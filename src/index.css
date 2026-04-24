@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========================= */
+/* 🌈 GRADIENTES DE TEXTO */
+/* ========================= */
+
+.gradient-strong {
+  background: linear-gradient(270deg, #2f80ed, #56ccf2, #27ae60);
+  background-size: 400% 400%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradientMove 6s ease infinite;
+}
+
+.gradient-soft {
+  background: linear-gradient(270deg, #56ccf2, #2f80ed);
+  background-size: 400% 400%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradientMove 5s ease infinite;
+}
+
+/* ========================= */
+/* ✨ ANIMAÇÃO GRADIENTE */
+/* ========================= */
+
+@keyframes gradientMove {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ========================= */
+/* 🌫️ GLASS EFFECT (GLOBAL) */
+/* ========================= */
+
+.glass {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.4);
+}
+
+/* ========================= */
+/* 💡 BOTÃO PREMIUM */
+/* ========================= */
+
+.btn-primary {
+  background: linear-gradient(135deg, #2f80ed 0%, #27ae60 100%);
+  box-shadow: 0 10px 30px rgba(47,128,237,0.35);
+}
+
+/* ========================= */
+/* 🧠 MICRO DETALHES */
+/* ========================= */
+
+::selection {
+  background: #2f80ed;
+  color: white;
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+  100% { transform: translateY(0px); }
+}
+
+@keyframes floatSlow {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(30px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 8s ease-in-out infinite;
+}
+
+.animate-floatSlow {
+  animation: floatSlow 12s ease-in-out infinite;
+}
