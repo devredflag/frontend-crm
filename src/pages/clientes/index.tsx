@@ -11,7 +11,6 @@ import {
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
   * { font-family: 'Plus Jakarta Sans', sans-serif; box-sizing: border-box; margin: 0; padding: 0; }
-
   @keyframes float1 { 0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(40px,-30px) scale(1.05)}66%{transform:translate(-20px,20px) scale(0.97)} }
   @keyframes float2 { 0%,100%{transform:translate(0,0) scale(1)}40%{transform:translate(-50px,25px) scale(1.08)}70%{transform:translate(30px,-15px) scale(0.95)} }
   @keyframes float3 { 0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(25px,40px) scale(1.03)} }
@@ -19,71 +18,19 @@ const css = `
   @keyframes float5 { 0%,100%{transform:translate(0,0) scale(1)}45%{transform:translate(35px,-20px) scale(1.06)}80%{transform:translate(-15px,30px) scale(0.96)} }
   @keyframes gradientShift { 0%,100%{background-position:0% 50%}50%{background-position:100% 50%} }
   @keyframes shimmer { 0%{background-position:-200% 0}100%{background-position:200% 0} }
-
-  .nav-item {
-    display:flex; align-items:center; gap:10px;
-    padding:10px 16px; border-radius:10px; cursor:pointer;
-    font-size:13.5px; font-weight:500; color:rgba(255,255,255,0.65);
-    transition:all 0.18s; user-select:none;
-  }
+  .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:10px; cursor:pointer; font-size:13.5px; font-weight:500; color:rgba(255,255,255,0.65); transition:all 0.18s; user-select:none; }
   .nav-item:hover { background:rgba(255,255,255,0.08); color:#fff; }
   .nav-item.active { background:rgba(255,255,255,0.14); color:#fff; font-weight:600; }
-
-  .glass-card {
-    background:rgba(255,255,255,0.72);
-    backdrop-filter:blur(16px);
-    border:1px solid rgba(255,255,255,0.9);
-    border-radius:16px;
-  }
-
-  .client-row {
-    display:grid;
-    grid-template-columns: 2.4fr 1.1fr 1fr 1fr 1fr 0.8fr 120px;
-    align-items:center;
-    padding:14px 20px;
-    border-bottom:1px solid rgba(200,225,240,0.4);
-    cursor:pointer;
-    transition:background 0.15s;
-    user-select:none;
-  }
+  .glass-card { background:rgba(255,255,255,0.72); backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.9); border-radius:16px; }
+  .client-row { display:grid; grid-template-columns: 2.4fr 1.1fr 1fr 1fr 1fr 0.8fr 120px; align-items:center; padding:14px 20px; border-bottom:1px solid rgba(200,225,240,0.4); cursor:pointer; transition:background 0.15s; user-select:none; }
   .client-row:hover { background:rgba(41,128,185,0.04); }
   .client-row:last-child { border-bottom:none; }
-
-  .th {
-    display:grid;
-    grid-template-columns: 2.4fr 1.1fr 1fr 1fr 1fr 0.8fr 120px;
-    align-items:center;
-    padding:10px 20px;
-    border-bottom:1px solid rgba(200,225,240,0.5);
-  }
-
-  .chip {
-    display:inline-flex; align-items:center; gap:4px;
-    padding:3px 9px; border-radius:20px;
-    font-size:11px; font-weight:700; white-space:nowrap;
-  }
-
-  .chip-btn {
-    display:inline-flex; align-items:center; gap:5px;
-    padding:5px 12px; border-radius:20px;
-    font-size:11px; font-weight:700; white-space:nowrap;
-    border:none; cursor:pointer; transition:opacity 0.15s;
-  }
+  .th { display:grid; grid-template-columns: 2.4fr 1.1fr 1fr 1fr 1fr 0.8fr 120px; align-items:center; padding:10px 20px; border-bottom:1px solid rgba(200,225,240,0.5); }
+  .chip { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:700; white-space:nowrap; }
+  .chip-btn { display:inline-flex; align-items:center; gap:5px; padding:5px 12px; border-radius:20px; font-size:11px; font-weight:700; white-space:nowrap; border:none; cursor:pointer; transition:opacity 0.15s; }
   .chip-btn:hover { opacity:0.85; }
-
-  .action-btn {
-    width:30px; height:30px; border-radius:8px; border:none; cursor:pointer;
-    display:flex; align-items:center; justify-content:center;
-    transition:background 0.15s;
-  }
-
-  .skeleton {
-    background: linear-gradient(90deg, rgba(200,225,240,0.4) 25%, rgba(220,240,252,0.7) 50%, rgba(200,225,240,0.4) 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.4s infinite;
-    border-radius: 6px;
-  }
-
+  .action-btn { width:30px; height:30px; border-radius:8px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.15s; }
+  .skeleton { background: linear-gradient(90deg, rgba(200,225,240,0.4) 25%, rgba(220,240,252,0.7) 50%, rgba(200,225,240,0.4) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 6px; }
   ::-webkit-scrollbar { width:4px; height:4px; }
   ::-webkit-scrollbar-track { background:transparent; }
   ::-webkit-scrollbar-thumb { background:rgba(41,128,185,0.25); border-radius:4px; }
@@ -142,81 +89,21 @@ interface Empresa {
   contatos_count?: number;
 }
 
+interface DropdownState {
+  id: string;
+  type: "status" | "temp";
+  top: number;
+  left: number;
+}
+
 const MOCK: Empresa[] = [
   { empresa_id:"1", nome:"TechSolutions Ltda", segmento:"Tecnologia", porte:"Grande", cidade:"São Paulo", status:"Em contato", temperatura:"Quente", ticket_medio_estimado:15000, responsavel_principal:"André Ferreira", origem_lead:"LinkedIn", ultima_interacao:"2025-06-10", proxima_acao:"Enviar proposta", contatos_count:3 },
-  { empresa_id:"2", nome:"InovaCorp", segmento:"Indústria", porte:"Médio", cidade:"Campinas", status:"Proposta", temperatura:"Morno", ticket_medio_estimado:8500, responsavel_principal:"Larissa Santos", origem_lead:"Indicação", ultima_interacao:"2025-06-08", proxima_acao:"Follow-up", contatos_count:2 },
 ];
 
 const STATUS_OPTS = ["Todos","Lead","Em contato","Proposta","Fechado"];
 const TEMP_OPTS   = ["Todas","Frio","Morno","Quente"];
 const STATUS_EDIT = ["Lead","Em contato","Proposta","Fechado"];
 const TEMP_EDIT   = ["Frio","Morno","Quente"];
-
-// Dropdown portal — renderizado fora da tabela para não ser cortado
-function InlineDropdown({ options, onSelect, getColor, anchorRef, onClose }: {
-  options: string[];
-  onSelect: (v: string) => void;
-  getColor: (v: string) => { text: string; bg: string };
-  anchorRef: React.RefObject<HTMLButtonElement>;
-  onClose: () => void;
-}) {
-  const [pos, setPos] = useState({ top: 0, left: 0 });
-
-  useEffect(() => {
-    if (anchorRef.current) {
-      const rect = anchorRef.current.getBoundingClientRect();
-      setPos({ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX });
-    }
-    const handler = (e: MouseEvent) => {
-      if (anchorRef.current && !anchorRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-    setTimeout(() => document.addEventListener("mousedown", handler), 0);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  return (
-    <div
-      style={{
-        position: "fixed",
-        top: pos.top,
-        left: pos.left,
-        zIndex: 9999,
-        background: "white",
-        borderRadius: 10,
-        boxShadow: "0 8px 24px rgba(0,0,0,0.14)",
-        border: "1px solid rgba(200,225,240,0.9)",
-        overflow: "hidden",
-        minWidth: 140,
-      }}
-      onMouseDown={e => e.stopPropagation()}
-    >
-      {options.map(opt => {
-        const c = getColor(opt);
-        return (
-          <div
-            key={opt}
-            onClick={() => { onSelect(opt); onClose(); }}
-            style={{
-              padding: "9px 16px",
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: "pointer",
-              color: c.text,
-              background: "white",
-              transition: "background 0.12s",
-            }}
-            onMouseEnter={e => (e.currentTarget.style.background = c.bg)}
-            onMouseLeave={e => (e.currentTarget.style.background = "white")}
-          >
-            {opt}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 export default function TodosClientes() {
   const navigate = useNavigate();
@@ -229,9 +116,16 @@ export default function TodosClientes() {
   const [sortDir, setSortDir] = useState<"asc"|"desc">("asc");
   const [clickTimer, setClickTimer] = useState<Record<string, number>>({});
   const [deleteConfirm, setDeleteConfirm] = useState<string|null>(null);
-  const [openDropdown, setOpenDropdown] = useState<{id: string, type: "status"|"temp", ref: React.RefObject<HTMLButtonElement>} | null>(null);
+  const [dropdown, setDropdown] = useState<DropdownState | null>(null);
 
   useEffect(() => { fetchEmpresas(); }, []);
+
+  useEffect(() => {
+    if (!dropdown) return;
+    const close = () => setDropdown(null);
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, [dropdown]);
 
   const fetchEmpresas = async () => {
     setLoading(true);
@@ -251,6 +145,7 @@ export default function TodosClientes() {
 
   const updateField = async (id: string, field: "status" | "temperatura", value: string) => {
     setEmpresas(prev => prev.map(e => e.empresa_id === id ? { ...e, [field]: value } : e));
+    setDropdown(null);
     try {
       const token = localStorage.getItem("token");
       await fetch(`https://backend-crm-production-157b.up.railway.app/empresas/${id}`, {
@@ -259,6 +154,16 @@ export default function TodosClientes() {
         body: JSON.stringify({ [field]: value }),
       });
     } catch {}
+  };
+
+  const openDropdown = (e: React.MouseEvent<HTMLButtonElement>, id: string, type: "status" | "temp") => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    setDropdown(prev =>
+      prev?.id === id && prev?.type === type
+        ? null
+        : { id, type, top: rect.bottom + 4, left: rect.left }
+    );
   };
 
   const handleRowClick = (id: string) => {
@@ -318,19 +223,34 @@ export default function TodosClientes() {
     fechado: empresas.filter(e => e.status==="Fechado").length,
   };
 
+  const dropdownOptions = dropdown?.type === "status" ? STATUS_EDIT : TEMP_EDIT;
+  const getColor = (v: string) => dropdown?.type === "status" ? statusColor(v) : tempColor(v);
+
   return (
     <div style={{ display:"flex", height:"100vh", overflow:"hidden", position:"relative" }}>
       <style>{css}</style>
 
       {/* Dropdown portal */}
-      {openDropdown && (
-        <InlineDropdown
-          options={openDropdown.type === "status" ? STATUS_EDIT : TEMP_EDIT}
-          onSelect={val => updateField(openDropdown.id, openDropdown.type === "status" ? "status" : "temperatura", val)}
-          getColor={openDropdown.type === "status" ? (v) => statusColor(v) : (v) => tempColor(v)}
-          anchorRef={openDropdown.ref}
-          onClose={() => setOpenDropdown(null)}
-        />
+      {dropdown && (
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{ position:"fixed", top: dropdown.top, left: dropdown.left, zIndex:9999, background:"white", borderRadius:10, boxShadow:"0 8px 24px rgba(0,0,0,0.14)", border:"1px solid rgba(200,225,240,0.9)", overflow:"hidden", minWidth:150 }}
+        >
+          {dropdownOptions.map(opt => {
+            const c = getColor(opt);
+            return (
+              <div
+                key={opt}
+                onClick={() => updateField(dropdown.id, dropdown.type === "status" ? "status" : "temperatura", opt)}
+                style={{ padding:"9px 16px", fontSize:12, fontWeight:600, cursor:"pointer", color:c.text, transition:"background 0.12s" }}
+                onMouseEnter={e => (e.currentTarget.style.background = c.bg)}
+                onMouseLeave={e => (e.currentTarget.style.background = "white")}
+              >
+                {"icon" in c ? `${(c as any).icon} ` : ""}{opt}
+              </div>
+            );
+          })}
+        </div>
       )}
 
       <div style={{ position:"fixed", inset:0, zIndex:0, overflow:"hidden", pointerEvents:"none" }}>
@@ -386,9 +306,7 @@ export default function TodosClientes() {
         <div style={{ position:"sticky", top:0, zIndex:20, padding:"14px 28px", background:"rgba(210,238,248,0.75)", backdropFilter:"blur(20px)", borderBottom:"1px solid rgba(255,255,255,0.6)", display:"flex", alignItems:"center", gap:14 }}>
           <div style={{ flex:1 }}>
             <h1 style={{ fontSize:18, fontWeight:800, color:"#0f2133", letterSpacing:"-0.02em" }}>Todos os Clientes</h1>
-            <p style={{ fontSize:12, color:"rgba(20,45,70,0.5)", marginTop:1 }}>
-              {filtered.length} empresa{filtered.length!==1?"s":""} encontrada{filtered.length!==1?"s":""}
-            </p>
+            <p style={{ fontSize:12, color:"rgba(20,45,70,0.5)", marginTop:1 }}>{filtered.length} empresa{filtered.length!==1?"s":""} encontrada{filtered.length!==1?"s":""}</p>
           </div>
           <button onClick={fetchEmpresas} style={{ width:36, height:36, borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.75)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
             <RefreshCw style={{ width:15, height:15, color:"#2980b9" }} />
@@ -468,8 +386,6 @@ export default function TodosClientes() {
                   const tc = tempColor(emp.temperatura);
                   const pc = porteColor(emp.porte);
                   const isDeleting = deleteConfirm === emp.empresa_id;
-                  const statusBtnRef = { current: null } as React.RefObject<HTMLButtonElement>;
-                  const tempBtnRef = { current: null } as React.RefObject<HTMLButtonElement>;
 
                   return (
                     <motion.div
@@ -481,7 +397,6 @@ export default function TodosClientes() {
                       transition={{ duration:0.2, delay:idx*0.03 }}
                       onClick={() => handleRowClick(emp.empresa_id)}
                     >
-                      {/* Nome */}
                       <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                         <div style={{ width:34, height:34, borderRadius:10, background:avatarColor(emp.nome), display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#fff", flexShrink:0 }}>
                           {initials(emp.nome)}
@@ -497,62 +412,36 @@ export default function TodosClientes() {
                         </div>
                       </div>
 
-                      {/* Segmento */}
                       <span style={{ fontSize:12, color:"rgba(20,45,70,0.6)", fontWeight:500 }}>{emp.segmento || "—"}</span>
 
-                      {/* Status */}
+                      {/* Status dropdown */}
                       <div onClick={e => e.stopPropagation()}>
                         <button
-                          ref={statusBtnRef}
                           className="chip-btn"
                           style={{ background:sc.bg, color:sc.text, border:`1px solid ${sc.border}` }}
-                          onClick={e => {
-                            e.stopPropagation();
-                            const btn = e.currentTarget;
-                            const ref = { current: btn } as React.RefObject<HTMLButtonElement>;
-                            setOpenDropdown(prev =>
-                              prev?.id === emp.empresa_id && prev?.type === "status"
-                                ? null
-                                : { id: emp.empresa_id, type: "status", ref }
-                            );
-                          }}
+                          onClick={e => openDropdown(e, emp.empresa_id, "status")}
                         >
-                          {emp.status || "—"}
-                          <ChevronDown style={{ width:10, height:10 }} />
+                          {emp.status || "—"} <ChevronDown style={{ width:10, height:10 }} />
                         </button>
                       </div>
 
-                      {/* Temperatura */}
+                      {/* Temperatura dropdown */}
                       <div onClick={e => e.stopPropagation()}>
                         <button
-                          ref={tempBtnRef}
                           className="chip-btn"
                           style={{ background:tc.bg, color:tc.text }}
-                          onClick={e => {
-                            e.stopPropagation();
-                            const btn = e.currentTarget;
-                            const ref = { current: btn } as React.RefObject<HTMLButtonElement>;
-                            setOpenDropdown(prev =>
-                              prev?.id === emp.empresa_id && prev?.type === "temp"
-                                ? null
-                                : { id: emp.empresa_id, type: "temp", ref }
-                            );
-                          }}
+                          onClick={e => openDropdown(e, emp.empresa_id, "temp")}
                         >
-                          {tc.icon} {emp.temperatura || "—"}
-                          <ChevronDown style={{ width:10, height:10 }} />
+                          {tc.icon} {emp.temperatura || "—"} <ChevronDown style={{ width:10, height:10 }} />
                         </button>
                       </div>
 
-                      {/* Cidade */}
                       <span style={{ fontSize:12, color:"rgba(20,45,70,0.6)", fontWeight:500 }}>{emp.cidade || "—"}</span>
 
-                      {/* Ticket */}
                       <span style={{ fontSize:12, fontWeight:700, color:"#0f2133" }}>
                         {emp.ticket_medio_estimado ? `R$ ${emp.ticket_medio_estimado.toLocaleString("pt-BR")}` : "—"}
                       </span>
 
-                      {/* Actions */}
                       <div style={{ display:"flex", alignItems:"center", gap:5 }} onClick={e => e.stopPropagation()}>
                         <button className="action-btn" style={{ background:"rgba(41,128,185,0.08)", color:"#2980b9" }} onClick={e => handleView(e, emp.empresa_id)} title="Ver perfil">
                           <Eye style={{ width:13, height:13 }} />
