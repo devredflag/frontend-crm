@@ -9,6 +9,7 @@ import NovaEmpresa from "./pages/empresas/nova";
 import Clientes from "./pages/clientes";
 import EmpresaView from "./pages/clientes/detalhe";
 import EmpresaEdit from "./pages/clientes/detalhe/editar";
+import Perfil from "./pages/perfil";
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
         <Route path="/clientes/:id" element={<EmpresaView />} />
         <Route path="/clientes/:id/editar" element={<EmpresaEdit />} />
         <Route path="*" element={<div>Página não encontrada</div>} />
+        <Route path="/perfil" element={<Perfil />} />
       </Routes>
     </Router>
   );
