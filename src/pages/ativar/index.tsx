@@ -70,7 +70,7 @@ export default function AtivarConta() {
     setLoading(true);
 
     try {
-      const res = await fetch("https://backend-crm-production-157b.up.railway.app", {
+       const res = await fetch("https://backend-crm-production-157b.up.railway.app/ativar-conta", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, senha }),
