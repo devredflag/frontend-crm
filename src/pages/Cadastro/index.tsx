@@ -68,20 +68,14 @@ export default function Cadastro() {
     e.preventDefault();
     setLoading(true);
     try {
-      await fetch("https://backend-crm-production-157b.up.railway.app", {
+      await fetch("https://backend-crm-production-157b.up.railway.app/usuarios", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           nome: form.nome,
           email: form.email,
-          senha: "123456",
           telefone: form.telefone,
         }),
-      });
-      await fetch("https://backend-crm-production-157b.up.railway.app", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nome: form.empresa, cidade: "" }),
       });
       setSuccess(true);
     } catch {
