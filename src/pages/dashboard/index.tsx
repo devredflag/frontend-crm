@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  Users, Building2, MessageCircle, MapPin, Send, Handshake,
+  Users, Building2, MessageCircle, Send, Handshake,
   LayoutDashboard, Search, Bell, Calendar, Plus,
-  TrendingUp, TrendingDown, ChevronDown,
-  ClipboardList, BarChart3,
-  Phone, Eye, ArrowRight, RefreshCw,
+  TrendingUp, ChevronDown, ChevronRight,
+  ClipboardList, BarChart3, RefreshCw,
+  MapPin, Phone, Mail, User, Flame, ArrowRight,
+  Eye, X,
 } from "lucide-react";
 
 const css = `
@@ -18,17 +19,25 @@ const css = `
   @keyframes float4 { 0%,100%{transform:translate(0,0)}30%{transform:translate(-30px,-40px)}60%{transform:translate(20px,15px)} }
   @keyframes float5 { 0%,100%{transform:translate(0,0) scale(1)}45%{transform:translate(35px,-20px) scale(1.06)}80%{transform:translate(-15px,30px) scale(0.96)} }
   @keyframes gradientShift { 0%,100%{background-position:0% 50%}50%{background-position:100% 50%} }
+  @keyframes shimmer { 0%{background-position:-200% 0}100%{background-position:200% 0} }
   .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:10px; cursor:pointer; font-size:13.5px; font-weight:500; color:rgba(255,255,255,0.65); transition:all 0.18s; user-select:none; }
   .nav-item:hover { background:rgba(255,255,255,0.08); color:#fff; }
   .nav-item.active { background:rgba(255,255,255,0.14); color:#fff; font-weight:600; }
-  .metric-card { background:rgba(255,255,255,0.72); backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.9); border-radius:16px; padding:20px 18px; transition:transform 0.2s, box-shadow 0.2s; cursor:default; }
-  .metric-card:hover { transform:translateY(-3px); box-shadow:0 12px 36px rgba(41,128,185,0.18); }
   .glass-card { background:rgba(255,255,255,0.72); backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.9); border-radius:16px; }
-  ::-webkit-scrollbar { width:4px; }
+  .metric-card { background:rgba(255,255,255,0.72); backdrop-filter:blur(16px); border:1.5px solid rgba(255,255,255,0.9); border-radius:16px; padding:18px 16px; transition:all 0.2s; cursor:pointer; user-select:none; }
+  .metric-card:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(41,128,185,0.15); }
+  .metric-card.selected { border-color: var(--card-color); box-shadow: 0 0 0 3px color-mix(in srgb, var(--card-color) 20%, transparent); transform:translateY(-2px); }
+  .preview-row { display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr; align-items:center; padding:11px 18px; border-bottom:1px solid rgba(200,225,240,0.35); cursor:pointer; transition:background 0.13s; }
+  .preview-row:hover { background:rgba(41,128,185,0.04); }
+  .preview-row:last-child { border-bottom:none; }
+  .preview-th { display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr; align-items:center; padding:8px 18px; border-bottom:1px solid rgba(200,225,240,0.5); }
+  .chip { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:20px; font-size:10px; font-weight:700; white-space:nowrap; }
+  .action-item { padding:12px 14px; border-radius:12px; background:rgba(255,255,255,0.55); border:1px solid rgba(200,225,240,0.6); cursor:pointer; transition:all 0.18s; }
+  .action-item:hover { background:rgba(255,255,255,0.85); border-color:rgba(41,128,185,0.3); transform:translateY(-1px); }
+  .skeleton { background:linear-gradient(90deg,rgba(200,225,240,0.4) 25%,rgba(220,240,252,0.7) 50%,rgba(200,225,240,0.4) 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:6px; }
+  ::-webkit-scrollbar { width:4px; height:4px; }
   ::-webkit-scrollbar-track { background:transparent; }
   ::-webkit-scrollbar-thumb { background:rgba(41,128,185,0.25); border-radius:4px; }
-  .skeleton { background:linear-gradient(90deg,rgba(200,225,240,0.4) 25%,rgba(220,240,252,0.7) 50%,rgba(200,225,240,0.4) 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:6px; }
-  @keyframes shimmer { 0%{background-position:-200% 0}100%{background-position:200% 0} }
 `;
 
 interface Empresa {
@@ -44,67 +53,61 @@ interface Empresa {
   origem_lead: string;
   ultima_interacao: string | null;
   proxima_acao: string;
+  cnpj?: string;
+  site?: string;
+  telefone?: string;
+  email?: string;
 }
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboards",               active: true  },
-  { icon: Search,          label: "Buscar Empresas",          active: false },
-  { icon: Building2,       label: "Cadastrar Empresas",       active: false },
-  { icon: Users,           label: "Todos os clientes",        active: false },
-  { icon: ClipboardList,   label: "Gerenciamento de clientes",active: false },
-  { icon: Calendar,        label: "Calendário",               active: false },
+  { icon: LayoutDashboard, label: "Dashboards",                active: true  },
+  { icon: Search,          label: "Buscar Empresas",           active: false },
+  { icon: Building2,       label: "Cadastrar Empresas",        active: false },
+  { icon: Users,           label: "Todos os clientes",         active: false },
+  { icon: ClipboardList,   label: "Gerenciamento de clientes", active: false },
+  { icon: Calendar,        label: "Calendário",                active: false },
 ];
 
 function avatarColor(name: string) {
   const colors = ["#2980b9","#1abc9c","#8e44ad","#e67e22","#27ae60","#e74c3c"];
   return colors[(name?.charCodeAt(0) || 0) % colors.length];
 }
-
 function initials(name: string) {
   return name?.split(" ").slice(0,2).map(w => w[0]).join("").toUpperCase() || "?";
 }
-
-function statusTagColor(s: string) {
-  if (s === "Fechado")    return { color:"#1e8449", bg:"rgba(39,174,96,0.12)"   };
-  if (s === "Proposta")   return { color:"#7d3c98", bg:"rgba(142,68,173,0.12)" };
-  if (s === "Em contato") return { color:"#1a5276", bg:"rgba(41,128,185,0.12)" };
-  return                         { color:"#566573", bg:"rgba(149,165,166,0.15)"};
+function statusColor(s: string) {
+  if (s === "Fechado")    return { bg:"rgba(39,174,96,0.12)",   text:"#1e8449",  border:"rgba(39,174,96,0.3)"   };
+  if (s === "Proposta")   return { bg:"rgba(142,68,173,0.12)",  text:"#7d3c98",  border:"rgba(142,68,173,0.3)"  };
+  if (s === "Em contato") return { bg:"rgba(41,128,185,0.12)",  text:"#1a5276",  border:"rgba(41,128,185,0.3)"  };
+  return                         { bg:"rgba(149,165,166,0.15)", text:"#566573",  border:"rgba(149,165,166,0.3)" };
+}
+function tempIcon(t: string) {
+  if (t === "Quente") return "🔥";
+  if (t === "Morno")  return "🌡️";
+  return "❄️";
+}
+function tempColor(t: string) {
+  if (t === "Quente") return "#c0392b";
+  if (t === "Morno")  return "#d68910";
+  return "#2980b9";
 }
 
-function Sparkline({ up }: { up: boolean }) {
-  const color = up ? "#27ae60" : "#e74c3c";
-  const points = up
-    ? "0,18 8,14 16,16 24,10 32,12 40,6 48,8 56,4 64,2"
-    : "0,4 8,6 16,4 24,10 32,8 40,14 48,12 56,16 64,18";
+function Sparkline({ color }: { color: string }) {
   return (
-    <svg width="64" height="20" viewBox="0 0 64 20" fill="none">
-      <polyline points={points} stroke={color} strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0.8" />
+    <svg width="48" height="16" viewBox="0 0 48 16" fill="none">
+      <polyline points="0,12 8,9 16,11 24,6 32,8 40,3 48,2" stroke={color} strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0.7" />
     </svg>
   );
 }
 
-function BarChartViz({ empresas }: { empresas: Empresa[] }) {
-  const statuses = ["Lead","Em contato","Proposta","Fechado"];
-  const counts = statuses.map(s => empresas.filter(e => e.status === s).length);
-  const max = Math.max(...counts, 1);
-  const colors = ["#95a5a6","#2980b9","#8e44ad","#27ae60"];
-  return (
-    <div style={{ display:"flex", alignItems:"flex-end", gap:12, height:80, padding:"0 4px" }}>
-      {statuses.map((s, i) => (
-        <div key={s} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
-          <div style={{ fontSize:11, fontWeight:700, color:colors[i] }}>{counts[i]}</div>
-          <div style={{ width:"100%", height:`${Math.max((counts[i]/max)*70, 4)}px`, borderRadius:"4px 4px 0 0", background:colors[i], opacity:0.8 }} />
-          <div style={{ fontSize:9, color:"rgba(20,45,70,0.4)", textAlign:"center", lineHeight:1.2 }}>{s}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
+type FilterKey = "total" | "lead" | "em_contato" | "proposta" | "fechado" | "quente";
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeFilter, setActiveFilter] = useState<FilterKey>("total");
+  const [selectedAction, setSelectedAction] = useState<Empresa | null>(null);
   const [searchValue, setSearchValue] = useState("");
 
   useEffect(() => { fetchData(); }, []);
@@ -123,43 +126,51 @@ export default function Dashboard() {
     setLoading(false);
   };
 
-  // Métricas calculadas
-  const total = empresas.length;
+  const total     = empresas.length;
+  const leads     = empresas.filter(e => e.status === "Lead").length;
   const emContato = empresas.filter(e => e.status === "Em contato").length;
   const propostas = empresas.filter(e => e.status === "Proposta").length;
-  const fechados = empresas.filter(e => e.status === "Fechado").length;
-  const leads = empresas.filter(e => e.status === "Lead").length;
-  const quentes = empresas.filter(e => e.temperatura === "Quente").length;
-  const ticketTotal = empresas.reduce((acc, e) => acc + (e.ticket_medio_estimado || 0), 0);
-  const conversao = total > 0 ? ((fechados / total) * 100).toFixed(1) : "0.0";
+  const fechados  = empresas.filter(e => e.status === "Fechado").length;
+  const quentes   = empresas.filter(e => e.temperatura === "Quente").length;
+  const ticketMedio = total > 0 ? Math.round(empresas.reduce((a,e) => a + (e.ticket_medio_estimado||0), 0) / total) : 0;
+  const conversao = total > 0 ? ((fechados/total)*100).toFixed(1) : "0.0";
 
-  const metrics = [
-    { icon: Building2,     label: "Total de empresas",   value: total,      up: true,  color:"#2980b9", bg:"rgba(41,128,185,0.1)"  },
-    { icon: Users,         label: "Leads",               value: leads,      up: true,  color:"#95a5a6", bg:"rgba(149,165,166,0.1)" },
-    { icon: MessageCircle, label: "Em contato",          value: emContato,  up: true,  color:"#e67e22", bg:"rgba(230,126,34,0.1)"  },
-    { icon: Send,          label: "Propostas",           value: propostas,  up: true,  color:"#8e44ad", bg:"rgba(142,68,173,0.1)"  },
-    { icon: Handshake,     label: "Fechados",            value: fechados,   up: true,  color:"#27ae60", bg:"rgba(39,174,96,0.1)"   },
-    { icon: MapPin,        label: "Leads quentes 🔥",   value: quentes,    up: true,  color:"#c0392b", bg:"rgba(192,57,43,0.1)"   },
+  const metricCards = [
+    { key:"total"      as FilterKey, icon:Building2,     label:"Total",        value:total,     color:"#2980b9", bg:"rgba(41,128,185,0.1)"  },
+    { key:"lead"       as FilterKey, icon:Users,         label:"Leads",        value:leads,     color:"#95a5a6", bg:"rgba(149,165,166,0.1)" },
+    { key:"em_contato" as FilterKey, icon:MessageCircle, label:"Em contato",   value:emContato, color:"#e67e22", bg:"rgba(230,126,34,0.1)"  },
+    { key:"proposta"   as FilterKey, icon:Send,          label:"Propostas",    value:propostas, color:"#8e44ad", bg:"rgba(142,68,173,0.1)"  },
+    { key:"fechado"    as FilterKey, icon:Handshake,     label:"Fechados",     value:fechados,  color:"#27ae60", bg:"rgba(39,174,96,0.1)"   },
+    { key:"quente"     as FilterKey, icon:Flame,         label:"Quentes 🔥",   value:quentes,   color:"#c0392b", bg:"rgba(192,57,43,0.1)"   },
   ];
 
-  const funnelData = [
-    { label:"Total",         value:total,     pct:100,                                    color:"#2980b9" },
-    { label:"Em contato",    value:emContato, pct:total>0?Math.round((emContato/total)*100):0, color:"#1abc9c" },
-    { label:"Em negociação", value:propostas, pct:total>0?Math.round((propostas/total)*100):0, color:"#e67e22" },
-    { label:"Proposta",      value:propostas, pct:total>0?Math.round((propostas/total)*100):0, color:"#8e44ad" },
-    { label:"Fechado",       value:fechados,  pct:total>0?Math.round((fechados/total)*100):0,  color:"#27ae60" },
+  const filterMap: Record<FilterKey, Empresa[]> = {
+    total:      empresas,
+    lead:       empresas.filter(e => e.status === "Lead"),
+    em_contato: empresas.filter(e => e.status === "Em contato"),
+    proposta:   empresas.filter(e => e.status === "Proposta"),
+    fechado:    empresas.filter(e => e.status === "Fechado"),
+    quente:     empresas.filter(e => e.temperatura === "Quente"),
+  };
+
+  const filterLabels: Record<FilterKey, string> = {
+    total:      "Todas as empresas",
+    lead:       "Leads",
+    em_contato: "Em contato",
+    proposta:   "Propostas enviadas",
+    fechado:    "Clientes fechados",
+    quente:     "Leads quentes 🔥",
+  };
+
+  const previewList = filterMap[activeFilter];
+  const activeCard = metricCards.find(m => m.key === activeFilter)!;
+
+  const proximasAcoes = empresas.filter(e => e.proxima_acao).slice(0, 4);
+  const porTemp = [
+    { label:"Quente 🔥", value:empresas.filter(e=>e.temperatura==="Quente").length, color:"#c0392b", bg:"rgba(192,57,43,0.08)"  },
+    { label:"Morno 🌡️",  value:empresas.filter(e=>e.temperatura==="Morno").length,  color:"#d68910", bg:"rgba(214,137,16,0.08)" },
+    { label:"Frio ❄️",   value:empresas.filter(e=>e.temperatura==="Frio").length,   color:"#2980b9", bg:"rgba(41,128,185,0.08)"  },
   ];
-
-  const destaques = [...empresas]
-    .sort((a, b) => {
-      const order: Record<string, number> = { Quente:0, Morno:1, Frio:2 };
-      return (order[a.temperatura] ?? 3) - (order[b.temperatura] ?? 3);
-    })
-    .slice(0, 3);
-
-  const comProximaAcao = empresas
-    .filter(e => e.proxima_acao)
-    .slice(0, 3);
 
   return (
     <div style={{ display:"flex", height:"100vh", overflow:"hidden", position:"relative" }}>
@@ -170,11 +181,11 @@ export default function Dashboard() {
         <div style={{ position:"absolute", inset:0, background:"linear-gradient(145deg,#c8e8f5 0%,#d6eef5 30%,#cceee8 65%,#c5eae0 100%)" }} />
         <div style={{ position:"absolute", inset:0, opacity:0.4, backgroundImage:"radial-gradient(circle,rgba(41,128,185,0.2) 1px,transparent 1px)", backgroundSize:"22px 22px" }} />
         {[
-          { w:420,h:420, top:"-80px",  left:"10%",  anim:"float1 18s ease-in-out infinite",    op:0.12, c1:"#2980b9",c2:"#1abc9c" },
-          { w:280,h:280, top:"40%",    left:"-60px", anim:"float2 22s ease-in-out infinite",    op:0.1,  c1:"#1abc9c",c2:"#2ecc71" },
-          { w:360,h:360, top:"60%",    left:"55%",   anim:"float3 26s ease-in-out infinite",    op:0.09, c1:"#2980b9",c2:"#8e44ad" },
-          { w:200,h:200, top:"20%",    left:"75%",   anim:"float4 20s ease-in-out infinite",    op:0.11, c1:"#27ae60",c2:"#1abc9c" },
-          { w:300,h:300, top:"75%",    left:"20%",   anim:"float5 24s ease-in-out infinite",    op:0.08, c1:"#e67e22",c2:"#f39c12" },
+          { w:420,h:420, top:"-80px", left:"10%",  anim:"float1 18s ease-in-out infinite", op:0.1,  c1:"#2980b9",c2:"#1abc9c" },
+          { w:280,h:280, top:"40%",   left:"-60px", anim:"float2 22s ease-in-out infinite", op:0.08, c1:"#1abc9c",c2:"#2ecc71" },
+          { w:360,h:360, top:"60%",   left:"55%",   anim:"float3 26s ease-in-out infinite", op:0.07, c1:"#2980b9",c2:"#8e44ad" },
+          { w:200,h:200, top:"20%",   left:"75%",   anim:"float4 20s ease-in-out infinite", op:0.09, c1:"#27ae60",c2:"#1abc9c" },
+          { w:300,h:300, top:"75%",   left:"20%",   anim:"float5 24s ease-in-out infinite", op:0.07, c1:"#e67e22",c2:"#f39c12" },
         ].map((c,i) => (
           <div key={i} style={{ position:"absolute", width:c.w, height:c.h, top:c.top, left:c.left, borderRadius:"50%", background:`radial-gradient(circle at 40% 40%,${c.c1},${c.c2})`, opacity:c.op, animation:c.anim, filter:"blur(2px)" }} />
         ))}
@@ -207,17 +218,17 @@ export default function Dashboard() {
         <div style={{ marginTop:16, padding:"12px", borderRadius:12, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.08)", display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
           <div style={{ width:34, height:34, borderRadius:"50%", background:"linear-gradient(135deg,#2980b9,#1abc9c)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#fff", flexShrink:0 }}>KS</div>
           <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontSize:12, fontWeight:600, color:"#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>Kauê Silva</div>
+            <div style={{ fontSize:12, fontWeight:600, color:"#fff" }}>Kauê Silva</div>
             <div style={{ fontSize:10, color:"rgba(255,255,255,0.45)" }}>Administrador</div>
           </div>
-          <ChevronDown style={{ width:13, height:13, color:"rgba(255,255,255,0.4)", flexShrink:0 }} />
+          <ChevronDown style={{ width:13, height:13, color:"rgba(255,255,255,0.4)" }} />
         </div>
       </div>
 
       {/* Main */}
       <div style={{ flex:1, height:"100vh", overflowY:"auto", position:"relative", zIndex:5 }}>
 
-        {/* Top bar */}
+        {/* Topbar */}
         <div style={{ position:"sticky", top:0, zIndex:20, padding:"14px 28px", background:"rgba(210,238,248,0.75)", backdropFilter:"blur(20px)", borderBottom:"1px solid rgba(255,255,255,0.6)", display:"flex", alignItems:"center", gap:16 }}>
           <div style={{ flex:1 }}>
             <h1 style={{ fontSize:18, fontWeight:800, color:"#0f2133", letterSpacing:"-0.02em" }}>Dashboard</h1>
@@ -227,11 +238,11 @@ export default function Dashboard() {
             <Search style={{ width:14, height:14, color:"rgba(20,45,70,0.35)", flexShrink:0 }} />
             <input value={searchValue} onChange={e => setSearchValue(e.target.value)} placeholder="Buscar leads, empresas..." style={{ flex:1, border:"none", background:"transparent", fontSize:13, color:"#1a2e40", outline:"none" }} />
           </div>
-          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          <div style={{ display:"flex", gap:8 }}>
             <button onClick={fetchData} style={{ width:38, height:38, borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.75)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
               <RefreshCw style={{ width:15, height:15, color:"#2980b9" }} />
             </button>
-            <button style={{ width:38, height:38, borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.75)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", position:"relative" }}>
+            <button style={{ width:38, height:38, borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.75)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
               <Bell style={{ width:16, height:16, color:"#2980b9" }} />
             </button>
             <button onClick={() => navigate("/empresas/nova")} style={{ height:38, padding:"0 14px", borderRadius:10, border:"none", cursor:"pointer", background:"linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)", backgroundSize:"200% 200%", animation:"gradientShift 4s ease infinite", color:"#fff", fontSize:13, fontWeight:700, display:"flex", alignItems:"center", gap:6, boxShadow:"0 4px 14px rgba(41,128,185,0.35)" }}>
@@ -240,187 +251,296 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div style={{ padding:"24px 28px 32px" }}>
+        <div style={{ padding:"22px 28px 32px", display:"flex", flexDirection:"column", gap:18 }}>
 
-          {/* Métricas */}
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(6, 1fr)", gap:14, marginBottom:22 }}>
-            {metrics.map((m, i) => (
-              <motion.div key={m.label} className="metric-card" initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.38, delay:i*0.06 }}>
-                <div style={{ width:36, height:36, borderRadius:10, background:m.bg, display:"flex", alignItems:"center", justifyContent:"center", marginBottom:12 }}>
-                  <m.icon style={{ width:17, height:17, color:m.color }} />
+          {/* Metric cards */}
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(6, 1fr)", gap:12 }}>
+            {metricCards.map((m, i) => (
+              <motion.div
+                key={m.key}
+                className={`metric-card${activeFilter === m.key ? " selected" : ""}`}
+                style={{ "--card-color": m.color } as React.CSSProperties}
+                initial={{ opacity:0, y:14 }}
+                animate={{ opacity:1, y:0 }}
+                transition={{ duration:0.35, delay:i*0.05 }}
+                onClick={() => setActiveFilter(m.key)}
+              >
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
+                  <div style={{ width:32, height:32, borderRadius:9, background:m.bg, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <m.icon style={{ width:15, height:15, color:m.color }} />
+                  </div>
+                  {activeFilter === m.key && (
+                    <div style={{ width:8, height:8, borderRadius:"50%", background:m.color }} />
+                  )}
                 </div>
                 {loading ? (
-                  <div className="skeleton" style={{ height:28, width:"60%", marginBottom:6 }} />
+                  <div className="skeleton" style={{ height:24, width:"50%", marginBottom:4 }} />
                 ) : (
-                  <div style={{ fontSize:26, fontWeight:900, color:"#0f2133", letterSpacing:"-0.03em", lineHeight:1 }}>{m.value}</div>
+                  <div style={{ fontSize:24, fontWeight:900, color:"#0f2133", letterSpacing:"-0.03em" }}>{m.value}</div>
                 )}
-                <div style={{ fontSize:11, color:"rgba(20,45,70,0.55)", fontWeight:500, marginTop:4, lineHeight:1.3 }}>{m.label}</div>
-                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginTop:10 }}>
-                  <span style={{ display:"flex", alignItems:"center", gap:2, fontSize:10, fontWeight:600, color:m.up?"#27ae60":"#e74c3c" }}>
-                    {m.up ? <TrendingUp style={{ width:10, height:10 }} /> : <TrendingDown style={{ width:10, height:10 }} />}
-                    {m.up ? "+" : "-"}
-                  </span>
-                  <Sparkline up={m.up} />
+                <div style={{ fontSize:10, color:"rgba(20,45,70,0.5)", fontWeight:600, marginTop:2 }}>{m.label}</div>
+                <div style={{ marginTop:8 }}>
+                  <Sparkline color={m.color} />
                 </div>
               </motion.div>
             ))}
           </div>
 
-          {/* Middle row */}
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 340px", gap:16, marginBottom:16 }}>
-
-            {/* Chart */}
-            <motion.div className="glass-card" style={{ padding:"22px 24px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.42, delay:0.38 }}>
-              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:18 }}>
-                <div>
-                  <div style={{ fontSize:14, fontWeight:700, color:"#0f2133" }}>Distribuição por Status</div>
-                  <div style={{ fontSize:11, color:"rgba(20,45,70,0.45)", marginTop:2 }}>Empresas cadastradas</div>
+          {/* Painel central — preview interativo */}
+          <motion.div
+            className="glass-card"
+            style={{ overflow:"hidden" }}
+            initial={{ opacity:0, y:14 }}
+            animate={{ opacity:1, y:0 }}
+            transition={{ duration:0.4, delay:0.3 }}
+          >
+            {/* Header do painel */}
+            <div style={{ padding:"16px 20px", borderBottom:"1px solid rgba(200,225,240,0.5)", display:"flex", alignItems:"center", justifyContent:"space-between", background:`linear-gradient(90deg, ${activeCard.bg}, transparent)` }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                <div style={{ width:30, height:30, borderRadius:8, background:activeCard.bg, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  <activeCard.icon style={{ width:14, height:14, color:activeCard.color }} />
                 </div>
-                <button onClick={() => navigate("/clientes")} style={{ display:"flex", alignItems:"center", gap:5, padding:"5px 10px", borderRadius:8, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.7)", fontSize:11, fontWeight:600, color:"rgba(20,45,70,0.6)", cursor:"pointer" }}>
-                  Ver todas <ArrowRight style={{ width:11, height:11 }} />
+                <div>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#0f2133" }}>{filterLabels[activeFilter]}</div>
+                  <div style={{ fontSize:11, color:"rgba(20,45,70,0.45)" }}>{previewList.length} empresa{previewList.length !== 1 ? "s" : ""}</div>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate("/clientes")}
+                style={{ display:"flex", alignItems:"center", gap:5, padding:"6px 12px", borderRadius:8, border:`1px solid ${activeCard.color}40`, background:`${activeCard.bg}`, fontSize:11, fontWeight:600, color:activeCard.color, cursor:"pointer" }}
+              >
+                Ver no CRM <ArrowRight style={{ width:11, height:11 }} />
+              </button>
+            </div>
+
+            {/* Tabela */}
+            {loading ? (
+              <div style={{ padding:20, display:"flex", flexDirection:"column", gap:10 }}>
+                {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height:40 }} />)}
+              </div>
+            ) : previewList.length === 0 ? (
+              <div style={{ padding:"40px 20px", textAlign:"center" }}>
+                <Building2 style={{ width:32, height:32, color:"rgba(41,128,185,0.25)", margin:"0 auto 10px" }} />
+                <p style={{ fontSize:13, fontWeight:600, color:"rgba(20,45,70,0.4)" }}>Nenhuma empresa nesta categoria</p>
+                <button onClick={() => navigate("/empresas/nova")} style={{ marginTop:12, padding:"7px 16px", borderRadius:8, border:"none", background:"linear-gradient(135deg,#2980b9,#1abc9c)", color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer" }}>
+                  + Cadastrar empresa
                 </button>
               </div>
-              {loading ? (
-                <div className="skeleton" style={{ height:80 }} />
-              ) : (
-                <BarChartViz empresas={empresas} />
-              )}
-              <div style={{ display:"flex", alignItems:"center", gap:16, marginTop:16, paddingTop:14, borderTop:"1px solid rgba(200,225,240,0.5)", flexWrap:"wrap" }}>
-                {[
-                  { label:"Ticket total estimado", value:`R$ ${ticketTotal.toLocaleString("pt-BR")}`, color:"#2980b9" },
-                  { label:"Taxa de conversão", value:`${conversao}%`, color:"#27ae60" },
-                  { label:"Leads quentes", value:`${quentes} 🔥`, color:"#c0392b" },
-                ].map(s => (
-                  <div key={s.label} style={{ display:"flex", alignItems:"center", gap:5 }}>
-                    <span style={{ fontSize:13, fontWeight:800, color:s.color }}>{s.value}</span>
-                    <span style={{ fontSize:10, color:"rgba(20,45,70,0.45)" }}>{s.label}</span>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* Funil */}
-            <motion.div className="glass-card" style={{ padding:"22px 20px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.42, delay:0.44 }}>
-              <div style={{ fontSize:14, fontWeight:700, color:"#0f2133", marginBottom:18 }}>Funil de Prospecção</div>
-              {funnelData.map(f => (
-                <div key={f.label} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
-                  <div style={{ flex:1, position:"relative", height:38 }}>
-                    <div style={{ position:"absolute", inset:0, borderRadius:6, background:`${f.color}18` }} />
-                    <div style={{ position:"absolute", top:0, left:0, bottom:0, width:`${Math.max(f.pct, 4)}%`, borderRadius:6, background:f.color, transition:"width 0.6s ease" }} />
-                    <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", padding:"0 10px", overflow:"hidden" }}>
-                      <span style={{ fontSize:12, fontWeight:600, color:"#0f2133", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{f.label}</span>
-                    </div>
-                  </div>
-                  <span style={{ fontSize:12, fontWeight:700, color:"#0f2133", minWidth:28, textAlign:"right" }}>{f.value}</span>
+            ) : (
+              <>
+                <div className="preview-th">
+                  {["Empresa","Status","Temperatura","Cidade","Ticket"].map(h => (
+                    <span key={h} style={{ fontSize:10, fontWeight:700, letterSpacing:"0.07em", textTransform:"uppercase", color:"rgba(20,45,70,0.45)" }}>{h}</span>
+                  ))}
                 </div>
-              ))}
-              <div style={{ marginTop:18, paddingTop:14, borderTop:"1px solid rgba(200,225,240,0.5)" }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
-                  <span style={{ fontSize:12, fontWeight:600, color:"rgba(20,45,70,0.65)" }}>Taxa de Conversão</span>
-                  <span style={{ fontSize:13, fontWeight:800, color:"#2980b9" }}>{conversao}%</span>
+                <div style={{ maxHeight:220, overflowY:"auto" }}>
+                  <AnimatePresence mode="wait">
+                    {previewList.slice(0,10).map((emp, idx) => {
+                      const sc = statusColor(emp.status);
+                      return (
+                        <motion.div
+                          key={emp.empresa_id}
+                          className="preview-row"
+                          initial={{ opacity:0, x:-8 }}
+                          animate={{ opacity:1, x:0 }}
+                          exit={{ opacity:0 }}
+                          transition={{ duration:0.18, delay:idx*0.03 }}
+                          onClick={() => navigate(`/clientes/${emp.empresa_id}`)}
+                        >
+                          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                            <div style={{ width:28, height:28, borderRadius:8, background:avatarColor(emp.nome), display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:700, color:"#fff", flexShrink:0 }}>
+                              {initials(emp.nome)}
+                            </div>
+                            <div>
+                              <div style={{ fontSize:12, fontWeight:700, color:"#0f2133" }}>{emp.nome}</div>
+                              <div style={{ fontSize:10, color:"rgba(20,45,70,0.4)" }}>{emp.segmento || "—"}</div>
+                            </div>
+                          </div>
+                          <span className="chip" style={{ background:sc.bg, color:sc.text, border:`1px solid ${sc.border}` }}>{emp.status || "—"}</span>
+                          <span style={{ fontSize:12, color:tempColor(emp.temperatura) }}>{tempIcon(emp.temperatura)} {emp.temperatura || "—"}</span>
+                          <span style={{ fontSize:11, color:"rgba(20,45,70,0.6)" }}>{emp.cidade || "—"}</span>
+                          <span style={{ fontSize:12, fontWeight:700, color:"#0f2133" }}>
+                            {emp.ticket_medio_estimado ? `R$ ${emp.ticket_medio_estimado.toLocaleString("pt-BR")}` : "—"}
+                          </span>
+                        </motion.div>
+                      );
+                    })}
+                  </AnimatePresence>
                 </div>
-                <div style={{ height:6, borderRadius:6, background:"rgba(41,128,185,0.12)" }}>
-                  <div style={{ height:"100%", width:`${Math.min(parseFloat(conversao)*5, 100)}%`, borderRadius:6, background:"linear-gradient(90deg,#2980b9,#1abc9c)" }} />
-                </div>
-                <div style={{ fontSize:10, color:"rgba(20,45,70,0.4)", marginTop:4 }}>Meta: 20%</div>
-              </div>
-            </motion.div>
-          </div>
+              </>
+            )}
+          </motion.div>
 
           {/* Bottom row */}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:16 }}>
 
-            {/* Próximas ações */}
-            <motion.div className="glass-card" style={{ padding:"20px 20px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.42, delay:0.5 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+            {/* Próximas Ações — expandível */}
+            <motion.div className="glass-card" style={{ padding:"18px" }} initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.45 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
                 <div style={{ fontSize:13, fontWeight:700, color:"#0f2133" }}>Próximas Ações</div>
                 <button onClick={() => navigate("/clientes")} style={{ display:"flex", alignItems:"center", gap:3, fontSize:10, fontWeight:600, color:"#2980b9", background:"none", border:"none", cursor:"pointer" }}>
                   Ver todas <ArrowRight style={{ width:10, height:10 }} />
                 </button>
               </div>
+
               {loading ? (
                 <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                   {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height:52 }} />)}
                 </div>
-              ) : comProximaAcao.length === 0 ? (
-                <div style={{ textAlign:"center", padding:"20px 0", color:"rgba(20,45,70,0.4)", fontSize:12 }}>Nenhuma ação pendente</div>
+              ) : proximasAcoes.length === 0 ? (
+                <div style={{ textAlign:"center", padding:"16px 0", color:"rgba(20,45,70,0.4)", fontSize:12 }}>Nenhuma ação pendente</div>
               ) : (
-                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                  {comProximaAcao.map(e => (
-                    <div key={e.empresa_id} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", borderRadius:10, background:"rgba(255,255,255,0.55)", border:"1px solid rgba(200,225,240,0.6)", cursor:"pointer" }} onClick={() => navigate(`/clientes/${e.empresa_id}`)}>
-                      <div style={{ width:30, height:30, borderRadius:8, flexShrink:0, background:"rgba(41,128,185,0.12)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                        <Phone style={{ width:14, height:14, color:"#2980b9" }} />
-                      </div>
-                      <div style={{ flex:1, minWidth:0 }}>
-                        <div style={{ fontSize:12, fontWeight:600, color:"#0f2133", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{e.nome}</div>
-                        <div style={{ fontSize:10, color:"rgba(20,45,70,0.45)", marginTop:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{e.proxima_acao}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </motion.div>
-
-            {/* Por temperatura */}
-            <motion.div className="glass-card" style={{ padding:"20px 20px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.42, delay:0.56 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-                <div style={{ fontSize:13, fontWeight:700, color:"#0f2133" }}>Por Temperatura</div>
-              </div>
-              {loading ? (
                 <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                  {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height:44 }} />)}
-                </div>
-              ) : (
-                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                  {[
-                    { label:"Quente 🔥", value:empresas.filter(e=>e.temperatura==="Quente").length, color:"#c0392b", bg:"rgba(192,57,43,0.1)" },
-                    { label:"Morno 🌡️",  value:empresas.filter(e=>e.temperatura==="Morno").length,  color:"#d68910", bg:"rgba(214,137,16,0.1)" },
-                    { label:"Frio ❄️",   value:empresas.filter(e=>e.temperatura==="Frio").length,   color:"#2980b9", bg:"rgba(41,128,185,0.1)" },
-                  ].map(t => (
-                    <div key={t.label} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", borderRadius:10, background:"rgba(255,255,255,0.55)", border:"1px solid rgba(200,225,240,0.6)" }}>
-                      <div style={{ flex:1, fontSize:12, fontWeight:600, color:"#0f2133" }}>{t.label}</div>
-                      <span style={{ fontSize:16, fontWeight:800, color:t.color }}>{t.value}</span>
-                    </div>
-                  ))}
-                  <div style={{ marginTop:4, padding:"10px 12px", borderRadius:10, background:"rgba(41,128,185,0.06)", border:"1px solid rgba(41,128,185,0.12)" }}>
-                    <div style={{ fontSize:10, color:"rgba(20,45,70,0.5)", marginBottom:2 }}>Ticket médio total estimado</div>
-                    <div style={{ fontSize:15, fontWeight:800, color:"#2980b9" }}>R$ {total > 0 ? Math.round(ticketTotal/total).toLocaleString("pt-BR") : "0"}</div>
-                  </div>
-                </div>
-              )}
-            </motion.div>
-
-            {/* Leads em destaque */}
-            <motion.div className="glass-card" style={{ padding:"20px 20px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.42, delay:0.62 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-                <div style={{ fontSize:13, fontWeight:700, color:"#0f2133" }}>Leads em Destaque</div>
-                <button onClick={() => navigate("/clientes")} style={{ display:"flex", alignItems:"center", gap:3, fontSize:10, fontWeight:600, color:"#2980b9", background:"none", border:"none", cursor:"pointer" }}>
-                  Ver todos <ArrowRight style={{ width:10, height:10 }} />
-                </button>
-              </div>
-              {loading ? (
-                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                  {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height:52 }} />)}
-                </div>
-              ) : destaques.length === 0 ? (
-                <div style={{ textAlign:"center", padding:"20px 0", color:"rgba(20,45,70,0.4)", fontSize:12 }}>Nenhuma empresa cadastrada</div>
-              ) : (
-                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                  {destaques.map(e => {
-                    const tc = statusTagColor(e.status);
+                  {proximasAcoes.map(emp => {
+                    const isSelected = selectedAction?.empresa_id === emp.empresa_id;
+                    const sc = statusColor(emp.status);
                     return (
-                      <div key={e.empresa_id} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", borderRadius:10, background:"rgba(255,255,255,0.55)", border:"1px solid rgba(200,225,240,0.6)", cursor:"pointer" }} onClick={() => navigate(`/clientes/${e.empresa_id}`)}>
-                        <div style={{ width:32, height:32, borderRadius:"50%", flexShrink:0, background:avatarColor(e.nome), display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:"#fff" }}>{initials(e.nome)}</div>
-                        <div style={{ flex:1, minWidth:0 }}>
-                          <div style={{ fontSize:12, fontWeight:600, color:"#0f2133", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{e.nome}</div>
-                          <div style={{ fontSize:10, color:"rgba(20,45,70,0.45)", marginTop:1 }}>{e.segmento || e.cidade || "—"}</div>
+                      <div key={emp.empresa_id}>
+                        <div
+                          className="action-item"
+                          onClick={() => setSelectedAction(isSelected ? null : emp)}
+                        >
+                          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                            <div style={{ width:32, height:32, borderRadius:9, background:avatarColor(emp.nome), display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:"#fff", flexShrink:0 }}>
+                              {initials(emp.nome)}
+                            </div>
+                            <div style={{ flex:1, minWidth:0 }}>
+                              <div style={{ fontSize:12, fontWeight:700, color:"#0f2133", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{emp.nome}</div>
+                              <div style={{ fontSize:10, color:"rgba(20,45,70,0.5)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{emp.proxima_acao}</div>
+                            </div>
+                            <ChevronRight style={{ width:12, height:12, color:"rgba(20,45,70,0.3)", flexShrink:0, transform:isSelected?"rotate(90deg)":"rotate(0deg)", transition:"transform 0.2s" }} />
+                          </div>
                         </div>
-                        <span style={{ fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:6, background:tc.bg, color:tc.color, border:`1px solid ${tc.color}30`, whiteSpace:"nowrap" }}>{e.status}</span>
+
+                        {/* Card expandido */}
+                        <AnimatePresence>
+                          {isSelected && (
+                            <motion.div
+                              initial={{ opacity:0, height:0 }}
+                              animate={{ opacity:1, height:"auto" }}
+                              exit={{ opacity:0, height:0 }}
+                              transition={{ duration:0.22 }}
+                              style={{ overflow:"hidden" }}
+                            >
+                              <div style={{ margin:"6px 0 2px", padding:"14px", borderRadius:12, background:"rgba(255,255,255,0.85)", border:"1px solid rgba(200,225,240,0.8)", boxShadow:"0 4px 16px rgba(41,128,185,0.08)" }}>
+                                {/* Header */}
+                                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
+                                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                                    <div style={{ width:36, height:36, borderRadius:10, background:avatarColor(emp.nome), display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#fff" }}>
+                                      {initials(emp.nome)}
+                                    </div>
+                                    <div>
+                                      <div style={{ fontSize:13, fontWeight:800, color:"#0f2133" }}>{emp.nome}</div>
+                                      <div style={{ display:"flex", gap:5, marginTop:3 }}>
+                                        <span className="chip" style={{ background:sc.bg, color:sc.text, border:`1px solid ${sc.border}` }}>{emp.status}</span>
+                                        <span style={{ fontSize:10, color:tempColor(emp.temperatura), fontWeight:700 }}>{tempIcon(emp.temperatura)} {emp.temperatura}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <button onClick={e => { e.stopPropagation(); setSelectedAction(null); }} style={{ background:"none", border:"none", cursor:"pointer", color:"rgba(20,45,70,0.3)" }}>
+                                    <X style={{ width:14, height:14 }} />
+                                  </button>
+                                </div>
+
+                                {/* Infos */}
+                                <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                                  {emp.responsavel_principal && (
+                                    <div style={{ display:"flex", alignItems:"center", gap:7, fontSize:11 }}>
+                                      <User style={{ width:12, height:12, color:"#2980b9", flexShrink:0 }} />
+                                      <span style={{ color:"rgba(20,45,70,0.5)" }}>Responsável:</span>
+                                      <span style={{ fontWeight:600, color:"#0f2133" }}>{emp.responsavel_principal}</span>
+                                    </div>
+                                  )}
+                                  {emp.cidade && (
+                                    <div style={{ display:"flex", alignItems:"center", gap:7, fontSize:11 }}>
+                                      <MapPin style={{ width:12, height:12, color:"#2980b9", flexShrink:0 }} />
+                                      <span style={{ color:"rgba(20,45,70,0.5)" }}>Cidade:</span>
+                                      <span style={{ fontWeight:600, color:"#0f2133" }}>{emp.cidade}</span>
+                                    </div>
+                                  )}
+                                  {emp.ticket_medio_estimado && (
+                                    <div style={{ display:"flex", alignItems:"center", gap:7, fontSize:11 }}>
+                                      <TrendingUp style={{ width:12, height:12, color:"#27ae60", flexShrink:0 }} />
+                                      <span style={{ color:"rgba(20,45,70,0.5)" }}>Ticket:</span>
+                                      <span style={{ fontWeight:700, color:"#27ae60" }}>R$ {emp.ticket_medio_estimado.toLocaleString("pt-BR")}</span>
+                                    </div>
+                                  )}
+                                  <div style={{ display:"flex", alignItems:"center", gap:7, fontSize:11, padding:"6px 8px", borderRadius:8, background:"rgba(41,128,185,0.06)", border:"1px solid rgba(41,128,185,0.12)" }}>
+                                    <Calendar style={{ width:12, height:12, color:"#e67e22", flexShrink:0 }} />
+                                    <span style={{ color:"rgba(20,45,70,0.5)" }}>Próxima ação:</span>
+                                    <span style={{ fontWeight:600, color:"#e67e22" }}>{emp.proxima_acao}</span>
+                                  </div>
+                                </div>
+
+                                {/* Botão ver perfil */}
+                                <button
+                                  onClick={() => navigate(`/clientes/${emp.empresa_id}`)}
+                                  style={{ marginTop:10, width:"100%", height:32, borderRadius:8, border:"none", cursor:"pointer", background:"linear-gradient(135deg,#2980b9,#1abc9c)", color:"#fff", fontSize:11, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}
+                                >
+                                  <Eye style={{ width:12, height:12 }} /> Ver perfil completo
+                                </button>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     );
                   })}
                 </div>
               )}
+            </motion.div>
+
+            {/* Por temperatura + métricas */}
+            <motion.div className="glass-card" style={{ padding:"18px" }} initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.5 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:"#0f2133", marginBottom:14 }}>Por Temperatura</div>
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                {porTemp.map(t => (
+                  <div
+                    key={t.label}
+                    style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", borderRadius:10, background:t.bg, border:`1px solid ${t.color}20`, cursor:"pointer" }}
+                    onClick={() => setActiveFilter(t.label.includes("Quente") ? "quente" : "total")}
+                  >
+                    <div style={{ flex:1, fontSize:12, fontWeight:600, color:"#0f2133" }}>{t.label}</div>
+                    <span style={{ fontSize:18, fontWeight:900, color:t.color }}>{t.value}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ marginTop:14, padding:"12px 14px", borderRadius:12, background:"rgba(41,128,185,0.06)", border:"1px solid rgba(41,128,185,0.12)" }}>
+                <div style={{ fontSize:10, color:"rgba(20,45,70,0.5)", fontWeight:600, marginBottom:4 }}>TAXA DE CONVERSÃO</div>
+                <div style={{ fontSize:22, fontWeight:900, color:"#2980b9" }}>{conversao}%</div>
+                <div style={{ height:5, borderRadius:5, background:"rgba(41,128,185,0.12)", marginTop:6 }}>
+                  <div style={{ height:"100%", width:`${Math.min(parseFloat(conversao)*5,100)}%`, borderRadius:5, background:"linear-gradient(90deg,#2980b9,#1abc9c)" }} />
+                </div>
+                <div style={{ fontSize:10, color:"rgba(20,45,70,0.35)", marginTop:3 }}>Meta: 20%</div>
+              </div>
+
+              <div style={{ marginTop:10, padding:"12px 14px", borderRadius:12, background:"rgba(39,174,96,0.06)", border:"1px solid rgba(39,174,96,0.15)" }}>
+                <div style={{ fontSize:10, color:"rgba(20,45,70,0.5)", fontWeight:600, marginBottom:4 }}>TICKET MÉDIO</div>
+                <div style={{ fontSize:18, fontWeight:900, color:"#27ae60" }}>R$ {ticketMedio.toLocaleString("pt-BR")}</div>
+              </div>
+            </motion.div>
+
+            {/* Funil de prospecção */}
+            <motion.div className="glass-card" style={{ padding:"18px" }} initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.55 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:"#0f2133", marginBottom:14 }}>Funil de Prospecção</div>
+              {[
+                { label:"Total",      value:total,     color:"#2980b9", key:"total"      as FilterKey },
+                { label:"Em contato", value:emContato, color:"#1abc9c", key:"em_contato" as FilterKey },
+                { label:"Proposta",   value:propostas, color:"#8e44ad", key:"proposta"   as FilterKey },
+                { label:"Fechado",    value:fechados,  color:"#27ae60", key:"fechado"    as FilterKey },
+              ].map(f => (
+                <div key={f.label} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10, cursor:"pointer" }} onClick={() => setActiveFilter(f.key)}>
+                  <div style={{ flex:1, position:"relative", height:34 }}>
+                    <div style={{ position:"absolute", inset:0, borderRadius:6, background:`${f.color}15` }} />
+                    <div style={{ position:"absolute", top:0, left:0, bottom:0, width:`${total>0?Math.max((f.value/total)*100,f.value>0?8:0):0}%`, borderRadius:6, background:f.color, transition:"width 0.6s ease" }} />
+                    <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", padding:"0 10px" }}>
+                      <span style={{ fontSize:11, fontWeight:600, color:"#0f2133", whiteSpace:"nowrap" }}>{f.label}</span>
+                    </div>
+                  </div>
+                  <span style={{ fontSize:13, fontWeight:800, color:f.color, minWidth:24, textAlign:"right" }}>{f.value}</span>
+                </div>
+              ))}
             </motion.div>
           </div>
         </div>
