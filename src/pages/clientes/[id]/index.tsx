@@ -1,0 +1,403 @@
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import {
+  BarChart3, LayoutDashboard, Search, Building2, Users,
+  ClipboardList, Calendar, ArrowLeft, Edit3,
+  MapPin, Tag, Thermometer, TrendingUp, DollarSign,
+  Phone, Mail, User, Clock, ChevronRight,
+} from "lucide-react";
+
+const css = `
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
+  * { font-family: 'Plus Jakarta Sans', sans-serif; box-sizing: border-box; margin: 0; padding: 0; }
+
+  @keyframes float1 { 0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(40px,-30px) scale(1.05)}66%{transform:translate(-20px,20px) scale(0.97)} }
+  @keyframes float2 { 0%,100%{transform:translate(0,0) scale(1)}40%{transform:translate(-50px,25px) scale(1.08)}70%{transform:translate(30px,-15px) scale(0.95)} }
+  @keyframes float3 { 0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(25px,40px) scale(1.03)} }
+  @keyframes float4 { 0%,100%{transform:translate(0,0)}30%{transform:translate(-30px,-40px)}60%{transform:translate(20px,15px)} }
+  @keyframes float5 { 0%,100%{transform:translate(0,0) scale(1)}45%{transform:translate(35px,-20px) scale(1.06)}80%{transform:translate(-15px,30px) scale(0.96)} }
+  @keyframes gradientShift { 0%,100%{background-position:0% 50%}50%{background-position:100% 50%} }
+  @keyframes shimmer { 0%{background-position:-200% 0}100%{background-position:200% 0} }
+
+  .nav-item {
+    display:flex; align-items:center; gap:10px;
+    padding:10px 16px; border-radius:10px; cursor:pointer;
+    font-size:13.5px; font-weight:500; color:rgba(255,255,255,0.65);
+    transition:all 0.18s; user-select:none;
+  }
+  .nav-item:hover { background:rgba(255,255,255,0.08); color:#fff; }
+  .nav-item.active { background:rgba(255,255,255,0.14); color:#fff; font-weight:600; }
+
+  .glass-card {
+    background:rgba(255,255,255,0.72);
+    backdrop-filter:blur(16px);
+    border:1px solid rgba(255,255,255,0.9);
+    border-radius:16px;
+  }
+
+  .chip {
+    display:inline-flex; align-items:center; gap:4px;
+    padding:4px 12px; border-radius:20px;
+    font-size:12px; font-weight:700;
+  }
+
+  .info-row {
+    display:flex; align-items:center; gap:10px;
+    padding:10px 0;
+    border-bottom:1px solid rgba(200,225,240,0.4);
+  }
+  .info-row:last-child { border-bottom:none; }
+
+  .skeleton {
+    background: linear-gradient(90deg, rgba(200,225,240,0.4) 25%, rgba(220,240,252,0.7) 50%, rgba(200,225,240,0.4) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+    border-radius: 6px;
+  }
+
+  ::-webkit-scrollbar { width:4px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:rgba(41,128,185,0.25); border-radius:4px; }
+`;
+
+const navItems = [
+  { icon: LayoutDashboard, label: "Dashboards" },
+  { icon: Search,          label: "Buscar Empresas" },
+  { icon: Building2,       label: "Cadastrar Empresas" },
+  { icon: Users,           label: "Todos os clientes" },
+  { icon: ClipboardList,   label: "Gerenciamento de clientes" },
+  { icon: Calendar,        label: "Calendário" },
+];
+
+interface Contato {
+  contato_id: string;
+  nome: string;
+  cargo?: string;
+  email?: string;
+  telefone?: string;
+}
+
+interface Empresa {
+  empresa_id: string;
+  nome: string;
+  segmento: string;
+  porte: string;
+  cidade: string;
+  estado?: string;
+  status: string;
+  temperatura: string;
+  ticket_medio_estimado: number | null;
+  responsavel_principal: string;
+  origem_lead: string;
+  ultima_interacao: string | null;
+  proxima_acao: string;
+  observacoes?: string;
+  contatos?: Contato[];
+}
+
+function statusColor(s: string) {
+  if (s === "Fechado")    return { bg:"rgba(39,174,96,0.12)",   text:"#1e8449",  border:"rgba(39,174,96,0.25)"   };
+  if (s === "Proposta")   return { bg:"rgba(142,68,173,0.12)",  text:"#7d3c98",  border:"rgba(142,68,173,0.25)"  };
+  if (s === "Em contato") return { bg:"rgba(41,128,185,0.12)",  text:"#1a5276",  border:"rgba(41,128,185,0.25)"  };
+  return                         { bg:"rgba(149,165,166,0.15)", text:"#566573",  border:"rgba(149,165,166,0.3)"  };
+}
+
+function tempColor(t: string) {
+  if (t === "Quente") return { text:"#c0392b", bg:"rgba(192,57,43,0.1)",  icon:"🔥" };
+  if (t === "Morno")  return { text:"#d68910", bg:"rgba(214,137,16,0.1)", icon:"🌡️" };
+  return                     { text:"#2980b9", bg:"rgba(41,128,185,0.1)", icon:"❄️" };
+}
+
+function initials(name: string) {
+  return name.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase();
+}
+
+function avatarColor(name: string) {
+  const colors = ["#2980b9", "#1abc9c", "#8e44ad", "#e67e22", "#27ae60", "#e74c3c"];
+  return colors[name.charCodeAt(0) % colors.length];
+}
+
+function formatDate(d: string | null) {
+  if (!d) return "—";
+  return new Date(d).toLocaleDateString("pt-BR");
+}
+
+const MOCK: Empresa = {
+  empresa_id: "1",
+  nome: "TechSolutions Ltda",
+  segmento: "Tecnologia",
+  porte: "Grande",
+  cidade: "São Paulo",
+  estado: "SP",
+  status: "Em contato",
+  temperatura: "Quente",
+  ticket_medio_estimado: 15000,
+  responsavel_principal: "André Ferreira",
+  origem_lead: "LinkedIn",
+  ultima_interacao: "2025-06-10",
+  proxima_acao: "Enviar proposta",
+  observacoes: "Empresa com alto potencial. Decisor é o CTO, demonstrou interesse na solução premium.",
+  contatos: [
+    { contato_id: "c1", nome: "Carlos Mendes",  cargo: "CTO",             email: "carlos@techsolutions.com", telefone: "(11) 9 8765-4321" },
+    { contato_id: "c2", nome: "Ana Beatriz",    cargo: "Gerente Comercial",email: "ana@techsolutions.com",   telefone: "(11) 9 5555-1234" },
+    { contato_id: "c3", nome: "Roberto Lima",   cargo: "CEO",             email: "roberto@techsolutions.com" },
+  ],
+};
+
+export default function EmpresaView() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [empresa, setEmpresa] = useState<Empresa | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchEmpresa = async () => {
+      setLoading(true);
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch(`https://backend-crm-production-157b.up.railway.app/empresas/${id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        setEmpresa(data);
+      } catch {
+        setEmpresa({ ...MOCK, empresa_id: id || "1" });
+      }
+      setLoading(false);
+    };
+    fetchEmpresa();
+  }, [id]);
+
+  const sc = empresa ? statusColor(empresa.status) : statusColor("");
+  const tc = empresa ? tempColor(empresa.temperatura) : tempColor("");
+
+  return (
+    <div style={{ display:"flex", height:"100vh", overflow:"hidden", position:"relative" }}>
+      <style>{css}</style>
+
+      {/* Background */}
+      <div style={{ position:"fixed", inset:0, zIndex:0, overflow:"hidden", pointerEvents:"none" }}>
+        <div style={{ position:"absolute", inset:0, background:"linear-gradient(145deg,#c8e8f5 0%,#d6eef5 30%,#cceee8 65%,#c5eae0 100%)" }} />
+        <div style={{ position:"absolute", inset:0, opacity:0.4, backgroundImage:"radial-gradient(circle,rgba(41,128,185,0.2) 1px,transparent 1px)", backgroundSize:"22px 22px" }} />
+        {[
+          { w:400,h:400, top:"-60px",  left:"8%",   anim:"float1 18s ease-in-out infinite",  op:0.11, c1:"#2980b9",c2:"#1abc9c" },
+          { w:260,h:260, top:"45%",    left:"-50px", anim:"float2 22s ease-in-out infinite",  op:0.09, c1:"#1abc9c",c2:"#2ecc71" },
+          { w:320,h:320, top:"65%",    left:"60%",   anim:"float3 26s ease-in-out infinite",  op:0.08, c1:"#2980b9",c2:"#8e44ad" },
+          { w:180,h:180, top:"15%",    left:"78%",   anim:"float4 20s ease-in-out infinite",  op:0.10, c1:"#27ae60",c2:"#1abc9c" },
+          { w:220,h:220, top:"80%",    left:"25%",   anim:"float5 24s ease-in-out infinite",  op:0.07, c1:"#e67e22",c2:"#f39c12" },
+        ].map((c, i) => (
+          <div key={i} style={{ position:"absolute", width:c.w, height:c.h, top:c.top, left:c.left, borderRadius:"50%", background:`radial-gradient(circle at 40% 40%,${c.c1},${c.c2})`, opacity:c.op, animation:c.anim, filter:"blur(2px)" }} />
+        ))}
+      </div>
+
+      {/* Sidebar */}
+      <div style={{ width:220, flexShrink:0, height:"100vh", overflowY:"auto", position:"relative", zIndex:10, background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)", boxShadow:"4px 0 24px rgba(0,0,0,0.18)", display:"flex", flexDirection:"column", padding:"0 12px 20px" }}>
+        <div style={{ padding:"22px 4px 24px", borderBottom:"1px solid rgba(255,255,255,0.08)", marginBottom:16 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <div style={{ width:36, height:36, borderRadius:10, background:"linear-gradient(135deg,#2980b9,#1abc9c)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 12px rgba(41,128,185,0.4)" }}>
+              <BarChart3 style={{ width:18, height:18, color:"#fff" }} />
+            </div>
+            <div>
+              <div style={{ fontSize:14, fontWeight:800, color:"#fff" }}>Prospecção</div>
+              <div style={{ fontSize:11, fontWeight:700, background:"linear-gradient(90deg,#2980b9,#1abc9c,#2ecc71,#2980b9)", backgroundSize:"200% 200%", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", animation:"gradientShift 4s ease infinite" }}>CRM</div>
+            </div>
+          </div>
+        </div>
+        <nav style={{ flex:1, display:"flex", flexDirection:"column", gap:2 }}>
+          {navItems.map(item => (
+            <div
+              key={item.label}
+              className="nav-item"
+              onClick={() => {
+                if (item.label === "Dashboards") navigate("/dashboard");
+                if (item.label === "Cadastrar Empresas") navigate("/empresas/nova");
+                if (item.label === "Todos os clientes") navigate("/clientes");
+              }}
+            >
+              <item.icon style={{ width:16, height:16, flexShrink:0 }} />
+              {item.label}
+            </div>
+          ))}
+        </nav>
+        <div style={{ marginTop:16, padding:"12px", borderRadius:12, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.08)", display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
+          <div style={{ width:34, height:34, borderRadius:"50%", background:"linear-gradient(135deg,#2980b9,#1abc9c)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#fff", flexShrink:0 }}>KS</div>
+          <div>
+            <div style={{ fontSize:12, fontWeight:600, color:"#fff" }}>Kauê Silva</div>
+            <div style={{ fontSize:10, color:"rgba(255,255,255,0.45)" }}>Administrador</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main */}
+      <div style={{ flex:1, height:"100vh", overflowY:"auto", position:"relative", zIndex:5 }}>
+
+        {/* Top bar */}
+        <div style={{ position:"sticky", top:0, zIndex:20, padding:"14px 28px", background:"rgba(210,238,248,0.75)", backdropFilter:"blur(20px)", borderBottom:"1px solid rgba(255,255,255,0.6)", display:"flex", alignItems:"center", gap:14 }}>
+          <button
+            onClick={() => navigate("/clientes")}
+            style={{ width:36, height:36, borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.75)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}
+          >
+            <ArrowLeft style={{ width:15, height:15, color:"#2980b9" }} />
+          </button>
+          <div style={{ flex:1 }}>
+            <h1 style={{ fontSize:18, fontWeight:800, color:"#0f2133", letterSpacing:"-0.02em" }}>
+              {loading ? "Carregando..." : empresa?.nome}
+            </h1>
+            <p style={{ fontSize:12, color:"rgba(20,45,70,0.5)", marginTop:1, display:"flex", alignItems:"center", gap:4 }}>
+              <span>Clientes</span>
+              <ChevronRight style={{ width:11, height:11 }} />
+              <span>{loading ? "..." : empresa?.nome}</span>
+            </p>
+          </div>
+          <button
+            onClick={() => navigate(`/clientes/${id}/editar`)}
+            style={{ height:38, padding:"0 16px", borderRadius:10, border:"none", cursor:"pointer", background:"linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)", backgroundSize:"200% 200%", animation:"gradientShift 4s ease infinite", color:"#fff", fontSize:13, fontWeight:700, display:"flex", alignItems:"center", gap:6, boxShadow:"0 4px 14px rgba(41,128,185,0.35)" }}
+          >
+            <Edit3 style={{ width:14, height:14 }} /> Editar
+          </button>
+        </div>
+
+        <div style={{ padding:"24px 28px 40px", display:"flex", flexDirection:"column", gap:18 }}>
+
+          {loading ? (
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:18 }}>
+              {[1,2,3,4].map(i => (
+                <div key={i} className="glass-card" style={{ padding:24 }}>
+                  <div className="skeleton" style={{ height:20, width:"40%", marginBottom:16 }} />
+                  {[1,2,3].map(j => (
+                    <div key={j} className="skeleton" style={{ height:16, width:`${50+j*15}%`, marginBottom:10 }} />
+                  ))}
+                </div>
+              ))}
+            </div>
+          ) : empresa ? (
+            <>
+              {/* Header card */}
+              <motion.div className="glass-card" style={{ padding:"24px 28px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:18 }}>
+                  <div style={{ width:64, height:64, borderRadius:16, background:avatarColor(empresa.nome), display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, fontWeight:800, color:"#fff", flexShrink:0 }}>
+                    {initials(empresa.nome)}
+                  </div>
+                  <div style={{ flex:1 }}>
+                    <h2 style={{ fontSize:22, fontWeight:800, color:"#0f2133", letterSpacing:"-0.02em" }}>{empresa.nome}</h2>
+                    <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:6, flexWrap:"wrap" }}>
+                      <span className="chip" style={{ background:sc.bg, color:sc.text, border:`1px solid ${sc.border}` }}>{empresa.status}</span>
+                      <span className="chip" style={{ background:tc.bg, color:tc.text }}>{tc.icon} {empresa.temperatura}</span>
+                      <span style={{ fontSize:12, color:"rgba(20,45,70,0.55)", display:"flex", alignItems:"center", gap:4 }}>
+                        <MapPin style={{ width:12, height:12 }} />
+                        {empresa.cidade}{empresa.estado ? `, ${empresa.estado}` : ""}
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ display:"flex", gap:16, flexShrink:0 }}>
+                    <div style={{ textAlign:"center" }}>
+                      <div style={{ fontSize:20, fontWeight:800, color:"#2980b9" }}>
+                        {empresa.ticket_medio_estimado ? `R$ ${(empresa.ticket_medio_estimado / 1000).toFixed(0)}k` : "—"}
+                      </div>
+                      <div style={{ fontSize:10, color:"rgba(20,45,70,0.45)", fontWeight:600 }}>Ticket médio</div>
+                    </div>
+                    <div style={{ textAlign:"center" }}>
+                      <div style={{ fontSize:20, fontWeight:800, color:"#1abc9c" }}>{empresa.contatos?.length ?? "—"}</div>
+                      <div style={{ fontSize:10, color:"rgba(20,45,70,0.45)", fontWeight:600 }}>Contatos</div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:18 }}>
+
+                {/* Informações */}
+                <motion.div className="glass-card" style={{ padding:"22px 24px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.07 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#0f2133", marginBottom:16, display:"flex", alignItems:"center", gap:7 }}>
+                    <Building2 style={{ width:15, height:15, color:"#2980b9" }} /> Informações da Empresa
+                  </div>
+                  {[
+                    { icon: Tag,         label:"Segmento",    value:empresa.segmento },
+                    { icon: Building2,   label:"Porte",       value:empresa.porte },
+                    { icon: MapPin,      label:"Cidade",      value:`${empresa.cidade}${empresa.estado ? ` / ${empresa.estado}` : ""}` },
+                    { icon: TrendingUp,  label:"Origem do lead", value:empresa.origem_lead },
+                    { icon: DollarSign,  label:"Ticket médio", value:empresa.ticket_medio_estimado ? `R$ ${empresa.ticket_medio_estimado.toLocaleString("pt-BR")}` : "Não informado" },
+                    { icon: Thermometer, label:"Temperatura", value:empresa.temperatura },
+                  ].map(({ icon: Icon, label, value }) => (
+                    <div key={label} className="info-row">
+                      <Icon style={{ width:14, height:14, color:"#2980b9", flexShrink:0 }} />
+                      <span style={{ fontSize:12, color:"rgba(20,45,70,0.5)", fontWeight:600, minWidth:110 }}>{label}</span>
+                      <span style={{ fontSize:12, color:"#0f2133", fontWeight:600 }}>{value || "—"}</span>
+                    </div>
+                  ))}
+                </motion.div>
+
+                {/* Relacionamento */}
+                <motion.div className="glass-card" style={{ padding:"22px 24px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.12 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#0f2133", marginBottom:16, display:"flex", alignItems:"center", gap:7 }}>
+                    <ClipboardList style={{ width:15, height:15, color:"#2980b9" }} /> Relacionamento
+                  </div>
+                  {[
+                    { icon: User,  label:"Responsável",        value:empresa.responsavel_principal },
+                    { icon: Clock, label:"Última interação",   value:formatDate(empresa.ultima_interacao) },
+                    { icon: ChevronRight, label:"Próxima ação", value:empresa.proxima_acao },
+                  ].map(({ icon: Icon, label, value }) => (
+                    <div key={label} className="info-row">
+                      <Icon style={{ width:14, height:14, color:"#2980b9", flexShrink:0 }} />
+                      <span style={{ fontSize:12, color:"rgba(20,45,70,0.5)", fontWeight:600, minWidth:130 }}>{label}</span>
+                      <span style={{ fontSize:12, color:"#0f2133", fontWeight:600 }}>{value || "—"}</span>
+                    </div>
+                  ))}
+                  {empresa.observacoes && (
+                    <div style={{ marginTop:14, padding:"12px 14px", borderRadius:10, background:"rgba(41,128,185,0.06)", border:"1px solid rgba(41,128,185,0.12)" }}>
+                      <div style={{ fontSize:11, fontWeight:700, color:"rgba(20,45,70,0.5)", marginBottom:5 }}>OBSERVAÇÕES</div>
+                      <p style={{ fontSize:12, color:"#0f2133", lineHeight:1.6 }}>{empresa.observacoes}</p>
+                    </div>
+                  )}
+                </motion.div>
+              </div>
+
+              {/* Contatos */}
+              {empresa.contatos && empresa.contatos.length > 0 && (
+                <motion.div className="glass-card" style={{ padding:"22px 24px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.18 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#0f2133", marginBottom:16, display:"flex", alignItems:"center", gap:7 }}>
+                    <Users style={{ width:15, height:15, color:"#2980b9" }} /> Contatos ({empresa.contatos.length})
+                  </div>
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(260px, 1fr))", gap:12 }}>
+                    {empresa.contatos.map(c => (
+                      <div key={c.contato_id} style={{ padding:"14px 16px", borderRadius:12, background:"rgba(255,255,255,0.55)", border:"1px solid rgba(200,225,240,0.6)", display:"flex", alignItems:"center", gap:12 }}>
+                        <div style={{ width:38, height:38, borderRadius:10, background:avatarColor(c.nome), display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700, color:"#fff", flexShrink:0 }}>
+                          {initials(c.nome)}
+                        </div>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontSize:13, fontWeight:700, color:"#0f2133" }}>{c.nome}</div>
+                          {c.cargo && <div style={{ fontSize:11, color:"rgba(20,45,70,0.5)", marginTop:1 }}>{c.cargo}</div>}
+                          <div style={{ display:"flex", flexDirection:"column", gap:2, marginTop:5 }}>
+                            {c.email && (
+                              <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+                                <Mail style={{ width:11, height:11, color:"#2980b9", flexShrink:0 }} />
+                                <span style={{ fontSize:11, color:"rgba(20,45,70,0.6)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{c.email}</span>
+                              </div>
+                            )}
+                            {c.telefone && (
+                              <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+                                <Phone style={{ width:11, height:11, color:"#2980b9", flexShrink:0 }} />
+                                <span style={{ fontSize:11, color:"rgba(20,45,70,0.6)" }}>{c.telefone}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </>
+          ) : (
+            <div style={{ textAlign:"center", padding:48 }}>
+              <Building2 style={{ width:40, height:40, color:"rgba(41,128,185,0.3)", margin:"0 auto 12px" }} />
+              <p style={{ fontSize:14, fontWeight:600, color:"rgba(20,45,70,0.5)" }}>Empresa não encontrada</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
