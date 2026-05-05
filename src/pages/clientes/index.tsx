@@ -174,7 +174,7 @@ export default function TodosClientes() {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("https://backend-crm-production-157b.up.railway.app", {
+      const res = await fetch("https://backend-crm-production-157b.up.railway.app/empresas", {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error();
