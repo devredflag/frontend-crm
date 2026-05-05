@@ -55,28 +55,41 @@ export default function Login() {
       "0 2px 6px rgba(41,128,185,0.05), inset 0 1px 0 rgba(255,255,255,0.9)";
   };
 
-  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setLoading(true);
+  const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault(); // evita recarregar a página
+  setLoading(true);
 
-    try {
-      const res = await fetch("https://backend-crm-production-157b.up.railway.app/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, senha }),
-      });
+  try {
+    const res = await fetch("https://backend-crm-production-157b.up.railway.app/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: email,   // variável do input
+        senha: senha    // variável do input
+      }),
+    });
 
-      if (!res.ok) throw new Error();
+    const data = await res.json();
+    console.log("RESPOSTA:", data);
 
-      const data = await res.json();
+    if (res.ok) {
+      // sucesso
       localStorage.setItem("token", data.access_token);
       navigate("/dashboard");
-    } catch {
-      alert("Email ou senha inválidos");
+    } else {
+      // erro vindo do backend
+      alert(data.detail || "Email ou senha inválidos");
     }
 
+  } catch (error) {
+    console.error("ERRO:", error);
+    alert("Erro ao conectar com o servidor");
+  } finally {
     setLoading(false);
-  };
+  }
+};
 
   return (
     <div
