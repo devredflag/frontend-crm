@@ -64,6 +64,13 @@ interface Contato {
   decisor: boolean;
 }
 
+interface Usuario {
+  nome: string;
+  email: string;
+  cargo: string;
+  empresa_nome: string;
+}
+
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboards",                active: true  },
   { icon: Search,          label: "Buscar Empresas",           active: false },
@@ -108,6 +115,7 @@ export default function Dashboard() {
   const [contatos, setContatos] = useState<Contato[]>([]);
   const [loadingContatos, setLoadingContatos] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+  const [usuario, setUsuario] = useState<Usuario | null>(null);
 
   useEffect(() => { fetchData(); }, []);
 
@@ -115,11 +123,19 @@ export default function Dashboard() {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("https://backend-crm-production-157b.up.railway.app/empresas", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error();
-      setEmpresas(await res.json());
+
+      const [empRes, meRes] = await Promise.all([
+        fetch("https://backend-crm-production-157b.up.railway.app/empresas", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch("https://backend-crm-production-157b.up.railway.app/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+
+      if (empRes.ok) setEmpresas(await empRes.json());
+      if (meRes.ok) setUsuario(await meRes.json());
+
     } catch {}
     setLoading(false);
   };
@@ -184,6 +200,11 @@ export default function Dashboard() {
   const activeCard = metricCards.find(m => m.key === activeFilter)!;
   const proximasAcoes = empresas.filter(e => e.proxima_acao).slice(0,4);
 
+  const nomeUsuario = usuario?.nome || "...";
+  const cargoUsuario = usuario?.cargo || "Administrador";
+  const iniciaisUsuario = usuario ? initials(usuario.nome) : "?";
+  const corUsuario = usuario ? avatarColor(usuario.nome) : "#2980b9";
+
   return (
     <div style={{ display:"flex", height:"100vh", overflow:"hidden", position:"relative" }}>
       <style>{css}</style>
@@ -227,13 +248,22 @@ export default function Dashboard() {
             </div>
           ))}
         </nav>
-        <div onClick={() => navigate("/perfil")} style={{ marginTop:16, padding:"12px", borderRadius:12, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.08)", display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
-          <div style={{ width:34, height:34, borderRadius:"50%", background:"linear-gradient(135deg,#2980b9,#1abc9c)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#fff", flexShrink:0 }}>KS</div>
-          <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontSize:12, fontWeight:600, color:"#fff" }}>Kauê Silva</div>
-            <div style={{ fontSize:10, color:"rgba(255,255,255,0.45)" }}>Administrador</div>
+
+        {/* Card do usuário logado */}
+        <div
+          onClick={() => navigate("/perfil")}
+          style={{ marginTop:16, padding:"12px", borderRadius:12, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.08)", display:"flex", alignItems:"center", gap:10, cursor:"pointer", transition:"background 0.18s" }}
+          onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.12)")}
+          onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
+        >
+          <div style={{ width:34, height:34, borderRadius:"50%", background:`linear-gradient(135deg, ${corUsuario}, ${corUsuario}cc)`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#fff", flexShrink:0 }}>
+            {iniciaisUsuario}
           </div>
-          <ChevronDown style={{ width:13, height:13, color:"rgba(255,255,255,0.4)" }} />
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ fontSize:12, fontWeight:600, color:"#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{nomeUsuario}</div>
+            <div style={{ fontSize:10, color:"rgba(255,255,255,0.45)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{cargoUsuario}</div>
+          </div>
+          <ChevronDown style={{ width:13, height:13, color:"rgba(255,255,255,0.4)", flexShrink:0 }} />
         </div>
       </div>
 
@@ -244,7 +274,9 @@ export default function Dashboard() {
         <div style={{ position:"sticky", top:0, zIndex:20, padding:"14px 28px", background:"rgba(210,238,248,0.75)", backdropFilter:"blur(20px)", borderBottom:"1px solid rgba(255,255,255,0.6)", display:"flex", alignItems:"center", gap:16 }}>
           <div style={{ flex:1 }}>
             <h1 style={{ fontSize:18, fontWeight:800, color:"#0f2133", letterSpacing:"-0.02em" }}>Dashboard</h1>
-            <p style={{ fontSize:12, color:"rgba(20,45,70,0.5)", marginTop:1 }}>Bem-vindo de volta, Kauê! 👋</p>
+            <p style={{ fontSize:12, color:"rgba(20,45,70,0.5)", marginTop:1 }}>
+              Bem-vindo de volta, {usuario?.nome?.split(" ")[0] || "..."}! 👋
+            </p>
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:8, background:"rgba(255,255,255,0.75)", border:"1px solid rgba(200,225,240,0.9)", borderRadius:10, padding:"0 14px", height:38, width:260 }}>
             <Search style={{ width:14, height:14, color:"rgba(20,45,70,0.35)", flexShrink:0 }} />
@@ -394,8 +426,6 @@ export default function Dashboard() {
                           {isSelected && (
                             <motion.div initial={{ opacity:0, height:0 }} animate={{ opacity:1, height:"auto" }} exit={{ opacity:0, height:0 }} transition={{ duration:0.22 }} style={{ overflow:"hidden" }}>
                               <div style={{ margin:"6px 0 2px", padding:"14px", borderRadius:12, background:"rgba(255,255,255,0.9)", border:"1px solid rgba(200,225,240,0.8)", boxShadow:"0 4px 16px rgba(41,128,185,0.08)" }}>
-
-                                {/* Header empresa */}
                                 <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
                                   <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                                     <div style={{ width:34, height:34, borderRadius:10, background:avatarColor(emp.nome), display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#fff" }}>{initials(emp.nome)}</div>
@@ -412,7 +442,6 @@ export default function Dashboard() {
                                   </button>
                                 </div>
 
-                                {/* Infos empresa */}
                                 <div style={{ display:"flex", flexDirection:"column", gap:5, marginBottom:10 }}>
                                   {emp.responsavel_principal && (
                                     <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:11 }}>
@@ -444,40 +473,31 @@ export default function Dashboard() {
 
                                 {/* Contatos */}
                                 <div style={{ borderTop:"1px solid rgba(200,225,240,0.5)", paddingTop:10 }}>
-                                  <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"rgba(20,45,70,0.45)", marginBottom:8 }}>
-                                    Contatos da empresa
-                                  </div>
-
+                                  <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"rgba(20,45,70,0.45)", marginBottom:8 }}>Contatos</div>
                                   {loadingContatos ? (
                                     <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
                                       {[1,2].map(i => <div key={i} className="skeleton" style={{ height:36 }} />)}
                                     </div>
                                   ) : contatos.length === 0 ? (
-                                    <div style={{ fontSize:11, color:"rgba(20,45,70,0.4)", padding:"8px 0", textAlign:"center" }}>
-                                      Nenhum contato cadastrado
-                                    </div>
+                                    <div style={{ fontSize:11, color:"rgba(20,45,70,0.4)", padding:"6px 0", textAlign:"center" }}>Nenhum contato cadastrado</div>
                                   ) : (
                                     <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
                                       {contatos.map(c => (
                                         <div key={c.contato_id} style={{ padding:"8px 10px", borderRadius:8, background:"rgba(41,128,185,0.04)", border:"1px solid rgba(41,128,185,0.1)" }}>
-                                          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:4 }}>
-                                            <div>
-                                              <span style={{ fontSize:12, fontWeight:700, color:"#0f2133" }}>{c.nome}</span>
-                                              {c.funcao && <span style={{ fontSize:10, color:"rgba(20,45,70,0.45)", marginLeft:6 }}>{c.funcao}</span>}
-                                              {c.decisor && <span style={{ fontSize:9, fontWeight:700, color:"#8e44ad", background:"rgba(142,68,173,0.1)", padding:"1px 5px", borderRadius:4, marginLeft:5 }}>Decisor</span>}
-                                            </div>
+                                          <div style={{ marginBottom:4 }}>
+                                            <span style={{ fontSize:12, fontWeight:700, color:"#0f2133" }}>{c.nome}</span>
+                                            {c.funcao && <span style={{ fontSize:10, color:"rgba(20,45,70,0.45)", marginLeft:6 }}>{c.funcao}</span>}
+                                            {c.decisor && <span style={{ fontSize:9, fontWeight:700, color:"#8e44ad", background:"rgba(142,68,173,0.1)", padding:"1px 5px", borderRadius:4, marginLeft:5 }}>Decisor</span>}
                                           </div>
                                           <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
                                             {(c.celular || c.whatsapp) && (
                                               <a href={`tel:${c.celular || c.whatsapp}`} onClick={e => e.stopPropagation()} style={{ display:"flex", alignItems:"center", gap:4, fontSize:11, color:"#27ae60", fontWeight:600, textDecoration:"none" }}>
-                                                <Phone style={{ width:11, height:11 }} />
-                                                {c.celular || c.whatsapp}
+                                                <Phone style={{ width:11, height:11 }} />{c.celular || c.whatsapp}
                                               </a>
                                             )}
                                             {c.email && (
                                               <a href={`mailto:${c.email}`} onClick={e => e.stopPropagation()} style={{ display:"flex", alignItems:"center", gap:4, fontSize:11, color:"#2980b9", fontWeight:600, textDecoration:"none" }}>
-                                                <Mail style={{ width:11, height:11 }} />
-                                                {c.email}
+                                                <Mail style={{ width:11, height:11 }} />{c.email}
                                               </a>
                                             )}
                                           </div>
@@ -507,8 +527,8 @@ export default function Dashboard() {
               <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                 {[
                   { label:"Quente 🔥", value:empresas.filter(e=>e.temperatura==="Quente").length, color:"#c0392b", bg:"rgba(192,57,43,0.07)", key:"quente" as FilterKey },
-                  { label:"Morno 🌡️",  value:empresas.filter(e=>e.temperatura==="Morno").length,  color:"#d68910", bg:"rgba(214,137,16,0.07)", key:"total" as FilterKey },
-                  { label:"Frio ❄️",   value:empresas.filter(e=>e.temperatura==="Frio").length,   color:"#2980b9", bg:"rgba(41,128,185,0.07)", key:"total" as FilterKey },
+                  { label:"Morno 🌡️",  value:empresas.filter(e=>e.temperatura==="Morno").length,  color:"#d68910", bg:"rgba(214,137,16,0.07)", key:"total"  as FilterKey },
+                  { label:"Frio ❄️",   value:empresas.filter(e=>e.temperatura==="Frio").length,   color:"#2980b9", bg:"rgba(41,128,185,0.07)",  key:"total"  as FilterKey },
                 ].map(t => (
                   <div key={t.label} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", borderRadius:10, background:t.bg, border:`1px solid ${t.color}20`, cursor:"pointer" }} onClick={() => setActiveFilter(t.key)}>
                     <div style={{ flex:1, fontSize:12, fontWeight:600, color:"#0f2133" }}>{t.label}</div>
