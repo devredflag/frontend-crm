@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
@@ -64,12 +64,12 @@ const css = `
   }
 
   .chip-btn {
-    display:inline-flex; align-items:center; gap:4px;
-    padding:3px 9px; border-radius:20px;
+    display:inline-flex; align-items:center; gap:5px;
+    padding:5px 12px; border-radius:20px;
     font-size:11px; font-weight:700; white-space:nowrap;
     border:none; cursor:pointer; transition:opacity 0.15s;
   }
-  .chip-btn:hover { opacity:0.8; }
+  .chip-btn:hover { opacity:0.85; }
 
   .action-btn {
     width:30px; height:30px; border-radius:8px; border:none; cursor:pointer;
@@ -83,20 +83,6 @@ const css = `
     animation: shimmer 1.4s infinite;
     border-radius: 6px;
   }
-
-  .inline-dropdown {
-    position:absolute; top:calc(100% + 4px); left:0; z-index:100;
-    background:white; border-radius:10px;
-    box-shadow:0 8px 24px rgba(0,0,0,0.12);
-    border:1px solid rgba(200,225,240,0.9);
-    overflow:hidden; min-width:130px;
-  }
-
-  .inline-dropdown-item {
-    padding:8px 14px; font-size:12px; font-weight:600;
-    cursor:pointer; transition:background 0.12s;
-  }
-  .inline-dropdown-item:hover { background:rgba(41,128,185,0.06); }
 
   ::-webkit-scrollbar { width:4px; height:4px; }
   ::-webkit-scrollbar-track { background:transparent; }
@@ -166,6 +152,72 @@ const TEMP_OPTS   = ["Todas","Frio","Morno","Quente"];
 const STATUS_EDIT = ["Lead","Em contato","Proposta","Fechado"];
 const TEMP_EDIT   = ["Frio","Morno","Quente"];
 
+// Dropdown portal — renderizado fora da tabela para não ser cortado
+function InlineDropdown({ options, onSelect, getColor, anchorRef, onClose }: {
+  options: string[];
+  onSelect: (v: string) => void;
+  getColor: (v: string) => { text: string; bg: string };
+  anchorRef: React.RefObject<HTMLButtonElement>;
+  onClose: () => void;
+}) {
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    if (anchorRef.current) {
+      const rect = anchorRef.current.getBoundingClientRect();
+      setPos({ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX });
+    }
+    const handler = (e: MouseEvent) => {
+      if (anchorRef.current && !anchorRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    setTimeout(() => document.addEventListener("mousedown", handler), 0);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        top: pos.top,
+        left: pos.left,
+        zIndex: 9999,
+        background: "white",
+        borderRadius: 10,
+        boxShadow: "0 8px 24px rgba(0,0,0,0.14)",
+        border: "1px solid rgba(200,225,240,0.9)",
+        overflow: "hidden",
+        minWidth: 140,
+      }}
+      onMouseDown={e => e.stopPropagation()}
+    >
+      {options.map(opt => {
+        const c = getColor(opt);
+        return (
+          <div
+            key={opt}
+            onClick={() => { onSelect(opt); onClose(); }}
+            style={{
+              padding: "9px 16px",
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: "pointer",
+              color: c.text,
+              background: "white",
+              transition: "background 0.12s",
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = c.bg)}
+            onMouseLeave={e => (e.currentTarget.style.background = "white")}
+          >
+            {opt}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function TodosClientes() {
   const navigate = useNavigate();
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
@@ -177,22 +229,9 @@ export default function TodosClientes() {
   const [sortDir, setSortDir] = useState<"asc"|"desc">("asc");
   const [clickTimer, setClickTimer] = useState<Record<string, number>>({});
   const [deleteConfirm, setDeleteConfirm] = useState<string|null>(null);
-  const [openDropdown, setOpenDropdown] = useState<{id: string, type: "status"|"temp"} | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [openDropdown, setOpenDropdown] = useState<{id: string, type: "status"|"temp", ref: React.RefObject<HTMLButtonElement>} | null>(null);
 
-  useEffect(() => {
-    fetchEmpresas();
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setOpenDropdown(null);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  useEffect(() => { fetchEmpresas(); }, []);
 
   const fetchEmpresas = async () => {
     setLoading(true);
@@ -212,7 +251,6 @@ export default function TodosClientes() {
 
   const updateField = async (id: string, field: "status" | "temperatura", value: string) => {
     setEmpresas(prev => prev.map(e => e.empresa_id === id ? { ...e, [field]: value } : e));
-    setOpenDropdown(null);
     try {
       const token = localStorage.getItem("token");
       await fetch(`https://backend-crm-production-157b.up.railway.app/empresas/${id}`, {
@@ -220,9 +258,7 @@ export default function TodosClientes() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ [field]: value }),
       });
-    } catch {
-      // silently fail - UI already updated
-    }
+    } catch {}
   };
 
   const handleRowClick = (id: string) => {
@@ -232,25 +268,15 @@ export default function TodosClientes() {
     setClickTimer({ ...clickTimer, [id]: now });
   };
 
-  const handleEdit = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    navigate(`/clientes/${id}/editar`);
-  };
-
-  const handleView = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    navigate(`/clientes/${id}`);
-  };
+  const handleEdit = (e: React.MouseEvent, id: string) => { e.stopPropagation(); navigate(`/clientes/${id}/editar`); };
+  const handleView = (e: React.MouseEvent, id: string) => { e.stopPropagation(); navigate(`/clientes/${id}`); };
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     if (deleteConfirm !== id) { setDeleteConfirm(id); return; }
     try {
       const token = localStorage.getItem("token");
-      await fetch(`https://backend-crm-production-157b.up.railway.app/empresas/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await fetch(`https://backend-crm-production-157b.up.railway.app/empresas/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
       setEmpresas(empresas.filter(e => e.empresa_id !== id));
     } catch {
       setEmpresas(empresas.filter(e => e.empresa_id !== id));
@@ -278,10 +304,7 @@ export default function TodosClientes() {
     });
 
   const SortTh = ({ label, field }: { label: string; field: keyof Empresa }) => (
-    <button
-      onClick={() => toggleSort(field)}
-      style={{ display:"flex", alignItems:"center", gap:4, background:"none", border:"none", cursor:"pointer", fontSize:11, fontWeight:700, letterSpacing:"0.07em", textTransform:"uppercase", color:"rgba(20,45,70,0.5)" }}
-    >
+    <button onClick={() => toggleSort(field)} style={{ display:"flex", alignItems:"center", gap:4, background:"none", border:"none", cursor:"pointer", fontSize:11, fontWeight:700, letterSpacing:"0.07em", textTransform:"uppercase", color:"rgba(20,45,70,0.5)" }}>
       {label}
       <ArrowUpDown style={{ width:10, height:10, opacity: sortField===field ? 1 : 0.4, color: sortField===field ? "#2980b9" : "inherit" }} />
     </button>
@@ -298,6 +321,17 @@ export default function TodosClientes() {
   return (
     <div style={{ display:"flex", height:"100vh", overflow:"hidden", position:"relative" }}>
       <style>{css}</style>
+
+      {/* Dropdown portal */}
+      {openDropdown && (
+        <InlineDropdown
+          options={openDropdown.type === "status" ? STATUS_EDIT : TEMP_EDIT}
+          onSelect={val => updateField(openDropdown.id, openDropdown.type === "status" ? "status" : "temperatura", val)}
+          getColor={openDropdown.type === "status" ? (v) => statusColor(v) : (v) => tempColor(v)}
+          anchorRef={openDropdown.ref}
+          onClose={() => setOpenDropdown(null)}
+        />
+      )}
 
       <div style={{ position:"fixed", inset:0, zIndex:0, overflow:"hidden", pointerEvents:"none" }}>
         <div style={{ position:"absolute", inset:0, background:"linear-gradient(145deg,#c8e8f5 0%,#d6eef5 30%,#cceee8 65%,#c5eae0 100%)" }} />
@@ -349,7 +383,6 @@ export default function TodosClientes() {
 
       {/* Main */}
       <div style={{ flex:1, height:"100vh", overflowY:"auto", position:"relative", zIndex:5 }}>
-
         <div style={{ position:"sticky", top:0, zIndex:20, padding:"14px 28px", background:"rgba(210,238,248,0.75)", backdropFilter:"blur(20px)", borderBottom:"1px solid rgba(255,255,255,0.6)", display:"flex", alignItems:"center", gap:14 }}>
           <div style={{ flex:1 }}>
             <h1 style={{ fontSize:18, fontWeight:800, color:"#0f2133", letterSpacing:"-0.02em" }}>Todos os Clientes</h1>
@@ -366,7 +399,6 @@ export default function TodosClientes() {
         </div>
 
         <div style={{ padding:"22px 28px 40px", display:"flex", flexDirection:"column", gap:18 }}>
-
           <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
             {[
               { label:"Total",      value:counts.total,    color:"#2980b9" },
@@ -404,7 +436,7 @@ export default function TodosClientes() {
             </div>
           </div>
 
-          <motion.div className="glass-card" style={{ overflow:"hidden" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.38 }}>
+          <motion.div className="glass-card" style={{ overflow:"visible" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.38 }}>
             <div className="th">
               <SortTh label="Empresa" field="nome" />
               <SortTh label="Segmento" field="segmento" />
@@ -436,8 +468,8 @@ export default function TodosClientes() {
                   const tc = tempColor(emp.temperatura);
                   const pc = porteColor(emp.porte);
                   const isDeleting = deleteConfirm === emp.empresa_id;
-                  const isStatusOpen = openDropdown?.id === emp.empresa_id && openDropdown?.type === "status";
-                  const isTempOpen = openDropdown?.id === emp.empresa_id && openDropdown?.type === "temp";
+                  const statusBtnRef = { current: null } as React.RefObject<HTMLButtonElement>;
+                  const tempBtnRef = { current: null } as React.RefObject<HTMLButtonElement>;
 
                   return (
                     <motion.div
@@ -458,6 +490,9 @@ export default function TodosClientes() {
                           <div style={{ fontSize:13, fontWeight:700, color:"#0f2133" }}>{emp.nome}</div>
                           <div style={{ display:"flex", alignItems:"center", gap:5, marginTop:2 }}>
                             <span style={{ fontSize:10, fontWeight:600, color:pc, background:`${pc}15`, padding:"1px 6px", borderRadius:4 }}>{emp.porte}</span>
+                            {emp.contatos_count !== undefined && (
+                              <span style={{ fontSize:10, color:"rgba(20,45,70,0.4)" }}>{emp.contatos_count} contato{emp.contatos_count!==1?"s":""}</span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -465,62 +500,48 @@ export default function TodosClientes() {
                       {/* Segmento */}
                       <span style={{ fontSize:12, color:"rgba(20,45,70,0.6)", fontWeight:500 }}>{emp.segmento || "—"}</span>
 
-                      {/* Status — inline dropdown */}
-                      <div style={{ position:"relative" }} onClick={e => e.stopPropagation()} ref={isStatusOpen ? dropdownRef : null}>
+                      {/* Status */}
+                      <div onClick={e => e.stopPropagation()}>
                         <button
+                          ref={statusBtnRef}
                           className="chip-btn"
                           style={{ background:sc.bg, color:sc.text, border:`1px solid ${sc.border}` }}
-                          onClick={e => { e.stopPropagation(); setOpenDropdown(isStatusOpen ? null : { id: emp.empresa_id, type: "status" }); }}
+                          onClick={e => {
+                            e.stopPropagation();
+                            const btn = e.currentTarget;
+                            const ref = { current: btn } as React.RefObject<HTMLButtonElement>;
+                            setOpenDropdown(prev =>
+                              prev?.id === emp.empresa_id && prev?.type === "status"
+                                ? null
+                                : { id: emp.empresa_id, type: "status", ref }
+                            );
+                          }}
                         >
                           {emp.status || "—"}
                           <ChevronDown style={{ width:10, height:10 }} />
                         </button>
-                        {isStatusOpen && (
-                          <div className="inline-dropdown">
-                            {STATUS_EDIT.map(opt => {
-                              const c = statusColor(opt);
-                              return (
-                                <div
-                                  key={opt}
-                                  className="inline-dropdown-item"
-                                  style={{ color: c.text }}
-                                  onClick={() => updateField(emp.empresa_id, "status", opt)}
-                                >
-                                  {opt}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
                       </div>
 
-                      {/* Temperatura — inline dropdown */}
-                      <div style={{ position:"relative" }} onClick={e => e.stopPropagation()} ref={isTempOpen ? dropdownRef : null}>
+                      {/* Temperatura */}
+                      <div onClick={e => e.stopPropagation()}>
                         <button
+                          ref={tempBtnRef}
                           className="chip-btn"
                           style={{ background:tc.bg, color:tc.text }}
-                          onClick={e => { e.stopPropagation(); setOpenDropdown(isTempOpen ? null : { id: emp.empresa_id, type: "temp" }); }}
+                          onClick={e => {
+                            e.stopPropagation();
+                            const btn = e.currentTarget;
+                            const ref = { current: btn } as React.RefObject<HTMLButtonElement>;
+                            setOpenDropdown(prev =>
+                              prev?.id === emp.empresa_id && prev?.type === "temp"
+                                ? null
+                                : { id: emp.empresa_id, type: "temp", ref }
+                            );
+                          }}
                         >
                           {tc.icon} {emp.temperatura || "—"}
                           <ChevronDown style={{ width:10, height:10 }} />
                         </button>
-                        {isTempOpen && (
-                          <div className="inline-dropdown">
-                            {TEMP_EDIT.map(opt => {
-                              const c = tempColor(opt);
-                              return (
-                                <div
-                                  key={opt}
-                                  className="inline-dropdown-item"
-                                  style={{ color: c.text }}
-                                  onClick={() => updateField(emp.empresa_id, "temperatura", opt)}
-                                >
-                                  {c.icon} {opt}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
                       </div>
 
                       {/* Cidade */}
