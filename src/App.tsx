@@ -7,8 +7,8 @@ import Login from "./pages/login";
 import Dashboard from "./pages/dashboard";
 import NovaEmpresa from "./pages/empresas/nova";
 import Clientes from "./pages/clientes";
-import EmpresaView from "./pages/clientes/[id]";
-import EmpresaEdit from "./pages/clientes/[id]/editar";
+import EmpresaView from "./pages/clientes/detalhe";
+import EmpresaEdit from "./pages/clientes/detalhe/editar";
 
 function App() {
   return (
