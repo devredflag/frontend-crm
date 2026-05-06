@@ -4,8 +4,8 @@ import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Search, Building2, Users, ClipboardList,
   Calendar, BarChart3, ChevronDown, Plus, Filter,
-  Thermometer, Eye, Edit3, Trash2,
-  CheckSquare, ArrowUpDown, RefreshCw,
+  Eye, Edit3, Trash2, CheckSquare, ArrowUpDown, RefreshCw,
+  Star,
 } from "lucide-react";
 
 const css = `
@@ -22,56 +22,19 @@ const css = `
   .nav-item:hover { background:rgba(255,255,255,0.08); color:#fff; }
   .nav-item.active { background:rgba(255,255,255,0.14); color:#fff; font-weight:600; }
   .glass-card { background:rgba(255,255,255,0.72); backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.9); border-radius:16px; }
-  .client-row { display:grid; grid-template-columns: 2.4fr 1.1fr 1fr 1fr 1fr 0.8fr 120px; align-items:center; padding:14px 20px; border-bottom:1px solid rgba(200,225,240,0.4); cursor:pointer; transition:background 0.15s; user-select:none; }
+  .client-row { display:grid; grid-template-columns:2.4fr 1fr 1fr 1fr 1fr 120px; align-items:center; padding:14px 20px; border-bottom:1px solid rgba(200,225,240,0.4); cursor:pointer; transition:background 0.15s; user-select:none; }
   .client-row:hover { background:rgba(41,128,185,0.04); }
   .client-row:last-child { border-bottom:none; }
-  .th { display:grid; grid-template-columns: 2.4fr 1.1fr 1fr 1fr 1fr 0.8fr 120px; align-items:center; padding:10px 20px; border-bottom:1px solid rgba(200,225,240,0.5); }
+  .th { display:grid; grid-template-columns:2.4fr 1fr 1fr 1fr 1fr 120px; align-items:center; padding:10px 20px; border-bottom:1px solid rgba(200,225,240,0.5); }
   .chip { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:700; white-space:nowrap; }
-  .chip-btn { display:inline-flex; align-items:center; gap:5px; padding:5px 12px; border-radius:20px; font-size:11px; font-weight:700; white-space:nowrap; border:none; cursor:pointer; transition:opacity 0.15s; }
-  .chip-btn:hover { opacity:0.85; }
   .action-btn { width:30px; height:30px; border-radius:8px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.15s; }
-  .skeleton { background: linear-gradient(90deg, rgba(200,225,240,0.4) 25%, rgba(220,240,252,0.7) 50%, rgba(200,225,240,0.4) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 6px; }
+  .skeleton { background:linear-gradient(90deg,rgba(200,225,240,0.4) 25%,rgba(220,240,252,0.7) 50%,rgba(200,225,240,0.4) 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:6px; }
   ::-webkit-scrollbar { width:4px; height:4px; }
   ::-webkit-scrollbar-track { background:transparent; }
   ::-webkit-scrollbar-thumb { background:rgba(41,128,185,0.25); border-radius:4px; }
 `;
 
-const navItems = [
-  { icon: LayoutDashboard, label: "Dashboards",                active: false },
-  { icon: Search,          label: "Buscar Empresas",           active: false },
-  { icon: Building2,       label: "Cadastrar Empresas",        active: false },
-  { icon: Users,           label: "Todos os clientes",         active: true  },
-  { icon: ClipboardList,   label: "Gerenciamento de clientes", active: false },
-  { icon: Calendar,        label: "Calendário",                active: false },
-];
-
-function statusColor(s: string) {
-  if (s === "Fechado")    return { bg:"rgba(39,174,96,0.12)",   text:"#1e8449",  border:"rgba(39,174,96,0.25)"   };
-  if (s === "Proposta")   return { bg:"rgba(142,68,173,0.12)",  text:"#7d3c98",  border:"rgba(142,68,173,0.25)"  };
-  if (s === "Em contato") return { bg:"rgba(41,128,185,0.12)",  text:"#1a5276",  border:"rgba(41,128,185,0.25)"  };
-  return                         { bg:"rgba(149,165,166,0.15)", text:"#566573",  border:"rgba(149,165,166,0.3)"  };
-}
-
-function tempColor(t: string) {
-  if (t === "Quente") return { text:"#c0392b", bg:"rgba(192,57,43,0.1)",  icon:"🔥" };
-  if (t === "Morno")  return { text:"#d68910", bg:"rgba(214,137,16,0.1)", icon:"🌡️" };
-  return                     { text:"#2980b9", bg:"rgba(41,128,185,0.1)", icon:"❄️" };
-}
-
-function porteColor(p: string) {
-  if (p === "Grande") return "#8e44ad";
-  if (p === "Médio")  return "#2980b9";
-  return "#27ae60";
-}
-
-function initials(name: string) {
-  return name.split(" ").slice(0,2).map(w => w[0]).join("").toUpperCase();
-}
-
-function avatarColor(name: string) {
-  const colors = ["#2980b9","#1abc9c","#8e44ad","#e67e22","#27ae60","#e74c3c"];
-  return colors[name.charCodeAt(0) % colors.length];
-}
+const API = "https://backend-crm-production-157b.up.railway.app";
 
 interface Empresa {
   empresa_id: string;
@@ -86,173 +49,168 @@ interface Empresa {
   origem_lead: string;
   ultima_interacao: string | null;
   proxima_acao: string;
-  contatos_count?: number;
 }
 
-interface DropdownState {
-  id: string;
-  type: "status" | "temp";
-  top: number;
-  left: number;
+interface Usuario {
+  nome: string;
+  cargo: string;
 }
 
-const MOCK: Empresa[] = [
-  { empresa_id:"1", nome:"TechSolutions Ltda", segmento:"Tecnologia", porte:"Grande", cidade:"São Paulo", status:"Em contato", temperatura:"Quente", ticket_medio_estimado:15000, responsavel_principal:"André Ferreira", origem_lead:"LinkedIn", ultima_interacao:"2025-06-10", proxima_acao:"Enviar proposta", contatos_count:3 },
+const navItems = [
+  { icon: LayoutDashboard, label: "Dashboards",                active: false },
+  { icon: Search,          label: "Buscar Empresas",           active: false },
+  { icon: Building2,       label: "Cadastrar Empresas",        active: false },
+  { icon: Users,           label: "Todos os clientes",         active: true  },
+  { icon: ClipboardList,   label: "Gerenciamento de clientes", active: false },
+  { icon: Calendar,        label: "Calendário",                active: false },
 ];
 
-const STATUS_OPTS = ["Todos","Lead","Em contato","Proposta","Fechado"];
-const TEMP_OPTS   = ["Todas","Frio","Morno","Quente"];
-const STATUS_EDIT = ["Lead","Em contato","Proposta","Fechado"];
-const TEMP_EDIT   = ["Frio","Morno","Quente"];
+const PORTE_OPTS = ["Todos","Pequeno","Médio","Grande"];
+
+function calcScore(emp: Empresa): number {
+  let score = 0;
+  // Temperatura (30pts)
+  if (emp.temperatura === "Quente") score += 30;
+  else if (emp.temperatura === "Morno") score += 18;
+  else score += 5;
+  // Status (25pts)
+  if (emp.status === "Fechado")    score += 25;
+  else if (emp.status === "Proposta")   score += 20;
+  else if (emp.status === "Em contato") score += 14;
+  else score += 5;
+  // Porte (20pts)
+  if (emp.porte === "Grande") score += 20;
+  else if (emp.porte === "Médio") score += 13;
+  else score += 6;
+  // Ticket (15pts)
+  const t = emp.ticket_medio_estimado || 0;
+  if (t >= 20000) score += 15;
+  else if (t >= 5000) score += 10;
+  else if (t > 0) score += 5;
+  // Interação recente (10pts)
+  if (emp.ultima_interacao) {
+    const days = (Date.now() - new Date(emp.ultima_interacao).getTime()) / 86400000;
+    if (days <= 7) score += 10;
+    else if (days <= 30) score += 6;
+    else score += 2;
+  }
+  return Math.min(score, 100);
+}
+
+function scoreColor(s: number) {
+  if (s >= 70) return { color:"#27ae60", bg:"rgba(39,174,96,0.12)", label:"Alto" };
+  if (s >= 40) return { color:"#e67e22", bg:"rgba(230,126,34,0.12)", label:"Médio" };
+  return { color:"#e74c3c", bg:"rgba(231,76,60,0.12)", label:"Baixo" };
+}
+
+function porteColor(p: string) {
+  if (p === "Grande") return "#8e44ad";
+  if (p === "Médio")  return "#2980b9";
+  return "#27ae60";
+}
+
+function initials(name: string) {
+  return name?.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase()||"?";
+}
+function avatarColor(name: string) {
+  const c=["#2980b9","#1abc9c","#8e44ad","#e67e22","#27ae60","#e74c3c"];
+  return c[(name?.charCodeAt(0)||0)%c.length];
+}
+
+function ScoreBar({ score }: { score: number }) {
+  const sc = scoreColor(score);
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+      <div style={{ flex:1, height:6, borderRadius:6, background:"rgba(200,225,240,0.5)", maxWidth:60 }}>
+        <div style={{ height:"100%", width:`${score}%`, borderRadius:6, background:sc.color, transition:"width 0.4s ease" }} />
+      </div>
+      <span style={{ fontSize:12, fontWeight:800, color:sc.color, minWidth:28 }}>{score}</span>
+    </div>
+  );
+}
 
 export default function TodosClientes() {
   const navigate = useNavigate();
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [usuario, setUsuario] = useState<Usuario|null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState("Todos");
-  const [filterTemp, setFilterTemp] = useState("Todas");
-  const [sortField, setSortField] = useState<keyof Empresa>("nome");
-  const [sortDir, setSortDir] = useState<"asc"|"desc">("asc");
-  const [clickTimer, setClickTimer] = useState<Record<string, number>>({});
+  const [filterPorte, setFilterPorte] = useState("Todos");
+  const [sortField, setSortField] = useState<"nome"|"score"|"ticket_medio_estimado"|"porte">("score");
+  const [sortDir, setSortDir] = useState<"asc"|"desc">("desc");
   const [deleteConfirm, setDeleteConfirm] = useState<string|null>(null);
-  const [dropdown, setDropdown] = useState<DropdownState | null>(null);
 
-  useEffect(() => { fetchEmpresas(); }, []);
+  const token = localStorage.getItem("token")||"";
+  const headers = { Authorization:`Bearer ${token}` };
 
-  useEffect(() => {
-    if (!dropdown) return;
-    const close = () => setDropdown(null);
-    document.addEventListener("click", close);
-    return () => document.removeEventListener("click", close);
-  }, [dropdown]);
+  useEffect(() => { fetchAll(); }, []);
 
-  const fetchEmpresas = async () => {
+  const fetchAll = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch("https://backend-crm-production-157b.up.railway.app/empresas", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      setEmpresas(data);
-    } catch {
-      setEmpresas(MOCK);
-    }
+      const [empRes, meRes] = await Promise.all([
+        fetch(`${API}/empresas`, { headers }),
+        fetch(`${API}/me`, { headers }),
+      ]);
+      if (empRes.ok) setEmpresas(await empRes.json());
+      if (meRes.ok)  setUsuario(await meRes.json());
+    } catch {}
     setLoading(false);
   };
-
-  const updateField = async (id: string, field: "status" | "temperatura", value: string) => {
-    setEmpresas(prev => prev.map(e => e.empresa_id === id ? { ...e, [field]: value } : e));
-    setDropdown(null);
-    try {
-      const token = localStorage.getItem("token");
-      await fetch(`https://backend-crm-production-157b.up.railway.app/empresas/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ [field]: value }),
-      });
-    } catch {}
-  };
-
-  const openDropdown = (e: React.MouseEvent<HTMLButtonElement>, id: string, type: "status" | "temp") => {
-    e.stopPropagation();
-    const rect = e.currentTarget.getBoundingClientRect();
-    setDropdown(prev =>
-      prev?.id === id && prev?.type === type
-        ? null
-        : { id, type, top: rect.bottom + 4, left: rect.left }
-    );
-  };
-
-  const handleRowClick = (id: string) => {
-    const now = Date.now();
-    const last = clickTimer[id] || 0;
-    if (now - last < 400) navigate(`/clientes/${id}`);
-    setClickTimer({ ...clickTimer, [id]: now });
-  };
-
-  const handleEdit = (e: React.MouseEvent, id: string) => { e.stopPropagation(); navigate(`/clientes/${id}/editar`); };
-  const handleView = (e: React.MouseEvent, id: string) => { e.stopPropagation(); navigate(`/clientes/${id}`); };
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     if (deleteConfirm !== id) { setDeleteConfirm(id); return; }
     try {
-      const token = localStorage.getItem("token");
-      await fetch(`https://backend-crm-production-157b.up.railway.app/empresas/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+      await fetch(`${API}/empresas/${id}`, { method:"DELETE", headers });
       setEmpresas(empresas.filter(e => e.empresa_id !== id));
-    } catch {
-      setEmpresas(empresas.filter(e => e.empresa_id !== id));
-    }
+    } catch {}
     setDeleteConfirm(null);
   };
 
-  const toggleSort = (field: keyof Empresa) => {
-    if (sortField === field) setSortDir(d => d === "asc" ? "desc" : "asc");
-    else { setSortField(field); setSortDir("asc"); }
+  const toggleSort = (field: typeof sortField) => {
+    if (sortField === field) setSortDir(d => d==="asc"?"desc":"asc");
+    else { setSortField(field); setSortDir("desc"); }
   };
 
-  const filtered = empresas
+  const empresasComScore = empresas.map(e => ({ ...e, score: calcScore(e) }));
+
+  const filtered = empresasComScore
     .filter(e => {
       const q = search.toLowerCase();
       const matchSearch = !q || e.nome.toLowerCase().includes(q) || e.cidade?.toLowerCase().includes(q) || e.segmento?.toLowerCase().includes(q);
-      const matchStatus = filterStatus === "Todos" || e.status === filterStatus;
-      const matchTemp = filterTemp === "Todas" || e.temperatura === filterTemp;
-      return matchSearch && matchStatus && matchTemp;
+      const matchPorte = filterPorte === "Todos" || e.porte === filterPorte;
+      return matchSearch && matchPorte;
     })
     .sort((a, b) => {
-      const va = String(a[sortField] || "");
-      const vb = String(b[sortField] || "");
-      return sortDir === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
+      let va: any, vb: any;
+      if (sortField === "score") { va = a.score; vb = b.score; }
+      else if (sortField === "ticket_medio_estimado") { va = a.ticket_medio_estimado||0; vb = b.ticket_medio_estimado||0; }
+      else { va = String(a[sortField]||""); vb = String(b[sortField]||""); }
+      if (typeof va === "number") return sortDir==="asc" ? va-vb : vb-va;
+      return sortDir==="asc" ? va.localeCompare(vb) : vb.localeCompare(va);
     });
 
-  const SortTh = ({ label, field }: { label: string; field: keyof Empresa }) => (
+  const SortTh = ({ label, field }: { label:string; field:typeof sortField }) => (
     <button onClick={() => toggleSort(field)} style={{ display:"flex", alignItems:"center", gap:4, background:"none", border:"none", cursor:"pointer", fontSize:11, fontWeight:700, letterSpacing:"0.07em", textTransform:"uppercase", color:"rgba(20,45,70,0.5)" }}>
       {label}
-      <ArrowUpDown style={{ width:10, height:10, opacity: sortField===field ? 1 : 0.4, color: sortField===field ? "#2980b9" : "inherit" }} />
+      <ArrowUpDown style={{ width:10, height:10, opacity:sortField===field?1:0.4, color:sortField===field?"#2980b9":"inherit" }} />
     </button>
   );
 
   const counts = {
     total: empresas.length,
-    lead: empresas.filter(e => e.status==="Lead").length,
-    contato: empresas.filter(e => e.status==="Em contato").length,
-    proposta: empresas.filter(e => e.status==="Proposta").length,
-    fechado: empresas.filter(e => e.status==="Fechado").length,
+    lead: empresas.filter(e=>e.status==="Lead").length,
+    contato: empresas.filter(e=>e.status==="Em contato").length,
+    proposta: empresas.filter(e=>e.status==="Proposta").length,
+    fechado: empresas.filter(e=>e.status==="Fechado").length,
   };
-
-  const dropdownOptions = dropdown?.type === "status" ? STATUS_EDIT : TEMP_EDIT;
-  const getColor = (v: string) => dropdown?.type === "status" ? statusColor(v) : tempColor(v);
 
   return (
     <div style={{ display:"flex", height:"100vh", overflow:"hidden", position:"relative" }}>
       <style>{css}</style>
 
-      {/* Dropdown portal */}
-      {dropdown && (
-        <div
-          onClick={e => e.stopPropagation()}
-          style={{ position:"fixed", top: dropdown.top, left: dropdown.left, zIndex:9999, background:"white", borderRadius:10, boxShadow:"0 8px 24px rgba(0,0,0,0.14)", border:"1px solid rgba(200,225,240,0.9)", overflow:"hidden", minWidth:150 }}
-        >
-          {dropdownOptions.map(opt => {
-            const c = getColor(opt);
-            return (
-              <div
-                key={opt}
-                onClick={() => updateField(dropdown.id, dropdown.type === "status" ? "status" : "temperatura", opt)}
-                style={{ padding:"9px 16px", fontSize:12, fontWeight:600, cursor:"pointer", color:c.text, transition:"background 0.12s" }}
-                onMouseEnter={e => (e.currentTarget.style.background = c.bg)}
-                onMouseLeave={e => (e.currentTarget.style.background = "white")}
-              >
-                {"icon" in c ? `${(c as any).icon} ` : ""}{opt}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
+      {/* Background */}
       <div style={{ position:"fixed", inset:0, zIndex:0, overflow:"hidden", pointerEvents:"none" }}>
         <div style={{ position:"absolute", inset:0, background:"linear-gradient(145deg,#c8e8f5 0%,#d6eef5 30%,#cceee8 65%,#c5eae0 100%)" }} />
         <div style={{ position:"absolute", inset:0, opacity:0.4, backgroundImage:"radial-gradient(circle,rgba(41,128,185,0.2) 1px,transparent 1px)", backgroundSize:"22px 22px" }} />
@@ -283,32 +241,38 @@ export default function TodosClientes() {
         <nav style={{ flex:1, display:"flex", flexDirection:"column", gap:2 }}>
           {navItems.map(item => (
             <div key={item.label} className={`nav-item${item.active?" active":""}`} onClick={() => {
-              if (item.label === "Dashboards") navigate("/dashboard");
-              if (item.label === "Cadastrar Empresas") navigate("/empresas/nova");
-              if (item.label === "Todos os clientes") navigate("/clientes");
+              if (item.label==="Dashboards") navigate("/dashboard");
+              if (item.label==="Cadastrar Empresas") navigate("/empresas/nova");
+              if (item.label==="Todos os clientes") navigate("/clientes");
+              if (item.label==="Gerenciamento de clientes") navigate("/gerenciamento");
+              if (item.label==="Calendário") navigate("/calendario");
             }}>
               <item.icon style={{ width:16, height:16, flexShrink:0 }} />
               {item.label}
             </div>
           ))}
         </nav>
-        <div style={{ marginTop:16, padding:"12px", borderRadius:12, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.08)", display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
-          <div style={{ width:34, height:34, borderRadius:"50%", background:"linear-gradient(135deg,#2980b9,#1abc9c)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#fff", flexShrink:0 }}>KS</div>
-          <div>
-            <div style={{ fontSize:12, fontWeight:600, color:"#fff" }}>Kauê Silva</div>
-            <div style={{ fontSize:10, color:"rgba(255,255,255,0.45)" }}>Administrador</div>
+        <div onClick={() => navigate("/perfil")} style={{ marginTop:16, padding:"12px", borderRadius:12, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.08)", display:"flex", alignItems:"center", gap:10, cursor:"pointer", transition:"background 0.18s" }} onMouseEnter={e=>(e.currentTarget.style.background="rgba(255,255,255,0.12)")} onMouseLeave={e=>(e.currentTarget.style.background="rgba(255,255,255,0.06)")}>
+          <div style={{ width:34, height:34, borderRadius:"50%", background:`linear-gradient(135deg,${avatarColor(usuario?.nome||"")},#1abc9c)`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#fff", flexShrink:0 }}>
+            {initials(usuario?.nome||"?")}
+          </div>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ fontSize:12, fontWeight:600, color:"#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{usuario?.nome||"..."}</div>
+            <div style={{ fontSize:10, color:"rgba(255,255,255,0.45)" }}>{usuario?.cargo||"Administrador"}</div>
           </div>
         </div>
       </div>
 
       {/* Main */}
       <div style={{ flex:1, height:"100vh", overflowY:"auto", position:"relative", zIndex:5 }}>
+
+        {/* Topbar */}
         <div style={{ position:"sticky", top:0, zIndex:20, padding:"14px 28px", background:"rgba(210,238,248,0.75)", backdropFilter:"blur(20px)", borderBottom:"1px solid rgba(255,255,255,0.6)", display:"flex", alignItems:"center", gap:14 }}>
           <div style={{ flex:1 }}>
             <h1 style={{ fontSize:18, fontWeight:800, color:"#0f2133", letterSpacing:"-0.02em" }}>Todos os Clientes</h1>
             <p style={{ fontSize:12, color:"rgba(20,45,70,0.5)", marginTop:1 }}>{filtered.length} empresa{filtered.length!==1?"s":""} encontrada{filtered.length!==1?"s":""}</p>
           </div>
-          <button onClick={fetchEmpresas} style={{ width:36, height:36, borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.75)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <button onClick={fetchAll} style={{ width:36, height:36, borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.75)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
             <RefreshCw style={{ width:15, height:15, color:"#2980b9" }} />
           </button>
           <button onClick={() => navigate("/empresas/nova")} style={{ height:38, padding:"0 16px", borderRadius:10, border:"none", cursor:"pointer", background:"linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)", backgroundSize:"200% 200%", animation:"gradientShift 4s ease infinite", color:"#fff", fontSize:13, fontWeight:700, display:"flex", alignItems:"center", gap:6, boxShadow:"0 4px 14px rgba(41,128,185,0.35)" }}>
@@ -317,11 +281,13 @@ export default function TodosClientes() {
         </div>
 
         <div style={{ padding:"22px 28px 40px", display:"flex", flexDirection:"column", gap:18 }}>
+
+          {/* Summary chips */}
           <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
             {[
               { label:"Total",      value:counts.total,    color:"#2980b9" },
               { label:"Leads",      value:counts.lead,     color:"#95a5a6" },
-              { label:"Em contato", value:counts.contato,  color:"#2980b9" },
+              { label:"Em contato", value:counts.contato,  color:"#e67e22" },
               { label:"Proposta",   value:counts.proposta, color:"#8e44ad" },
               { label:"Fechados",   value:counts.fechado,  color:"#27ae60" },
             ].map(s => (
@@ -330,45 +296,49 @@ export default function TodosClientes() {
                 <span style={{ fontSize:11, fontWeight:600, color:"rgba(20,45,70,0.5)" }}>{s.label}</span>
               </div>
             ))}
+
+            {/* Score legend */}
+            <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:8, padding:"6px 14px", borderRadius:20, background:"rgba(255,255,255,0.72)", border:"1px solid rgba(200,225,240,0.5)" }}>
+              <Star style={{ width:12, height:12, color:"#e67e22" }} />
+              <span style={{ fontSize:11, fontWeight:600, color:"rgba(20,45,70,0.5)" }}>Score:</span>
+              {[{l:"Alto",c:"#27ae60"},{l:"Médio",c:"#e67e22"},{l:"Baixo",c:"#e74c3c"}].map(s=>(
+                <span key={s.l} style={{ fontSize:10, fontWeight:700, color:s.c, background:`${s.c}15`, padding:"2px 7px", borderRadius:10 }}>{s.l}</span>
+              ))}
+            </div>
           </div>
 
+          {/* Filters */}
           <div style={{ display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
             <div style={{ flex:1, minWidth:220, position:"relative" }}>
               <Search style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", width:14, height:14, color:"rgba(20,45,70,0.35)" }} />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nome, cidade, segmento..." style={{ width:"100%", height:38, paddingLeft:34, paddingRight:14, borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.78)", fontSize:13, color:"#1a2e40", outline:"none" }} />
+              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar por nome, cidade, segmento..." style={{ width:"100%", height:38, paddingLeft:34, paddingRight:14, borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.78)", fontSize:13, color:"#1a2e40", outline:"none" }} />
             </div>
             <div style={{ position:"relative" }}>
-              <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ height:38, padding:"0 32px 0 12px", borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.78)", fontSize:13, color:"#1a2e40", outline:"none", cursor:"pointer", appearance:"none" }}>
-                {STATUS_OPTS.map(s => <option key={s}>{s}</option>)}
+              <select value={filterPorte} onChange={e=>setFilterPorte(e.target.value)} style={{ height:38, padding:"0 32px 0 12px", borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.78)", fontSize:13, color:"#1a2e40", outline:"none", cursor:"pointer", appearance:"none" }}>
+                {PORTE_OPTS.map(s=><option key={s}>{s}</option>)}
               </select>
               <ChevronDown style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", width:13, height:13, color:"rgba(20,45,70,0.4)", pointerEvents:"none" }} />
-            </div>
-            <div style={{ position:"relative" }}>
-              <select value={filterTemp} onChange={e => setFilterTemp(e.target.value)} style={{ height:38, padding:"0 32px 0 12px", borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.78)", fontSize:13, color:"#1a2e40", outline:"none", cursor:"pointer", appearance:"none" }}>
-                {TEMP_OPTS.map(t => <option key={t}>{t}</option>)}
-              </select>
-              <Thermometer style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", width:13, height:13, color:"rgba(20,45,70,0.4)", pointerEvents:"none" }} />
             </div>
             <div style={{ display:"flex", alignItems:"center", gap:5, padding:"0 12px", height:38, borderRadius:10, background:"rgba(255,255,255,0.6)", border:"1px solid rgba(200,225,240,0.7)", fontSize:12, color:"rgba(20,45,70,0.5)" }}>
               <Filter style={{ width:13, height:13 }} /> {filtered.length} resultado{filtered.length!==1?"s":""}
             </div>
           </div>
 
-          <motion.div className="glass-card" style={{ overflow:"visible" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.38 }}>
+          {/* Table */}
+          <motion.div className="glass-card" style={{ overflow:"hidden" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.38 }}>
             <div className="th">
               <SortTh label="Empresa" field="nome" />
-              <SortTh label="Segmento" field="segmento" />
-              <SortTh label="Status" field="status" />
-              <SortTh label="Temperatura" field="temperatura" />
-              <SortTh label="Cidade" field="cidade" />
-              <SortTh label="Ticket" field="ticket_medio_estimado" />
+              <SortTh label="Porte" field="porte" />
+              <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.07em", textTransform:"uppercase", color:"rgba(20,45,70,0.5)" }}>Segmento</span>
+              <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.07em", textTransform:"uppercase", color:"rgba(20,45,70,0.5)" }}>Cidade</span>
+              <SortTh label="Score ★" field="score" />
               <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.07em", textTransform:"uppercase", color:"rgba(20,45,70,0.5)" }}>Ações</span>
             </div>
 
             {loading ? (
-              Array.from({length:6}).map((_,i) => (
+              Array.from({length:5}).map((_,i) => (
                 <div key={i} className="client-row" style={{ cursor:"default" }}>
-                  {Array.from({length:7}).map((_,j) => (
+                  {Array.from({length:6}).map((_,j) => (
                     <div key={j} className="skeleton" style={{ height:18, width:`${60+Math.random()*30}%` }} />
                   ))}
                 </div>
@@ -377,16 +347,13 @@ export default function TodosClientes() {
               <div style={{ padding:"48px 20px", textAlign:"center" }}>
                 <Building2 style={{ width:36, height:36, color:"rgba(41,128,185,0.3)", margin:"0 auto 12px" }} />
                 <p style={{ fontSize:14, fontWeight:600, color:"rgba(20,45,70,0.5)" }}>Nenhuma empresa encontrada</p>
-                <p style={{ fontSize:12, color:"rgba(20,45,70,0.35)", marginTop:4 }}>Tente ajustar os filtros ou cadastre uma nova empresa</p>
               </div>
             ) : (
               <AnimatePresence>
                 {filtered.map((emp, idx) => {
-                  const sc = statusColor(emp.status);
-                  const tc = tempColor(emp.temperatura);
                   const pc = porteColor(emp.porte);
+                  const sc = scoreColor(emp.score);
                   const isDeleting = deleteConfirm === emp.empresa_id;
-
                   return (
                     <motion.div
                       key={emp.empresa_id}
@@ -395,61 +362,43 @@ export default function TodosClientes() {
                       animate={{ opacity:1, x:0 }}
                       exit={{ opacity:0, height:0 }}
                       transition={{ duration:0.2, delay:idx*0.03 }}
-                      onClick={() => handleRowClick(emp.empresa_id)}
+                      onClick={() => navigate(`/clientes/${emp.empresa_id}`)}
                     >
+                      {/* Nome */}
                       <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                         <div style={{ width:34, height:34, borderRadius:10, background:avatarColor(emp.nome), display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#fff", flexShrink:0 }}>
                           {initials(emp.nome)}
                         </div>
                         <div>
                           <div style={{ fontSize:13, fontWeight:700, color:"#0f2133" }}>{emp.nome}</div>
-                          <div style={{ display:"flex", alignItems:"center", gap:5, marginTop:2 }}>
-                            <span style={{ fontSize:10, fontWeight:600, color:pc, background:`${pc}15`, padding:"1px 6px", borderRadius:4 }}>{emp.porte}</span>
-                            {emp.contatos_count !== undefined && (
-                              <span style={{ fontSize:10, color:"rgba(20,45,70,0.4)" }}>{emp.contatos_count} contato{emp.contatos_count!==1?"s":""}</span>
-                            )}
-                          </div>
+                          {emp.responsavel_principal && <div style={{ fontSize:10, color:"rgba(20,45,70,0.4)" }}>{emp.responsavel_principal}</div>}
                         </div>
                       </div>
 
-                      <span style={{ fontSize:12, color:"rgba(20,45,70,0.6)", fontWeight:500 }}>{emp.segmento || "—"}</span>
+                      {/* Porte */}
+                      <span className="chip" style={{ background:`${pc}15`, color:pc, border:`1px solid ${pc}30` }}>{emp.porte||"—"}</span>
 
-                      {/* Status dropdown */}
-                      <div onClick={e => e.stopPropagation()}>
-                        <button
-                          className="chip-btn"
-                          style={{ background:sc.bg, color:sc.text, border:`1px solid ${sc.border}` }}
-                          onClick={e => openDropdown(e, emp.empresa_id, "status")}
-                        >
-                          {emp.status || "—"} <ChevronDown style={{ width:10, height:10 }} />
-                        </button>
+                      {/* Segmento */}
+                      <span style={{ fontSize:12, color:"rgba(20,45,70,0.6)", fontWeight:500 }}>{emp.segmento||"—"}</span>
+
+                      {/* Cidade */}
+                      <span style={{ fontSize:12, color:"rgba(20,45,70,0.6)", fontWeight:500 }}>{emp.cidade||"—"}</span>
+
+                      {/* Score */}
+                      <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
+                        <ScoreBar score={emp.score} />
+                        <span style={{ fontSize:9, fontWeight:700, color:sc.color, textTransform:"uppercase", letterSpacing:"0.05em" }}>{sc.label}</span>
                       </div>
 
-                      {/* Temperatura dropdown */}
-                      <div onClick={e => e.stopPropagation()}>
-                        <button
-                          className="chip-btn"
-                          style={{ background:tc.bg, color:tc.text }}
-                          onClick={e => openDropdown(e, emp.empresa_id, "temp")}
-                        >
-                          {tc.icon} {emp.temperatura || "—"} <ChevronDown style={{ width:10, height:10 }} />
-                        </button>
-                      </div>
-
-                      <span style={{ fontSize:12, color:"rgba(20,45,70,0.6)", fontWeight:500 }}>{emp.cidade || "—"}</span>
-
-                      <span style={{ fontSize:12, fontWeight:700, color:"#0f2133" }}>
-                        {emp.ticket_medio_estimado ? `R$ ${emp.ticket_medio_estimado.toLocaleString("pt-BR")}` : "—"}
-                      </span>
-
-                      <div style={{ display:"flex", alignItems:"center", gap:5 }} onClick={e => e.stopPropagation()}>
-                        <button className="action-btn" style={{ background:"rgba(41,128,185,0.08)", color:"#2980b9" }} onClick={e => handleView(e, emp.empresa_id)} title="Ver perfil">
+                      {/* Ações */}
+                      <div style={{ display:"flex", alignItems:"center", gap:5 }} onClick={e=>e.stopPropagation()}>
+                        <button className="action-btn" style={{ background:"rgba(41,128,185,0.08)", color:"#2980b9" }} onClick={e=>{e.stopPropagation();navigate(`/clientes/${emp.empresa_id}`)}} title="Ver perfil">
                           <Eye style={{ width:13, height:13 }} />
                         </button>
-                        <button className="action-btn" style={{ background:"rgba(142,68,173,0.08)", color:"#8e44ad" }} onClick={e => handleEdit(e, emp.empresa_id)} title="Editar">
+                        <button className="action-btn" style={{ background:"rgba(142,68,173,0.08)", color:"#8e44ad" }} onClick={e=>{e.stopPropagation();navigate(`/clientes/${emp.empresa_id}/editar`)}} title="Editar">
                           <Edit3 style={{ width:13, height:13 }} />
                         </button>
-                        <button className="action-btn" style={{ background: isDeleting ? "rgba(231,76,60,0.2)" : "rgba(231,76,60,0.08)", color:"#e74c3c" }} onClick={e => handleDelete(e, emp.empresa_id)} title={isDeleting ? "Confirmar exclusão" : "Excluir"} onBlur={() => setTimeout(() => setDeleteConfirm(null), 200)}>
+                        <button className="action-btn" style={{ background:isDeleting?"rgba(231,76,60,0.2)":"rgba(231,76,60,0.08)", color:"#e74c3c" }} onClick={e=>handleDelete(e,emp.empresa_id)} title={isDeleting?"Confirmar exclusão":"Excluir"} onBlur={()=>setTimeout(()=>setDeleteConfirm(null),200)}>
                           {isDeleting ? <CheckSquare style={{ width:13, height:13 }} /> : <Trash2 style={{ width:13, height:13 }} />}
                         </button>
                       </div>
@@ -459,10 +408,6 @@ export default function TodosClientes() {
               </AnimatePresence>
             )}
           </motion.div>
-
-          <p style={{ textAlign:"center", fontSize:11, color:"rgba(20,45,70,0.35)" }}>
-            💡 Clique no <strong>status</strong> ou <strong>temperatura</strong> para editar direto na tabela
-          </p>
         </div>
       </div>
     </div>
