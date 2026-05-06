@@ -243,6 +243,7 @@ export default function Dashboard() {
               if (item.label === "Todos os clientes") navigate("/clientes");
               if (item.label === "Cadastrar Empresas") navigate("/empresas/nova");
               if (item.label === "Calendário") navigate("/calendario");
+              if (item.label === "Gerenciamento de clientes") navigate("/gerenciamento");
             }}>
               <item.icon style={{ width:16, height:16 }} />
               {item.label}
