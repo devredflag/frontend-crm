@@ -242,6 +242,7 @@ export default function Dashboard() {
             <div key={item.label} className={`nav-item${item.active?" active":""}`} onClick={() => {
               if (item.label === "Todos os clientes") navigate("/clientes");
               if (item.label === "Cadastrar Empresas") navigate("/empresas/nova");
+              if (item.label === "Calendário") navigate("/calendario");
             }}>
               <item.icon style={{ width:16, height:16 }} />
               {item.label}
