@@ -11,6 +11,7 @@ import EmpresaView from "./pages/clientes/detalhe";
 import EmpresaEdit from "./pages/clientes/detalhe/editar";
 import Perfil from "./pages/perfil";
 import Calendario from "./pages/calendario";
+import Gerenciamento from "./pages/gerenciamento";
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
         <Route path="*" element={<div>Página não encontrada</div>} />
         <Route path="/perfil" element={<Perfil />} />
         <Route path="/calendario" element={<Calendario />} />
+        <Route path="/gerenciamento" element={<Gerenciamento />} />
       </Routes>
     </Router>
   );
