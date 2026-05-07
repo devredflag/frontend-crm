@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -6,9 +6,153 @@ import {
   ClipboardList, BarChart3, ChevronDown, ArrowLeft,
   Plus, Trash2, Globe, Link2, Phone, Mail,
   MapPin, Briefcase, Hash, User, Thermometer,
-  Target, Clock, MessageSquare, Star, CheckSquare,
-  DollarSign, FileText, Bell, Save,
+  Target, Clock, Star, CheckSquare,
+  FileText, Bell, Save,
 } from "lucide-react";
+
+const API = "https://backend-crm-production-157b.up.railway.app";
+
+const SEGMENTOS_PADRAO = [
+  "Academias e Fitness",
+  "Administracao de Condominios",
+  "Advocacia",
+  "Agencia de Marketing",
+  "Agencia de Publicidade",
+  "Agronegocio",
+  "Alimentos e Bebidas",
+  "Arquitetura e Urbanismo",
+  "Assistencia Tecnica",
+  "Atacado e Distribuicao",
+  "Automacao Industrial",
+  "Autopecas",
+  "Bares e Restaurantes",
+  "Beleza e Estetica",
+  "Biotecnologia",
+  "Clinicas Medicas",
+  "Comercio Exterior",
+  "Comercio Varejista",
+  "Concessionarias",
+  "Construcao Civil",
+  "Consultoria Empresarial",
+  "Contabilidade",
+  "Coworking",
+  "Cursos e Treinamentos",
+  "Decoracao",
+  "Distribuidora",
+  "E-commerce",
+  "Educacao",
+  "Energia",
+  "Energia Solar",
+  "Engenharia",
+  "Entretenimento",
+  "Escritorio de Projetos",
+  "Eventos",
+  "Farmacias e Drogarias",
+  "Financeiro",
+  "Franquias",
+  "Gestao de Pessoas",
+  "Hotelaria",
+  "Imobiliarias",
+  "Industria Alimenticia",
+  "Industria Automotiva",
+  "Industria Farmaceutica",
+  "Industria Metalurgica",
+  "Industria Textil",
+  "Logistica e Transporte",
+  "Manutencao Predial",
+  "Maquinas e Equipamentos",
+  "Materiais de Construcao",
+  "Moda e Vestuario",
+  "Moveis Planejados",
+  "Odontologia",
+  "Pet Shop",
+  "Produtos Agropecuarios",
+  "Recursos Humanos",
+  "Saude",
+  "Seguranca Eletronica",
+  "Seguros",
+  "Servicos de Limpeza",
+  "Servicos Financeiros",
+  "Software e SaaS",
+  "Supermercados",
+  "Tecnologia da Informacao",
+  "Telecomunicacoes",
+  "Turismo",
+  "Venda de Gado",
+  "Vendas B2B",
+  "Veterinaria",
+  "Agropecuaria",
+  "Clinicas Odontologicas",
+  "Confeitaria",
+  "Delivery",
+  "Grafica",
+  "Hospitais",
+  "Jardinagem e Paisagismo",
+  "Laboratorios",
+  "Laticinios",
+  "Lavanderias",
+  "Marcenaria",
+  "Padarias",
+  "Papelarias",
+  "Postos de Combustivel",
+  "Serralheria",
+  "Transportadoras",
+];
+
+const PROXIMAS_ACOES = [
+  "Ligar",
+  "Enviar WhatsApp",
+  "Enviar email",
+  "Conectar no LinkedIn",
+  "Agendar reuniao",
+  "Enviar apresentacao",
+  "Enviar proposta",
+  "Fazer follow-up",
+  "Agendar visita",
+  "Solicitar documentos",
+  "Aguardar retorno",
+  "Sem proxima acao",
+];
+
+const uniqueSorted = (items: string[]) =>
+  Array.from(new Set(items.filter(Boolean).map((item) => item.trim())))
+    .sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+const onlyDigits = (value: string) => value.replace(/\D/g, "");
+
+const formatCnpj = (value: string) =>
+  onlyDigits(value)
+    .slice(0, 14)
+    .replace(/^(\d{2})(\d)/, "$1.$2")
+    .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})(\d)/, ".$1/$2")
+    .replace(/(\d{4})(\d)/, "$1-$2");
+
+const formatCep = (value: string) =>
+  onlyDigits(value).slice(0, 8).replace(/^(\d{5})(\d)/, "$1-$2");
+
+const formatPhone = (value: string) => {
+  const digits = onlyDigits(value).slice(0, 11);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 6) return digits.replace(/^(\d{2})(\d+)/, "($1) $2");
+  if (digits.length <= 10) {
+    return digits.replace(/^(\d{2})(\d{4})(\d+)/, "($1) $2-$3");
+  }
+  return digits.replace(/^(\d{2})(\d{5})(\d+)/, "($1) $2-$3");
+};
+
+const normalizeSegmento = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ");
+
+const todayInputValue = () => new Date().toISOString().slice(0, 10);
+
+const dateInputToIso = (value: string) =>
+  value ? `${value}T00:00:00` : new Date().toISOString();
 
 // ─── CSS / Keyframes (mesmos do Dashboard) ────────────────────
 const css = `
@@ -361,10 +505,10 @@ function ContatoCard({
           <IconInput icon={Mail} className="field-input" type="email" placeholder="email@empresa.com" value={contato.email} onChange={(e: any) => up("email", e.target.value)} />
         </Field>
         <Field label="Celular">
-          <IconInput icon={Phone} className="field-input" placeholder="(00) 00000-0000" value={contato.celular} onChange={(e: any) => up("celular", e.target.value)} />
+          <IconInput icon={Phone} className="field-input" placeholder="(00) 00000-0000" value={contato.celular} onChange={(e: any) => up("celular", formatPhone(e.target.value))} />
         </Field>
         <Field label="WhatsApp">
-          <IconInput icon={Phone} className="field-input" placeholder="(00) 00000-0000" value={contato.whatsapp} onChange={(e: any) => up("whatsapp", e.target.value)} />
+          <IconInput icon={Phone} className="field-input" placeholder="(00) 00000-0000" value={contato.whatsapp} onChange={(e: any) => up("whatsapp", formatPhone(e.target.value))} />
         </Field>
         <Field label="LinkedIn">
           <IconInput icon={Link2} className="field-input" placeholder="linkedin.com/in/..." value={contato.linkedin} onChange={(e: any) => up("linkedin", e.target.value)} />
@@ -402,17 +546,72 @@ function ContatoCard({
 export default function NovaEmpresa() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [validandoSegmento, setValidandoSegmento] = useState(false);
+  const [segmentoFeedback, setSegmentoFeedback] = useState("");
+  const [segmentos, setSegmentos] = useState<string[]>(SEGMENTOS_PADRAO);
   const [contatos, setContatos] = useState([contatoVazio()]);
 
   const [empresa, setEmpresa] = useState({
     nome: "", segmento: "", porte: "", cidade: "", endereco: "",
     cep: "", bairro: "", regiao: "", observacoes: "",
     cnpj: "", site: "", linkedin_empresa: "", responsavel_principal: "",
-    ticket_medio_estimado: "", status: "", origem_lead: "",
-    ultima_interacao: "", proxima_acao: "", temperatura: "",
+    status: "Lead", origem_lead: "",
+    ultima_interacao: todayInputValue(), proxima_acao: "", temperatura: "",
   });
 
   const setEmp = (key: string, val: string) => setEmpresa((p) => ({ ...p, [key]: val }));
+  const segmentosOrdenados = useMemo(() => uniqueSorted(segmentos), [segmentos]);
+  const segmentoExiste = useMemo(
+    () => segmentosOrdenados.some((segmento) => normalizeSegmento(segmento) === normalizeSegmento(empresa.segmento)),
+    [empresa.segmento, segmentosOrdenados],
+  );
+
+  useEffect(() => {
+    let ativo = true;
+
+    const carregarSegmentos = async () => {
+      try {
+        const res = await fetch(`${API}/segmentos`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const segmentosApi = Array.isArray(data) ? data : data.segmentos || [];
+        if (ativo) setSegmentos((prev) => uniqueSorted([...prev, ...segmentosApi]));
+      } catch (error) {
+        console.warn("Nao foi possivel carregar segmentos cadastrados", error);
+      }
+    };
+
+    carregarSegmentos();
+    return () => { ativo = false; };
+  }, []);
+
+  const validarSegmentoSeNecessario = async () => {
+    const segmento = empresa.segmento.trim();
+    if (!segmento) throw new Error("Segmento da empresa e obrigatorio");
+    if (segmentoExiste) return segmento;
+
+    setValidandoSegmento(true);
+    setSegmentoFeedback("Validando segmento novo...");
+    try {
+      const res = await fetch(`${API}/segmentos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nome: segmento }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.detail || "Segmento nao reconhecido. Escolha um item da lista ou informe um segmento real.");
+      }
+
+      const nomeValidado = data.nome || segmento;
+      setSegmentos((prev) => uniqueSorted([...prev, nomeValidado]));
+      setEmp("segmento", nomeValidado);
+      setSegmentoFeedback("Segmento validado e salvo na base.");
+      return nomeValidado;
+    } finally {
+      setValidandoSegmento(false);
+    }
+  };
 
   const handleContatoChange = (index: number, field: string, value: any) => {
     const novos = [...contatos];
@@ -425,17 +624,20 @@ export default function NovaEmpresa() {
 
   const handleSubmit = async () => {
     if (!empresa.nome) { alert("Nome da empresa é obrigatório"); return; }
+    if (!empresa.segmento.trim()) { alert("Segmento da empresa e obrigatorio"); return; }
     setLoading(true);
     try {
+      const segmentoValidado = await validarSegmentoSeNecessario();
+
       // =========================
       // 1. CRIAR EMPRESA
       // =========================
-      const empresaRes = await fetch("https://backend-crm-production-157b.up.railway.app/empresas", {
+      const empresaRes = await fetch(`${API}/empresas`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           nome: empresa.nome,
-          segmento: empresa.segmento,
+          segmento: segmentoValidado,
           porte: empresa.porte,
           cidade: empresa.cidade,
           endereco: empresa.endereco,
@@ -447,16 +649,18 @@ export default function NovaEmpresa() {
           site: empresa.site,
           linkedin_empresa: empresa.linkedin_empresa,
           responsavel_principal: empresa.responsavel_principal,
-          ticket_medio_estimado: empresa.ticket_medio_estimado ? parseFloat(empresa.ticket_medio_estimado) : null,
-          status: empresa.status || "Lead",
+          status: "Lead",
           origem_lead: empresa.origem_lead || "Manual",
-          ultima_interacao: empresa.ultima_interacao || new Date().toISOString(),
+          ultima_interacao: dateInputToIso(empresa.ultima_interacao),
           proxima_acao: empresa.proxima_acao,
           temperatura: empresa.temperatura || "Frio",
         }),
       });
 
       const empresaData = await empresaRes.json();
+      if (!empresaRes.ok) {
+        throw new Error(empresaData.detail || "Erro ao criar empresa");
+      }
       console.log("Empresa criada:", empresaData);
 
       const empresaId = empresaData.empresa_id ?? empresaData.id ?? empresaData.id;
@@ -490,7 +694,7 @@ export default function NovaEmpresa() {
         };
         console.log("Enviando contato:", payload);
 
-        const contatoRes = await fetch("https://backend-crm-production-157b.up.railway.app/contatos", {
+        const contatoRes = await fetch(`${API}/contatos`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -506,7 +710,7 @@ export default function NovaEmpresa() {
       navigate("/dashboard");
     } catch (error) {
       console.error(error);
-      alert("Erro ao cadastrar empresa");
+      alert(error instanceof Error ? error.message : "Erro ao cadastrar empresa");
     } finally {
       setLoading(false);
     }
@@ -656,12 +860,12 @@ export default function NovaEmpresa() {
 
           <button
             className="btn-grad"
-            style={{ height: 38, padding: "0 18px", fontSize: 13, opacity: loading ? 0.7 : 1 }}
+            style={{ height: 38, padding: "0 18px", fontSize: 13, opacity: loading || validandoSegmento ? 0.7 : 1 }}
             onClick={handleSubmit}
-            disabled={loading}
+            disabled={loading || validandoSegmento}
           >
             <Save style={{ width: 15, height: 15 }} />
-            {loading ? "Salvando..." : "Salvar Empresa"}
+            {validandoSegmento ? "Validando..." : loading ? "Salvando..." : "Salvar Empresa"}
           </button>
         </div>
 
@@ -702,7 +906,36 @@ export default function NovaEmpresa() {
                     </Field>
                   </div>
                   <Field label="Segmento *">
-                    <IconInput icon={Briefcase} placeholder="ex: Tecnologia, Varejo..." value={empresa.segmento} onChange={(e: any) => setEmp("segmento", e.target.value)} />
+                    <div>
+                      <div className="field-input-icon">
+                        <Briefcase className="icon" style={{ width: 14, height: 14 }} />
+                        <input
+                          className="field-input"
+                          list="segmentos-options"
+                          placeholder="Selecione ou digite um segmento"
+                          value={empresa.segmento}
+                          onChange={(e) => {
+                            setEmp("segmento", e.target.value);
+                            setSegmentoFeedback("");
+                          }}
+                        />
+                      </div>
+                      <datalist id="segmentos-options">
+                        {segmentosOrdenados.map((segmento) => (
+                          <option key={segmento} value={segmento} />
+                        ))}
+                      </datalist>
+                      {empresa.segmento.trim() && !segmentoExiste && (
+                        <div style={{ marginTop: 5, fontSize: 10, fontWeight: 600, color: "#e67e22" }}>
+                          {segmentoFeedback || "Segmento novo: sera validado antes de salvar."}
+                        </div>
+                      )}
+                      {segmentoFeedback && segmentoExiste && (
+                        <div style={{ marginTop: 5, fontSize: 10, fontWeight: 600, color: "#27ae60" }}>
+                          {segmentoFeedback}
+                        </div>
+                      )}
+                    </div>
                   </Field>
                   <Field label="Porte *">
                     <select className="field-select" value={empresa.porte} onChange={(e) => setEmp("porte", e.target.value)}>
@@ -713,7 +946,7 @@ export default function NovaEmpresa() {
                     </select>
                   </Field>
                   <Field label="CNPJ">
-                    <IconInput icon={Hash} placeholder="00.000.000/0000-00" value={empresa.cnpj} onChange={(e: any) => setEmp("cnpj", e.target.value)} />
+                    <IconInput icon={Hash} placeholder="00.000.000/0000-00" value={empresa.cnpj} onChange={(e: any) => setEmp("cnpj", formatCnpj(e.target.value))} />
                   </Field>
                   <Field label="Responsável Principal">
                     <IconInput icon={User} placeholder="Nome do responsável" value={empresa.responsavel_principal} onChange={(e: any) => setEmp("responsavel_principal", e.target.value)} />
@@ -754,7 +987,7 @@ export default function NovaEmpresa() {
                     <IconInput icon={MapPin} placeholder="Nome da cidade" value={empresa.cidade} onChange={(e: any) => setEmp("cidade", e.target.value)} />
                   </Field>
                   <Field label="CEP *">
-                    <input className="field-input" placeholder="00000-000" value={empresa.cep} onChange={(e) => setEmp("cep", e.target.value)} />
+                    <input className="field-input" placeholder="00000-000" value={empresa.cep} onChange={(e) => setEmp("cep", formatCep(e.target.value))} />
                   </Field>
                   <div style={{ gridColumn: "1 / -1" }}>
                     <Field label="Endereço *">
@@ -830,13 +1063,12 @@ export default function NovaEmpresa() {
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   <Field label="Status do Lead">
-                    <select className="field-select" value={empresa.status} onChange={(e) => setEmpresa({ ...empresa, status: e.target.value })}>
-                      <option value="">Selecionar status...</option>
-                      <option>Lead</option>
-                      <option>Em contato</option>
-                      <option>Proposta</option>
-                      <option>Fechado</option>
-                    </select>
+                    <input
+                      className="field-input"
+                      value="Lead"
+                      disabled
+                      style={{ background: "rgba(39,174,96,0.08)", color: "#1f7a4d", fontWeight: 700 }}
+                    />
                   </Field>
 
                   <Field label="Temperatura do Lead">
@@ -852,10 +1084,6 @@ export default function NovaEmpresa() {
                         </button>
                       ))}
                     </div>
-                  </Field>
-
-                  <Field label="Ticket Médio Estimado">
-                    <IconInput icon={DollarSign} type="number" placeholder="0,00" value={empresa.ticket_medio_estimado} onChange={(e: any) => setEmpresa({ ...empresa, ticket_medio_estimado: e.target.value })} />
                   </Field>
 
                   <Field label="Origem do Lead">
@@ -896,11 +1124,16 @@ export default function NovaEmpresa() {
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  <Field label="Última Interação">
+                  <Field label="Primeira Interação">
                     <input className="field-input" type="date" value={empresa.ultima_interacao} onChange={(e) => setEmpresa({ ...empresa, ultima_interacao: e.target.value })} />
                   </Field>
                   <Field label="Próxima Ação">
-                    <IconInput icon={MessageSquare} placeholder="ex: Enviar proposta, Ligar..." value={empresa.proxima_acao} onChange={(e: any) => setEmpresa({ ...empresa, proxima_acao: e.target.value })} />
+                    <select className="field-select" value={empresa.proxima_acao} onChange={(e) => setEmpresa({ ...empresa, proxima_acao: e.target.value })}>
+                      <option value="">Selecionar proxima acao...</option>
+                      {PROXIMAS_ACOES.map((acao) => (
+                        <option key={acao}>{acao}</option>
+                      ))}
+                    </select>
                   </Field>
                 </div>
               </motion.div>
@@ -1054,12 +1287,12 @@ export default function NovaEmpresa() {
             </button>
             <button
               className="btn-grad"
-              style={{ height: 44, padding: "0 28px", fontSize: 14, opacity: loading ? 0.75 : 1 }}
+              style={{ height: 44, padding: "0 28px", fontSize: 14, opacity: loading || validandoSegmento ? 0.75 : 1 }}
               onClick={handleSubmit}
-              disabled={loading}
+              disabled={loading || validandoSegmento}
             >
               <Save style={{ width: 16, height: 16 }} />
-              {loading ? "Salvando..." : "Salvar Empresa"}
+              {validandoSegmento ? "Validando..." : loading ? "Salvando..." : "Salvar Empresa"}
             </button>
           </div>
         </div>
