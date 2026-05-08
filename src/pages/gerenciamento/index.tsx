@@ -33,7 +33,7 @@ const css = `
     cursor:pointer;
     transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
     position:relative;
-    overflow:visible;
+    overflow:hidden;
     z-index:1;
   }
   .kanban-card:hover {
@@ -41,6 +41,20 @@ const css = `
     box-shadow:0 16px 40px rgba(41,128,185,0.18);
     border-color:rgba(41,128,185,0.4);
     z-index:10;
+    overflow:visible;
+  }
+
+  .card-expand-section {
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.24s ease;
+    pointer-events: none;
+  }
+  .kanban-card:hover .card-expand-section {
+    max-height: 260px;
+    opacity: 1;
+    pointer-events: all;
   }
 
   .drop-active { border-color:rgba(41,128,185,0.55)!important; background:rgba(41,128,185,0.06)!important; }
@@ -548,7 +562,7 @@ export default function Gerenciamento() {
                     </div>
 
                     {/* Cards */}
-                    <div style={{display:"flex",flexDirection:"column",gap:8,overflowY:"auto",maxHeight:"calc(100vh - 385px)",paddingRight:2,paddingBottom:8,minHeight:120}}>
+                    <div style={{display:"flex",flexDirection:"column",gap:8,paddingRight:2,paddingBottom:8,minHeight:120}}>
                       {loading?([1,2].map(i=><div key={i} className="skeleton" style={{height:100,borderRadius:14}}/>)):
                       cards.length===0?(
                         <div style={{padding:"28px 0",textAlign:"center",border:"2px dashed rgba(200,225,240,0.6)",borderRadius:14,background:"rgba(255,255,255,0.35)"}}>
@@ -623,7 +637,8 @@ export default function Gerenciamento() {
                               </div>
                             </div>
 
-                            {/* ── SEÇÃO SEMPRE VISÍVEL ── */}
+                            {/* ── SEÇÃO EXPANSÍVEL NO HOVER ── */}
+                            <div className="card-expand-section">
                             {/* Valor */}
                             <div style={{marginBottom:8}} onClick={e=>e.stopPropagation()}>
                               {editValorId===emp.empresa_id?(
@@ -688,6 +703,7 @@ export default function Gerenciamento() {
                               </select>
                               <ChevronRight style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%) rotate(90deg)",width:12,height:12,color:col.color,pointerEvents:"none"}}/>
                             </div>
+                            </div>{/* fim card-expand-section */}
                           </motion.div>
                         );
                       })}
