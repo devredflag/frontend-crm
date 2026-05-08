@@ -255,8 +255,11 @@ export default function Gerenciamento() {
   // ✅ MUDANÇA 3: Painel de atrasadas
   const [showOverduePanel, setShowOverduePanel] = useState(false);
 
-  const token = localStorage.getItem("token")||"";
-  const hdrs = { "Content-Type":"application/json", Authorization:`Bearer ${token}` };
+  // Token sempre fresco — garante que salva mesmo após re-login
+  const hdrs = () => ({
+    "Content-Type":"application/json",
+    Authorization:`Bearer ${localStorage.getItem("token")||""}`,
+  });
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -264,8 +267,8 @@ export default function Gerenciamento() {
     setLoading(true);
     try {
       const [e,m] = await Promise.all([
-        fetch(`${API}/empresas`,{headers:hdrs}),
-        fetch(`${API}/me`,{headers:hdrs}),
+        fetch(`${API}/empresas`,{headers:hdrs()}),
+        fetch(`${API}/me`,{headers:hdrs()}),
       ]);
       if(e.ok) setEmpresas(await e.json());
       if(m.ok) setUsuario(await m.json());
@@ -278,7 +281,8 @@ export default function Gerenciamento() {
   };
 
   const savePatch = async (id: string, patch: Partial<Empresa>) => {
-    await fetch(`${API}/empresas/${id}`,{method:"PUT",headers:hdrs,body:JSON.stringify(patch)});
+    const res = await fetch(`${API}/empresas/${id}`,{method:"PUT",headers:hdrs(),body:JSON.stringify(patch)});
+    if(!res.ok) throw new Error(`Erro ao salvar: ${res.status}`);
   };
 
   const updateStatus = async (id: string, status: string) => {
@@ -323,7 +327,7 @@ export default function Gerenciamento() {
     setHistoryItems([]);
     setHistoryLoading(true);
     try {
-      const res = await fetch(`${API}/empresas/${emp.empresa_id}/historico-status`,{headers:hdrs});
+      const res = await fetch(`${API}/empresas/${emp.empresa_id}/historico-status`,{headers:hdrs()});
       if(res.ok) setHistoryItems(await res.json());
     } catch {}
     setHistoryLoading(false);

@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Search, Building2, Users, ClipboardList,
   Calendar, BarChart3, ChevronDown, Plus, Filter,
   Eye, Edit3, Trash2, CheckSquare, ArrowUpDown, RefreshCw,
-  Star,
+  Star, AlertTriangle, X,
 } from "lucide-react";
 
 const css = `
@@ -27,7 +27,8 @@ const css = `
   .client-row:last-child { border-bottom:none; }
   .th { display:grid; grid-template-columns:2.4fr 1fr 1fr 1fr 1fr 120px; align-items:center; padding:10px 20px; border-bottom:1px solid rgba(200,225,240,0.5); }
   .chip { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:700; white-space:nowrap; }
-  .action-btn { width:30px; height:30px; border-radius:8px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.15s; }
+  .action-btn { width:30px; height:30px; border-radius:8px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+  .action-btn:hover { transform:translateY(-1px); }
   .skeleton { background:linear-gradient(90deg,rgba(200,225,240,0.4) 25%,rgba(220,240,252,0.7) 50%,rgba(200,225,240,0.4) 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:6px; }
   ::-webkit-scrollbar { width:4px; height:4px; }
   ::-webkit-scrollbar-track { background:transparent; }
@@ -51,10 +52,7 @@ interface Empresa {
   proxima_acao: string;
 }
 
-interface Usuario {
-  nome: string;
-  cargo: string;
-}
+interface Usuario { nome: string; cargo: string; }
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboards",                active: false },
@@ -68,64 +66,97 @@ const navItems = [
 const PORTE_OPTS = ["Todos","Pequeno","Médio","Grande"];
 
 function calcScore(emp: Empresa): number {
-  let score = 0;
-  // Temperatura (30pts)
-  if (emp.temperatura === "Quente") score += 30;
-  else if (emp.temperatura === "Morno") score += 18;
-  else score += 5;
-  // Status (25pts)
-  if (emp.status === "Fechado")    score += 25;
-  else if (emp.status === "Proposta")   score += 20;
-  else if (emp.status === "Em contato") score += 14;
-  else score += 5;
-  // Porte (20pts)
-  if (emp.porte === "Grande") score += 20;
-  else if (emp.porte === "Médio") score += 13;
-  else score += 6;
-  // Ticket (15pts)
-  const t = emp.ticket_medio_estimado || 0;
-  if (t >= 20000) score += 15;
-  else if (t >= 5000) score += 10;
-  else if (t > 0) score += 5;
-  // Interação recente (10pts)
-  if (emp.ultima_interacao) {
-    const days = (Date.now() - new Date(emp.ultima_interacao).getTime()) / 86400000;
-    if (days <= 7) score += 10;
-    else if (days <= 30) score += 6;
-    else score += 2;
+  let s = 0;
+  if(emp.temperatura==="Quente") s+=30; else if(emp.temperatura==="Morno") s+=18; else s+=5;
+  if(emp.status==="Fechado") s+=25; else if(emp.status==="Proposta") s+=20; else if(emp.status==="Em contato") s+=14; else s+=5;
+  if(emp.porte==="Grande") s+=20; else if(emp.porte==="Médio") s+=13; else s+=6;
+  const t = emp.ticket_medio_estimado||0;
+  if(t>=20000) s+=15; else if(t>=5000) s+=10; else if(t>0) s+=5;
+  if(emp.ultima_interacao) {
+    const d = (Date.now()-new Date(emp.ultima_interacao).getTime())/86400000;
+    if(d<=7) s+=10; else if(d<=30) s+=6; else s+=2;
   }
-  return Math.min(score, 100);
+  return Math.min(s,100);
 }
 
 function scoreColor(s: number) {
-  if (s >= 70) return { color:"#27ae60", bg:"rgba(39,174,96,0.12)", label:"Alto" };
-  if (s >= 40) return { color:"#e67e22", bg:"rgba(230,126,34,0.12)", label:"Médio" };
+  if(s>=70) return { color:"#27ae60", bg:"rgba(39,174,96,0.12)", label:"Alto" };
+  if(s>=40) return { color:"#e67e22", bg:"rgba(230,126,34,0.12)", label:"Médio" };
   return { color:"#e74c3c", bg:"rgba(231,76,60,0.12)", label:"Baixo" };
 }
-
 function porteColor(p: string) {
-  if (p === "Grande") return "#8e44ad";
-  if (p === "Médio")  return "#2980b9";
-  return "#27ae60";
+  if(p==="Grande") return "#8e44ad"; if(p==="Médio") return "#2980b9"; return "#27ae60";
 }
-
-function initials(name: string) {
-  return name?.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase()||"?";
-}
-function avatarColor(name: string) {
-  const c=["#2980b9","#1abc9c","#8e44ad","#e67e22","#27ae60","#e74c3c"];
-  return c[(name?.charCodeAt(0)||0)%c.length];
-}
+function initials(n: string) { return n?.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase()||"?"; }
+function avatarColor(n: string) { const c=["#2980b9","#1abc9c","#8e44ad","#e67e22","#27ae60","#e74c3c"]; return c[(n?.charCodeAt(0)||0)%c.length]; }
 
 function ScoreBar({ score }: { score: number }) {
   const sc = scoreColor(score);
   return (
-    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-      <div style={{ flex:1, height:6, borderRadius:6, background:"rgba(200,225,240,0.5)", maxWidth:60 }}>
-        <div style={{ height:"100%", width:`${score}%`, borderRadius:6, background:sc.color, transition:"width 0.4s ease" }} />
+    <div style={{display:"flex",alignItems:"center",gap:8}}>
+      <div style={{flex:1,height:6,borderRadius:6,background:"rgba(200,225,240,0.5)",maxWidth:60}}>
+        <div style={{height:"100%",width:`${score}%`,borderRadius:6,background:sc.color,transition:"width 0.4s ease"}}/>
       </div>
-      <span style={{ fontSize:12, fontWeight:800, color:sc.color, minWidth:28 }}>{score}</span>
+      <span style={{fontSize:12,fontWeight:800,color:sc.color,minWidth:28}}>{score}</span>
     </div>
+  );
+}
+
+// ── Modal de Confirmação de Exclusão ─────────────────────────
+function DeleteModal({ empresa, onConfirm, onCancel, deleting }: {
+  empresa: Empresa; onConfirm: () => void; onCancel: () => void; deleting: boolean;
+}) {
+  return (
+    <motion.div
+      initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
+      style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(10,31,51,0.4)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center"}}
+      onClick={deleting?undefined:onCancel}
+    >
+      <motion.div
+        initial={{scale:0.88,opacity:0,y:20}} animate={{scale:1,opacity:1,y:0}} exit={{scale:0.92,opacity:0,y:12}}
+        transition={{duration:0.2,ease:[0.4,0,0.2,1]}}
+        onClick={e=>e.stopPropagation()}
+        style={{width:420,background:"rgba(255,255,255,0.97)",backdropFilter:"blur(24px)",borderRadius:20,border:"1.5px solid rgba(220,38,38,0.2)",boxShadow:"0 24px 64px rgba(10,31,51,0.2)",padding:"28px",position:"relative",overflow:"hidden"}}
+      >
+        {/* Barra vermelha no topo */}
+        <div style={{position:"absolute",top:0,left:0,right:0,height:4,background:"linear-gradient(90deg,#dc2626,#ef4444)",borderRadius:"20px 20px 0 0"}}/>
+
+        <div style={{textAlign:"center",marginBottom:20}}>
+          <div style={{width:60,height:60,borderRadius:16,background:"rgba(220,38,38,0.08)",border:"1.5px solid rgba(220,38,38,0.2)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}>
+            <AlertTriangle style={{width:28,height:28,color:"#dc2626"}}/>
+          </div>
+          <div style={{fontSize:17,fontWeight:800,color:"#0f2133",marginBottom:6}}>Confirmar Exclusão</div>
+          <div style={{fontSize:13,color:"rgba(20,45,70,0.55)",lineHeight:1.55}}>
+            Tem certeza que deseja excluir a empresa
+          </div>
+          <div style={{marginTop:8,padding:"10px 16px",borderRadius:10,background:"rgba(220,38,38,0.06)",border:"1px solid rgba(220,38,38,0.15)"}}>
+            <div style={{fontSize:15,fontWeight:800,color:"#dc2626"}}>{empresa.nome}</div>
+            {empresa.segmento&&<div style={{fontSize:11,color:"rgba(20,45,70,0.5)",marginTop:3}}>{empresa.segmento} · {empresa.cidade||"—"}</div>}
+          </div>
+          <div style={{marginTop:10,fontSize:12,color:"rgba(220,38,38,0.7)",fontWeight:600}}>
+            ⚠️ Esta ação não pode ser desfeita. Todos os dados e contatos serão removidos permanentemente.
+          </div>
+        </div>
+
+        <div style={{display:"flex",gap:10}}>
+          <button
+            onClick={onCancel}
+            disabled={deleting}
+            style={{flex:1,height:44,borderRadius:10,border:"1.5px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.8)",fontSize:13,fontWeight:600,color:"rgba(20,45,70,0.6)",cursor:deleting?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,opacity:deleting?0.5:1}}
+          >
+            <X style={{width:14,height:14}}/> Cancelar
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={deleting}
+            style={{flex:2,height:44,borderRadius:10,border:"none",background:deleting?"rgba(220,38,38,0.5)":"linear-gradient(135deg,#dc2626,#ef4444)",fontSize:13,fontWeight:700,color:"#fff",cursor:deleting?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,boxShadow:"0 4px 14px rgba(220,38,38,0.3)",transition:"all 0.18s"}}
+          >
+            <Trash2 style={{width:14,height:14}}/>
+            {deleting?"Excluindo...":"Sim, excluir empresa"}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -138,10 +169,14 @@ export default function TodosClientes() {
   const [filterPorte, setFilterPorte] = useState("Todos");
   const [sortField, setSortField] = useState<"nome"|"score"|"ticket_medio_estimado"|"porte">("score");
   const [sortDir, setSortDir] = useState<"asc"|"desc">("desc");
-  const [deleteConfirm, setDeleteConfirm] = useState<string|null>(null);
 
-  const token = localStorage.getItem("token")||"";
-  const headers = { Authorization:`Bearer ${token}` };
+  // ── Estado de exclusão com modal ──────────────────────────
+  const [deleteTarget, setDeleteTarget] = useState<Empresa|null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const token = () => localStorage.getItem("token")||"";
+  const headers = () => ({ Authorization:`Bearer ${token()}` });
+  const jsonHeaders = () => ({ "Content-Type":"application/json", Authorization:`Bearer ${token()}` });
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -149,27 +184,39 @@ export default function TodosClientes() {
     setLoading(true);
     try {
       const [empRes, meRes] = await Promise.all([
-        fetch(`${API}/empresas`, { headers }),
-        fetch(`${API}/me`, { headers }),
+        fetch(`${API}/empresas`, { headers: headers() }),
+        fetch(`${API}/me`, { headers: headers() }),
       ]);
-      if (empRes.ok) setEmpresas(await empRes.json());
-      if (meRes.ok)  setUsuario(await meRes.json());
+      if(empRes.ok) setEmpresas(await empRes.json());
+      if(meRes.ok)  setUsuario(await meRes.json());
     } catch {}
     setLoading(false);
   };
 
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    if (deleteConfirm !== id) { setDeleteConfirm(id); return; }
+  // ── Exclusão real com confirmação modal ───────────────────
+  const confirmDelete = async () => {
+    if(!deleteTarget) return;
+    setDeleting(true);
     try {
-      await fetch(`${API}/empresas/${id}`, { method:"DELETE", headers });
-      setEmpresas(empresas.filter(e => e.empresa_id !== id));
-    } catch {}
-    setDeleteConfirm(null);
+      const res = await fetch(`${API}/empresas/${deleteTarget.empresa_id}`, {
+        method: "DELETE",
+        headers: headers(),
+      });
+      if(!res.ok) {
+        const err = await res.json().catch(()=>({}));
+        throw new Error(err.detail || `Erro ${res.status}`);
+      }
+      setEmpresas(prev => prev.filter(e => e.empresa_id !== deleteTarget.empresa_id));
+      setDeleteTarget(null);
+    } catch(e) {
+      alert(e instanceof Error ? e.message : "Erro ao excluir empresa");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const toggleSort = (field: typeof sortField) => {
-    if (sortField === field) setSortDir(d => d==="asc"?"desc":"asc");
+    if(sortField===field) setSortDir(d=>d==="asc"?"desc":"asc");
     else { setSortField(field); setSortDir("desc"); }
   };
 
@@ -178,23 +225,23 @@ export default function TodosClientes() {
   const filtered = empresasComScore
     .filter(e => {
       const q = search.toLowerCase();
-      const matchSearch = !q || e.nome.toLowerCase().includes(q) || e.cidade?.toLowerCase().includes(q) || e.segmento?.toLowerCase().includes(q);
-      const matchPorte = filterPorte === "Todos" || e.porte === filterPorte;
-      return matchSearch && matchPorte;
+      const ms = !q || e.nome.toLowerCase().includes(q) || e.cidade?.toLowerCase().includes(q) || e.segmento?.toLowerCase().includes(q);
+      const mp = filterPorte==="Todos" || e.porte===filterPorte;
+      return ms && mp;
     })
-    .sort((a, b) => {
+    .sort((a,b) => {
       let va: any, vb: any;
-      if (sortField === "score") { va = a.score; vb = b.score; }
-      else if (sortField === "ticket_medio_estimado") { va = a.ticket_medio_estimado||0; vb = b.ticket_medio_estimado||0; }
-      else { va = String(a[sortField]||""); vb = String(b[sortField]||""); }
-      if (typeof va === "number") return sortDir==="asc" ? va-vb : vb-va;
-      return sortDir==="asc" ? va.localeCompare(vb) : vb.localeCompare(va);
+      if(sortField==="score") { va=a.score; vb=b.score; }
+      else if(sortField==="ticket_medio_estimado") { va=a.ticket_medio_estimado||0; vb=b.ticket_medio_estimado||0; }
+      else { va=String(a[sortField]||""); vb=String(b[sortField]||""); }
+      if(typeof va==="number") return sortDir==="asc"?va-vb:vb-va;
+      return sortDir==="asc"?va.localeCompare(vb):vb.localeCompare(va);
     });
 
   const SortTh = ({ label, field }: { label:string; field:typeof sortField }) => (
-    <button onClick={() => toggleSort(field)} style={{ display:"flex", alignItems:"center", gap:4, background:"none", border:"none", cursor:"pointer", fontSize:11, fontWeight:700, letterSpacing:"0.07em", textTransform:"uppercase", color:"rgba(20,45,70,0.5)" }}>
+    <button onClick={()=>toggleSort(field)} style={{display:"flex",alignItems:"center",gap:4,background:"none",border:"none",cursor:"pointer",fontSize:11,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase" as const,color:"rgba(20,45,70,0.5)"}}>
       {label}
-      <ArrowUpDown style={{ width:10, height:10, opacity:sortField===field?1:0.4, color:sortField===field?"#2980b9":"inherit" }} />
+      <ArrowUpDown style={{width:10,height:10,opacity:sortField===field?1:0.4,color:sortField===field?"#2980b9":"inherit"}}/>
     </button>
   );
 
@@ -207,199 +254,202 @@ export default function TodosClientes() {
   };
 
   return (
-    <div style={{ display:"flex", height:"100vh", overflow:"hidden", position:"relative" }}>
+    <div style={{display:"flex",height:"100vh",overflow:"hidden",position:"relative"}}>
       <style>{css}</style>
 
+      {/* Modal de exclusão */}
+      <AnimatePresence>
+        {deleteTarget&&(
+          <DeleteModal
+            empresa={deleteTarget}
+            onConfirm={confirmDelete}
+            onCancel={()=>{ if(!deleting) setDeleteTarget(null); }}
+            deleting={deleting}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Background */}
-      <div style={{ position:"fixed", inset:0, zIndex:0, overflow:"hidden", pointerEvents:"none" }}>
-        <div style={{ position:"absolute", inset:0, background:"linear-gradient(145deg,#c8e8f5 0%,#d6eef5 30%,#cceee8 65%,#c5eae0 100%)" }} />
-        <div style={{ position:"absolute", inset:0, opacity:0.4, backgroundImage:"radial-gradient(circle,rgba(41,128,185,0.2) 1px,transparent 1px)", backgroundSize:"22px 22px" }} />
+      <div style={{position:"fixed",inset:0,zIndex:0,overflow:"hidden",pointerEvents:"none"}}>
+        <div style={{position:"absolute",inset:0,background:"linear-gradient(145deg,#c8e8f5 0%,#d6eef5 30%,#cceee8 65%,#c5eae0 100%)"}}/>
+        <div style={{position:"absolute",inset:0,opacity:0.4,backgroundImage:"radial-gradient(circle,rgba(41,128,185,0.2) 1px,transparent 1px)",backgroundSize:"22px 22px"}}/>
         {[
-          { w:400,h:400, top:"-60px",  left:"8%",   anim:"float1 18s ease-in-out infinite", op:0.11, c1:"#2980b9",c2:"#1abc9c" },
-          { w:260,h:260, top:"45%",    left:"-50px", anim:"float2 22s ease-in-out infinite", op:0.09, c1:"#1abc9c",c2:"#2ecc71" },
-          { w:320,h:320, top:"65%",    left:"60%",   anim:"float3 26s ease-in-out infinite", op:0.08, c1:"#2980b9",c2:"#8e44ad" },
-          { w:180,h:180, top:"15%",    left:"78%",   anim:"float4 20s ease-in-out infinite", op:0.10, c1:"#27ae60",c2:"#1abc9c" },
-          { w:220,h:220, top:"80%",    left:"25%",   anim:"float5 24s ease-in-out infinite", op:0.07, c1:"#e67e22",c2:"#f39c12" },
-        ].map((c,i) => (
-          <div key={i} style={{ position:"absolute", width:c.w, height:c.h, top:c.top, left:c.left, borderRadius:"50%", background:`radial-gradient(circle at 40% 40%,${c.c1},${c.c2})`, opacity:c.op, animation:c.anim, filter:"blur(2px)" }} />
+          {w:400,h:400,top:"-60px",left:"8%",anim:"float1 18s ease-in-out infinite",op:0.11,c1:"#2980b9",c2:"#1abc9c"},
+          {w:260,h:260,top:"45%",left:"-50px",anim:"float2 22s ease-in-out infinite",op:0.09,c1:"#1abc9c",c2:"#2ecc71"},
+          {w:320,h:320,top:"65%",left:"60%",anim:"float3 26s ease-in-out infinite",op:0.08,c1:"#2980b9",c2:"#8e44ad"},
+          {w:180,h:180,top:"15%",left:"78%",anim:"float4 20s ease-in-out infinite",op:0.10,c1:"#27ae60",c2:"#1abc9c"},
+          {w:220,h:220,top:"80%",left:"25%",anim:"float5 24s ease-in-out infinite",op:0.07,c1:"#e67e22",c2:"#f39c12"},
+        ].map((c,i)=>(
+          <div key={i} style={{position:"absolute",width:c.w,height:c.h,top:c.top,left:c.left,borderRadius:"50%",background:`radial-gradient(circle at 40% 40%,${c.c1},${c.c2})`,opacity:c.op,animation:c.anim,filter:"blur(2px)"}}/>
         ))}
       </div>
 
       {/* Sidebar */}
-      <div style={{ width:220, flexShrink:0, height:"100vh", overflowY:"auto", position:"relative", zIndex:10, background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)", boxShadow:"4px 0 24px rgba(0,0,0,0.18)", display:"flex", flexDirection:"column", padding:"0 12px 20px" }}>
-        <div style={{ padding:"22px 4px 24px", borderBottom:"1px solid rgba(255,255,255,0.08)", marginBottom:16 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-            <div style={{ width:36, height:36, borderRadius:10, background:"linear-gradient(135deg,#2980b9,#1abc9c)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 12px rgba(41,128,185,0.4)" }}>
-              <BarChart3 style={{ width:18, height:18, color:"#fff" }} />
+      <div style={{width:220,flexShrink:0,height:"100vh",overflowY:"auto",position:"relative",zIndex:10,background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)",boxShadow:"4px 0 24px rgba(0,0,0,0.18)",display:"flex",flexDirection:"column",padding:"0 12px 20px"}}>
+        <div style={{padding:"22px 4px 24px",borderBottom:"1px solid rgba(255,255,255,0.08)",marginBottom:16}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#2980b9,#1abc9c)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 12px rgba(41,128,185,0.4)"}}>
+              <BarChart3 style={{width:18,height:18,color:"#fff"}}/>
             </div>
             <div>
-              <div style={{ fontSize:14, fontWeight:800, color:"#fff" }}>Prospecção</div>
-              <div style={{ fontSize:11, fontWeight:700, background:"linear-gradient(90deg,#2980b9,#1abc9c,#2ecc71,#2980b9)", backgroundSize:"200% 200%", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", animation:"gradientShift 4s ease infinite" }}>CRM</div>
+              <div style={{fontSize:14,fontWeight:800,color:"#fff"}}>Prospecção</div>
+              <div style={{fontSize:11,fontWeight:700,background:"linear-gradient(90deg,#2980b9,#1abc9c,#2ecc71,#2980b9)",backgroundSize:"200% 200%",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"gradientShift 4s ease infinite"}}>CRM</div>
             </div>
           </div>
         </div>
-        <nav style={{ flex:1, display:"flex", flexDirection:"column", gap:2 }}>
-          {navItems.map(item => (
-            <div key={item.label} className={`nav-item${item.active?" active":""}`} onClick={() => {
-              if (item.label==="Dashboards") navigate("/dashboard");
-              if (item.label==="Cadastrar Empresas") navigate("/empresas/nova");
-              if (item.label==="Todos os clientes") navigate("/clientes");
-              if (item.label==="Gerenciamento de clientes") navigate("/gerenciamento");
-              if (item.label==="Calendário") navigate("/calendario");
+        <nav style={{flex:1,display:"flex",flexDirection:"column",gap:2}}>
+          {navItems.map(item=>(
+            <div key={item.label} className={`nav-item${item.active?" active":""}`} onClick={()=>{
+              if(item.label==="Dashboards") navigate("/dashboard");
+              if(item.label==="Cadastrar Empresas") navigate("/empresas/nova");
+              if(item.label==="Todos os clientes") navigate("/clientes");
+              if(item.label==="Gerenciamento de clientes") navigate("/gerenciamento");
+              if(item.label==="Calendário") navigate("/calendario");
             }}>
-              <item.icon style={{ width:16, height:16, flexShrink:0 }} />
-              {item.label}
+              <item.icon style={{width:16,height:16,flexShrink:0}}/>{item.label}
             </div>
           ))}
         </nav>
-        <div onClick={() => navigate("/perfil")} style={{ marginTop:16, padding:"12px", borderRadius:12, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.08)", display:"flex", alignItems:"center", gap:10, cursor:"pointer", transition:"background 0.18s" }} onMouseEnter={e=>(e.currentTarget.style.background="rgba(255,255,255,0.12)")} onMouseLeave={e=>(e.currentTarget.style.background="rgba(255,255,255,0.06)")}>
-          <div style={{ width:34, height:34, borderRadius:"50%", background:`linear-gradient(135deg,${avatarColor(usuario?.nome||"")},#1abc9c)`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#fff", flexShrink:0 }}>
-            {initials(usuario?.nome||"?")}
-          </div>
-          <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontSize:12, fontWeight:600, color:"#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{usuario?.nome||"..."}</div>
-            <div style={{ fontSize:10, color:"rgba(255,255,255,0.45)" }}>{usuario?.cargo||"Administrador"}</div>
+        <div onClick={()=>navigate("/perfil")} style={{marginTop:16,padding:"12px",borderRadius:12,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.08)",display:"flex",alignItems:"center",gap:10,cursor:"pointer",transition:"background 0.18s"}} onMouseEnter={e=>(e.currentTarget.style.background="rgba(255,255,255,0.12)")} onMouseLeave={e=>(e.currentTarget.style.background="rgba(255,255,255,0.06)")}>
+          <div style={{width:34,height:34,borderRadius:"50%",background:`linear-gradient(135deg,${avatarColor(usuario?.nome||"")},#1abc9c)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"#fff",flexShrink:0}}>{initials(usuario?.nome||"?")}</div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:12,fontWeight:600,color:"#fff",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{usuario?.nome||"..."}</div>
+            <div style={{fontSize:10,color:"rgba(255,255,255,0.45)"}}>{usuario?.cargo||"Administrador"}</div>
           </div>
         </div>
       </div>
 
       {/* Main */}
-      <div style={{ flex:1, height:"100vh", overflowY:"auto", position:"relative", zIndex:5 }}>
+      <div style={{flex:1,height:"100vh",overflowY:"auto",position:"relative",zIndex:5}}>
 
         {/* Topbar */}
-        <div style={{ position:"sticky", top:0, zIndex:20, padding:"14px 28px", background:"rgba(210,238,248,0.75)", backdropFilter:"blur(20px)", borderBottom:"1px solid rgba(255,255,255,0.6)", display:"flex", alignItems:"center", gap:14 }}>
-          <div style={{ flex:1 }}>
-            <h1 style={{ fontSize:18, fontWeight:800, color:"#0f2133", letterSpacing:"-0.02em" }}>Todos os Clientes</h1>
-            <p style={{ fontSize:12, color:"rgba(20,45,70,0.5)", marginTop:1 }}>{filtered.length} empresa{filtered.length!==1?"s":""} encontrada{filtered.length!==1?"s":""}</p>
+        <div style={{position:"sticky",top:0,zIndex:20,padding:"14px 28px",background:"rgba(210,238,248,0.75)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,0.6)",display:"flex",alignItems:"center",gap:14}}>
+          <div style={{flex:1}}>
+            <h1 style={{fontSize:18,fontWeight:800,color:"#0f2133",letterSpacing:"-0.02em"}}>Todos os Clientes</h1>
+            <p style={{fontSize:12,color:"rgba(20,45,70,0.5)",marginTop:1}}>{filtered.length} empresa{filtered.length!==1?"s":""} encontrada{filtered.length!==1?"s":""}</p>
           </div>
-          <button onClick={fetchAll} style={{ width:36, height:36, borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.75)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
-            <RefreshCw style={{ width:15, height:15, color:"#2980b9" }} />
+          <button onClick={fetchAll} style={{width:36,height:36,borderRadius:10,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.75)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <RefreshCw style={{width:15,height:15,color:"#2980b9"}}/>
           </button>
-          <button onClick={() => navigate("/empresas/nova")} style={{ height:38, padding:"0 16px", borderRadius:10, border:"none", cursor:"pointer", background:"linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)", backgroundSize:"200% 200%", animation:"gradientShift 4s ease infinite", color:"#fff", fontSize:13, fontWeight:700, display:"flex", alignItems:"center", gap:6, boxShadow:"0 4px 14px rgba(41,128,185,0.35)" }}>
-            <Plus style={{ width:15, height:15 }} /> Nova empresa
+          <button onClick={()=>navigate("/empresas/nova")} style={{height:38,padding:"0 16px",borderRadius:10,border:"none",cursor:"pointer",background:"linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)",backgroundSize:"200% 200%",animation:"gradientShift 4s ease infinite",color:"#fff",fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:6,boxShadow:"0 4px 14px rgba(41,128,185,0.35)"}}>
+            <Plus style={{width:15,height:15}}/> Nova empresa
           </button>
         </div>
 
-        <div style={{ padding:"22px 28px 40px", display:"flex", flexDirection:"column", gap:18 }}>
+        <div style={{padding:"22px 28px 40px",display:"flex",flexDirection:"column",gap:18}}>
 
           {/* Summary chips */}
-          <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
             {[
-              { label:"Total",      value:counts.total,    color:"#2980b9" },
-              { label:"Leads",      value:counts.lead,     color:"#95a5a6" },
-              { label:"Em contato", value:counts.contato,  color:"#e67e22" },
-              { label:"Proposta",   value:counts.proposta, color:"#8e44ad" },
-              { label:"Fechados",   value:counts.fechado,  color:"#27ae60" },
-            ].map(s => (
-              <div key={s.label} style={{ padding:"6px 14px", borderRadius:20, background:"rgba(255,255,255,0.72)", border:`1px solid ${s.color}25`, backdropFilter:"blur(8px)", display:"flex", alignItems:"center", gap:7 }}>
-                <span style={{ fontSize:16, fontWeight:900, color:s.color }}>{s.value}</span>
-                <span style={{ fontSize:11, fontWeight:600, color:"rgba(20,45,70,0.5)" }}>{s.label}</span>
+              {label:"Total",value:counts.total,color:"#2980b9"},
+              {label:"Leads",value:counts.lead,color:"#95a5a6"},
+              {label:"Em contato",value:counts.contato,color:"#e67e22"},
+              {label:"Proposta",value:counts.proposta,color:"#8e44ad"},
+              {label:"Fechados",value:counts.fechado,color:"#27ae60"},
+            ].map(s=>(
+              <div key={s.label} style={{padding:"6px 14px",borderRadius:20,background:"rgba(255,255,255,0.72)",border:`1px solid ${s.color}25`,backdropFilter:"blur(8px)",display:"flex",alignItems:"center",gap:7}}>
+                <span style={{fontSize:16,fontWeight:900,color:s.color}}>{s.value}</span>
+                <span style={{fontSize:11,fontWeight:600,color:"rgba(20,45,70,0.5)"}}>{s.label}</span>
               </div>
             ))}
-
-            {/* Score legend */}
-            <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:8, padding:"6px 14px", borderRadius:20, background:"rgba(255,255,255,0.72)", border:"1px solid rgba(200,225,240,0.5)" }}>
-              <Star style={{ width:12, height:12, color:"#e67e22" }} />
-              <span style={{ fontSize:11, fontWeight:600, color:"rgba(20,45,70,0.5)" }}>Score:</span>
+            <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8,padding:"6px 14px",borderRadius:20,background:"rgba(255,255,255,0.72)",border:"1px solid rgba(200,225,240,0.5)"}}>
+              <Star style={{width:12,height:12,color:"#e67e22"}}/>
+              <span style={{fontSize:11,fontWeight:600,color:"rgba(20,45,70,0.5)"}}>Score:</span>
               {[{l:"Alto",c:"#27ae60"},{l:"Médio",c:"#e67e22"},{l:"Baixo",c:"#e74c3c"}].map(s=>(
-                <span key={s.l} style={{ fontSize:10, fontWeight:700, color:s.c, background:`${s.c}15`, padding:"2px 7px", borderRadius:10 }}>{s.l}</span>
+                <span key={s.l} style={{fontSize:10,fontWeight:700,color:s.c,background:`${s.c}15`,padding:"2px 7px",borderRadius:10}}>{s.l}</span>
               ))}
             </div>
           </div>
 
           {/* Filters */}
-          <div style={{ display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
-            <div style={{ flex:1, minWidth:220, position:"relative" }}>
-              <Search style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", width:14, height:14, color:"rgba(20,45,70,0.35)" }} />
-              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar por nome, cidade, segmento..." style={{ width:"100%", height:38, paddingLeft:34, paddingRight:14, borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.78)", fontSize:13, color:"#1a2e40", outline:"none" }} />
+          <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+            <div style={{flex:1,minWidth:220,position:"relative"}}>
+              <Search style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",width:14,height:14,color:"rgba(20,45,70,0.35)"}}/>
+              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar por nome, cidade, segmento..." style={{width:"100%",height:38,paddingLeft:34,paddingRight:14,borderRadius:10,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.78)",fontSize:13,color:"#1a2e40",outline:"none"}}/>
             </div>
-            <div style={{ position:"relative" }}>
-              <select value={filterPorte} onChange={e=>setFilterPorte(e.target.value)} style={{ height:38, padding:"0 32px 0 12px", borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.78)", fontSize:13, color:"#1a2e40", outline:"none", cursor:"pointer", appearance:"none" }}>
+            <div style={{position:"relative"}}>
+              <select value={filterPorte} onChange={e=>setFilterPorte(e.target.value)} style={{height:38,padding:"0 32px 0 12px",borderRadius:10,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.78)",fontSize:13,color:"#1a2e40",outline:"none",cursor:"pointer",appearance:"none"}}>
                 {PORTE_OPTS.map(s=><option key={s}>{s}</option>)}
               </select>
-              <ChevronDown style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", width:13, height:13, color:"rgba(20,45,70,0.4)", pointerEvents:"none" }} />
+              <ChevronDown style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",width:13,height:13,color:"rgba(20,45,70,0.4)",pointerEvents:"none"}}/>
             </div>
-            <div style={{ display:"flex", alignItems:"center", gap:5, padding:"0 12px", height:38, borderRadius:10, background:"rgba(255,255,255,0.6)", border:"1px solid rgba(200,225,240,0.7)", fontSize:12, color:"rgba(20,45,70,0.5)" }}>
-              <Filter style={{ width:13, height:13 }} /> {filtered.length} resultado{filtered.length!==1?"s":""}
+            <div style={{display:"flex",alignItems:"center",gap:5,padding:"0 12px",height:38,borderRadius:10,background:"rgba(255,255,255,0.6)",border:"1px solid rgba(200,225,240,0.7)",fontSize:12,color:"rgba(20,45,70,0.5)"}}>
+              <Filter style={{width:13,height:13}}/> {filtered.length} resultado{filtered.length!==1?"s":""}
             </div>
           </div>
 
           {/* Table */}
-          <motion.div className="glass-card" style={{ overflow:"hidden" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.38 }}>
+          <motion.div className="glass-card" style={{overflow:"hidden"}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.38}}>
             <div className="th">
-              <SortTh label="Empresa" field="nome" />
-              <SortTh label="Porte" field="porte" />
-              <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.07em", textTransform:"uppercase", color:"rgba(20,45,70,0.5)" }}>Segmento</span>
-              <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.07em", textTransform:"uppercase", color:"rgba(20,45,70,0.5)" }}>Cidade</span>
-              <SortTh label="Score ★" field="score" />
-              <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.07em", textTransform:"uppercase", color:"rgba(20,45,70,0.5)" }}>Ações</span>
+              <SortTh label="Empresa" field="nome"/>
+              <SortTh label="Porte" field="porte"/>
+              <span style={{fontSize:11,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase" as const,color:"rgba(20,45,70,0.5)"}}>Segmento</span>
+              <span style={{fontSize:11,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase" as const,color:"rgba(20,45,70,0.5)"}}>Cidade</span>
+              <SortTh label="Score ★" field="score"/>
+              <span style={{fontSize:11,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase" as const,color:"rgba(20,45,70,0.5)"}}>Ações</span>
             </div>
 
-            {loading ? (
-              Array.from({length:5}).map((_,i) => (
-                <div key={i} className="client-row" style={{ cursor:"default" }}>
-                  {Array.from({length:6}).map((_,j) => (
-                    <div key={j} className="skeleton" style={{ height:18, width:`${60+Math.random()*30}%` }} />
+            {loading?(
+              Array.from({length:5}).map((_,i)=>(
+                <div key={i} className="client-row" style={{cursor:"default"}}>
+                  {Array.from({length:6}).map((_,j)=>(
+                    <div key={j} className="skeleton" style={{height:18,width:`${60+Math.random()*30}%`}}/>
                   ))}
                 </div>
               ))
-            ) : filtered.length === 0 ? (
-              <div style={{ padding:"48px 20px", textAlign:"center" }}>
-                <Building2 style={{ width:36, height:36, color:"rgba(41,128,185,0.3)", margin:"0 auto 12px" }} />
-                <p style={{ fontSize:14, fontWeight:600, color:"rgba(20,45,70,0.5)" }}>Nenhuma empresa encontrada</p>
+            ):filtered.length===0?(
+              <div style={{padding:"48px 20px",textAlign:"center"}}>
+                <Building2 style={{width:36,height:36,color:"rgba(41,128,185,0.3)",margin:"0 auto 12px"}}/>
+                <p style={{fontSize:14,fontWeight:600,color:"rgba(20,45,70,0.5)"}}>Nenhuma empresa encontrada</p>
               </div>
-            ) : (
+            ):(
               <AnimatePresence>
-                {filtered.map((emp, idx) => {
+                {filtered.map((emp,idx)=>{
                   const pc = porteColor(emp.porte);
                   const sc = scoreColor(emp.score);
-                  const isDeleting = deleteConfirm === emp.empresa_id;
-                  return (
+                  return(
                     <motion.div
                       key={emp.empresa_id}
                       className="client-row"
-                      initial={{ opacity:0, x:-8 }}
-                      animate={{ opacity:1, x:0 }}
-                      exit={{ opacity:0, height:0 }}
-                      transition={{ duration:0.2, delay:idx*0.03 }}
-                      onClick={() => navigate(`/clientes/${emp.empresa_id}`)}
+                      initial={{opacity:0,x:-8}} animate={{opacity:1,x:0}} exit={{opacity:0,height:0}}
+                      transition={{duration:0.2,delay:idx*0.03}}
+                      onClick={()=>navigate(`/clientes/${emp.empresa_id}`)}
                     >
                       {/* Nome */}
-                      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                        <div style={{ width:34, height:34, borderRadius:10, background:avatarColor(emp.nome), display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#fff", flexShrink:0 }}>
-                          {initials(emp.nome)}
-                        </div>
+                      <div style={{display:"flex",alignItems:"center",gap:10}}>
+                        <div style={{width:34,height:34,borderRadius:10,background:avatarColor(emp.nome),display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"#fff",flexShrink:0}}>{initials(emp.nome)}</div>
                         <div>
-                          <div style={{ fontSize:13, fontWeight:700, color:"#0f2133" }}>{emp.nome}</div>
-                          {emp.responsavel_principal && <div style={{ fontSize:10, color:"rgba(20,45,70,0.4)" }}>{emp.responsavel_principal}</div>}
+                          <div style={{fontSize:13,fontWeight:700,color:"#0f2133"}}>{emp.nome}</div>
+                          {emp.responsavel_principal&&<div style={{fontSize:10,color:"rgba(20,45,70,0.4)"}}>{emp.responsavel_principal}</div>}
                         </div>
                       </div>
-
                       {/* Porte */}
-                      <span className="chip" style={{ background:`${pc}15`, color:pc, border:`1px solid ${pc}30` }}>{emp.porte||"—"}</span>
-
+                      <span className="chip" style={{background:`${pc}15`,color:pc,border:`1px solid ${pc}30`}}>{emp.porte||"—"}</span>
                       {/* Segmento */}
-                      <span style={{ fontSize:12, color:"rgba(20,45,70,0.6)", fontWeight:500 }}>{emp.segmento||"—"}</span>
-
+                      <span style={{fontSize:12,color:"rgba(20,45,70,0.6)",fontWeight:500}}>{emp.segmento||"—"}</span>
                       {/* Cidade */}
-                      <span style={{ fontSize:12, color:"rgba(20,45,70,0.6)", fontWeight:500 }}>{emp.cidade||"—"}</span>
-
+                      <span style={{fontSize:12,color:"rgba(20,45,70,0.6)",fontWeight:500}}>{emp.cidade||"—"}</span>
                       {/* Score */}
-                      <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
-                        <ScoreBar score={emp.score} />
-                        <span style={{ fontSize:9, fontWeight:700, color:sc.color, textTransform:"uppercase", letterSpacing:"0.05em" }}>{sc.label}</span>
+                      <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                        <ScoreBar score={emp.score}/>
+                        <span style={{fontSize:9,fontWeight:700,color:sc.color,textTransform:"uppercase" as const,letterSpacing:"0.05em"}}>{sc.label}</span>
                       </div>
-
                       {/* Ações */}
-                      <div style={{ display:"flex", alignItems:"center", gap:5 }} onClick={e=>e.stopPropagation()}>
-                        <button className="action-btn" style={{ background:"rgba(41,128,185,0.08)", color:"#2980b9" }} onClick={e=>{e.stopPropagation();navigate(`/clientes/${emp.empresa_id}`)}} title="Ver perfil">
-                          <Eye style={{ width:13, height:13 }} />
+                      <div style={{display:"flex",alignItems:"center",gap:5}} onClick={e=>e.stopPropagation()}>
+                        <button className="action-btn" style={{background:"rgba(41,128,185,0.08)",color:"#2980b9"}} onClick={e=>{e.stopPropagation();navigate(`/clientes/${emp.empresa_id}`);}} title="Ver perfil">
+                          <Eye style={{width:13,height:13}}/>
                         </button>
-                        <button className="action-btn" style={{ background:"rgba(142,68,173,0.08)", color:"#8e44ad" }} onClick={e=>{e.stopPropagation();navigate(`/clientes/${emp.empresa_id}/editar`)}} title="Editar">
-                          <Edit3 style={{ width:13, height:13 }} />
+                        <button className="action-btn" style={{background:"rgba(142,68,173,0.08)",color:"#8e44ad"}} onClick={e=>{e.stopPropagation();navigate(`/clientes/${emp.empresa_id}/editar`);}} title="Editar">
+                          <Edit3 style={{width:13,height:13}}/>
                         </button>
-                        <button className="action-btn" style={{ background:isDeleting?"rgba(231,76,60,0.2)":"rgba(231,76,60,0.08)", color:"#e74c3c" }} onClick={e=>handleDelete(e,emp.empresa_id)} title={isDeleting?"Confirmar exclusão":"Excluir"} onBlur={()=>setTimeout(()=>setDeleteConfirm(null),200)}>
-                          {isDeleting ? <CheckSquare style={{ width:13, height:13 }} /> : <Trash2 style={{ width:13, height:13 }} />}
+                        {/* ── Botão excluir abre modal ── */}
+                        <button
+                          className="action-btn"
+                          style={{background:"rgba(231,76,60,0.08)",color:"#e74c3c"}}
+                          onClick={e=>{e.stopPropagation(); setDeleteTarget(emp);}}
+                          title="Excluir empresa"
+                        >
+                          <Trash2 style={{width:13,height:13}}/>
                         </button>
                       </div>
                     </motion.div>
