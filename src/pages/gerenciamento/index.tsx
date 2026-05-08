@@ -30,8 +30,8 @@ const css = `
   .move-btn:hover { opacity:0.85; transform:scale(1.03); }
   .list-row { background:rgba(255,255,255,0.78); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.9); border-radius:12px; transition:all 0.18s; }
   .list-row:hover { box-shadow:0 4px 16px rgba(41,128,185,0.1); border-color:rgba(41,128,185,0.25); transform:translateY(-1px); }
-  .mini-input, .mini-select { height:26px; border-radius:7px; border:1px solid rgba(200,225,240,0.85); background:rgba(255,255,255,0.78); color:#0f2133; font-size:10px; font-weight:600; outline:none; padding:0 8px; min-width:0; }
-  .mini-input:focus, .mini-select:focus { border-color:rgba(41,128,185,0.55); box-shadow:0 0 0 2px rgba(41,128,185,0.08); }
+  .mini-status-select { width:100%; height:30px; border-radius:8px; border:1px solid rgba(200,225,240,0.85); background:rgba(255,255,255,0.85); font-size:11px; font-weight:700; outline:none; padding:0 26px 0 10px; cursor:pointer; appearance:none; }
+  .mini-status-select:focus { border-color:rgba(41,128,185,0.55); box-shadow:0 0 0 2px rgba(41,128,185,0.08); }
   .quick-btn { width:24px; height:24px; border-radius:6px; border:1px solid rgba(200,225,240,0.75); background:rgba(255,255,255,0.72); display:flex; align-items:center; justify-content:center; cursor:pointer; color:#2980b9; text-decoration:none; transition:all 0.15s; }
   .quick-btn:hover { transform:translateY(-1px); border-color:rgba(41,128,185,0.45); background:#fff; }
   .chip-select { height:32px; border-radius:9px; border:1px solid rgba(200,225,240,0.75); background:rgba(255,255,255,0.68); color:rgba(20,45,70,0.66); font-size:11px; font-weight:700; outline:none; padding:0 9px; cursor:pointer; }
@@ -514,9 +514,13 @@ export default function Gerenciamento() {
                             key={emp.empresa_id}
                             className="kanban-card"
                             draggable
-                            onDragStartCapture={ev=>{setDraggedId(emp.empresa_id);ev.dataTransfer.setData("text/plain",emp.empresa_id);ev.dataTransfer.effectAllowed="move";}}
-                            onDragEndCapture={()=>{setDraggedId(null);setDragOverStatus(null);}}
-                            style={{opacity:movingId===emp.empresa_id?0.45:1}}
+                            onDragStart={(ev: any)=>{
+                              setDraggedId(emp.empresa_id);
+                              ev.dataTransfer.setData("text/plain",emp.empresa_id);
+                              ev.dataTransfer.effectAllowed="move";
+                            }}
+                            onDragEnd={()=>{setDraggedId(null);setDragOverStatus(null);}}
+                            style={{opacity:movingId===emp.empresa_id?0.45:1,cursor:draggedId===emp.empresa_id?"grabbing":"grab"}}
                             initial={{opacity:0,y:10}}
                             animate={{opacity:movingId===emp.empresa_id?0.45:1,y:0}}
                             exit={{opacity:0,scale:0.95}}
@@ -567,21 +571,41 @@ export default function Gerenciamento() {
                               <input className="mini-input" type="date" value={dateOnly(emp.data_proxima_acao)} onChange={e=>updateNextAction(emp.empresa_id,{data_proxima_acao:e.target.value || null})}/>
                             </div>
                             <div style={{height:1,background:"rgba(200,225,240,0.5)",marginBottom:10}}/>
-                            <div style={{display:"flex",alignItems:"center",gap:5}}>
-                              <div style={{display:"flex",gap:3}}>
-                                {TEMPS.map(t=>(
-                                  <button key={t.key} onClick={ev=>updateTemp(emp.empresa_id,t.key,ev)} style={{width:24,height:24,borderRadius:5,border:`1.5px solid ${emp.temperatura===t.key?t.color:"rgba(200,225,240,0.7)"}`,background:emp.temperatura===t.key?t.bg:"rgba(255,255,255,0.6)",cursor:"pointer",fontSize:10,fontWeight:800,color:emp.temperatura===t.key?t.color:"rgba(20,45,70,0.5)",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center"}}>{t.icon}</button>
-                                ))}
-                              </div>
-                              <div style={{flex:1}}/>
-                              {renderQuickActions(emp)}
-                              {PIPELINE.filter(p=>p.key!==emp.status).slice(0,1).map(p=>(
-                                <button key={p.key} onClick={ev=>{ev.stopPropagation();updateStatus(emp.empresa_id,p.key);}} className="move-btn" style={{background:p.color,color:"#fff"}}>→ {p.label}</button>
+
+                          {/* Linha 1: temperatura + quick actions + ver */}
+                          <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:8}}>
+                            <div style={{display:"flex",gap:3}}>
+                              {TEMPS.map(t=>(
+                                <button key={t.key} onClick={ev=>updateTemp(emp.empresa_id,t.key,ev)} style={{width:24,height:24,borderRadius:5,border:`1.5px solid ${emp.temperatura===t.key?t.color:"rgba(200,225,240,0.7)"}`,background:emp.temperatura===t.key?t.bg:"rgba(255,255,255,0.6)",cursor:"pointer",fontSize:10,fontWeight:800,color:emp.temperatura===t.key?t.color:"rgba(20,45,70,0.5)",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center"}}>{t.icon}</button>
                               ))}
-                              <button onClick={ev=>{ev.stopPropagation();navigate(`/clientes/${emp.empresa_id}`);}} style={{width:24,height:24,borderRadius:6,border:"1px solid rgba(200,225,240,0.7)",background:"rgba(255,255,255,0.7)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
-                                <Eye style={{width:11,height:11,color:"#2980b9"}}/>
-                              </button>
                             </div>
+                            <div style={{flex:1}}/>
+                            {renderQuickActions(emp)}
+                            <button onClick={ev=>{ev.stopPropagation();navigate(`/clientes/${emp.empresa_id}`);}} style={{width:24,height:24,borderRadius:6,border:"1px solid rgba(200,225,240,0.7)",background:"rgba(255,255,255,0.7)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+                              <Eye style={{width:11,height:11,color:"#2980b9"}}/>
+                            </button>
+                          </div>
+
+                          {/* Linha 2: dropdown de mover status */}
+                          <div onClick={e=>e.stopPropagation()} style={{position:"relative"}}>
+                            <select 
+                              className="mini-status-select"
+                              value={emp.status}
+                              onChange={e=>updateStatus(emp.empresa_id, e.target.value)}
+                              style={{
+                                borderColor: `${col.color}50`,
+                                background: `${col.color}10`,
+                                color: col.color,
+                              }}
+                            >
+                              {PIPELINE.map(p=>(
+                                <option key={p.key} value={p.key}>
+                                  {p.key===emp.status ? `● ${p.label}` : `→ Mover para ${p.label}`}
+                                </option>
+                              ))}
+                            </select>
+                            <ChevronRight style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%) rotate(90deg)",width:12,height:12,color:col.color,pointerEvents:"none"}}/>
+                          </div>
                           </motion.div>
                         );
                       })}
