@@ -33,27 +33,14 @@ const css = `
     cursor:pointer;
     transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
     position:relative;
-    overflow:hidden;
+    overflow:visible;
     z-index:1;
   }
   .kanban-card:hover {
-    transform:translateY(-2px) scale(1.01);
+    transform:translateY(-2px);
     box-shadow:0 16px 40px rgba(41,128,185,0.18);
     border-color:rgba(41,128,185,0.4);
     z-index:10;
-  }
-
-  .card-expand-section {
-    max-height: 0;
-    overflow: hidden;
-    opacity: 0;
-    transition: max-height 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.22s ease;
-    pointer-events: none;
-  }
-  .kanban-card:hover .card-expand-section {
-    max-height: 240px;
-    opacity: 1;
-    pointer-events: all;
   }
 
   .drop-active { border-color:rgba(41,128,185,0.55)!important; background:rgba(41,128,185,0.06)!important; }
@@ -636,72 +623,70 @@ export default function Gerenciamento() {
                               </div>
                             </div>
 
-                            {/* ── SEÇÃO EXPANSÍVEL NO HOVER ── */}
-                            <div className="card-expand-section">
-                              {/* Valor */}
-                              <div style={{marginBottom:8}} onClick={e=>e.stopPropagation()}>
-                                {editValorId===emp.empresa_id?(
-                                  <div style={{display:"flex",gap:5}}>
-                                    <input className="mini-input" autoFocus value={valorDraft} onChange={e=>setValorDraft(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")saveValor(emp.empresa_id);if(e.key==="Escape")setEditValorId(null);}} placeholder="Ex: 5000"/>
-                                    <button className="quick-btn" onClick={e=>saveValor(emp.empresa_id,e)}><Save style={{width:12,height:12}}/></button>
-                                    <button className="quick-btn" onClick={()=>setEditValorId(null)}><X style={{width:12,height:12}}/></button>
-                                  </div>
-                                ):(
-                                  <button onClick={e=>{e.stopPropagation();setEditValorId(emp.empresa_id);setValorDraft(emp.ticket_medio_estimado?.toString()||"");}} style={{width:"100%",height:28,borderRadius:8,border:"1px solid rgba(39,174,96,0.25)",background:"rgba(39,174,96,0.07)",color:"#16a34a",fontSize:12,fontWeight:900,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 9px"}}>
-                                    <span>{formatMoney(emp.ticket_medio_estimado)}</span><Edit3 style={{width:11,height:11}}/>
-                                  </button>
-                                )}
-                              </div>
-
-                              {/* ✅ MUDANÇA 4: Data com layout corrigido - flex em vez de grid */}
-                              <div style={{display:"flex",gap:5,marginBottom:8}} onClick={e=>e.stopPropagation()}>
-                                <select className="mini-select" style={{flex:"1 1 0",minWidth:0}} value={emp.proxima_acao||""} onChange={e=>updateNextAction(emp.empresa_id,{proxima_acao:e.target.value})}>
-                                  <option value="">Próxima ação</option>
-                                  {PROXIMAS_ACOES.map(a=><option key={a}>{a}</option>)}
-                                </select>
-                                <input
-                                  className="mini-input"
-                                  type="date"
-                                  style={{width:120,flexShrink:0}}
-                                  value={dateOnly(emp.data_proxima_acao)}
-                                  onChange={e=>updateNextAction(emp.empresa_id,{data_proxima_acao:e.target.value || null})}
-                                />
-                              </div>
-
-                              <div style={{height:1,background:"rgba(200,225,240,0.5)",marginBottom:8}}/>
-
-                              {/* Temperatura + ações rápidas + status */}
-                              <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:7}}>
-                                <div style={{display:"flex",gap:3}}>
-                                  {TEMPS.map(t=>(
-                                    <button key={t.key} onClick={ev=>updateTemp(emp.empresa_id,t.key,ev)} title={t.key} style={{width:26,height:26,borderRadius:5,border:`1.5px solid ${emp.temperatura===t.key?t.color:"rgba(200,225,240,0.7)"}`,background:emp.temperatura===t.key?t.bg:"rgba(255,255,255,0.6)",cursor:"pointer",fontSize:13,transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                                      {t.icon}
-                                    </button>
-                                  ))}
+                            {/* ── SEÇÃO SEMPRE VISÍVEL ── */}
+                            {/* Valor */}
+                            <div style={{marginBottom:8}} onClick={e=>e.stopPropagation()}>
+                              {editValorId===emp.empresa_id?(
+                                <div style={{display:"flex",gap:5}}>
+                                  <input className="mini-input" autoFocus value={valorDraft} onChange={e=>setValorDraft(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")saveValor(emp.empresa_id);if(e.key==="Escape")setEditValorId(null);}} placeholder="Ex: 5000"/>
+                                  <button className="quick-btn" onClick={e=>saveValor(emp.empresa_id,e)}><Save style={{width:12,height:12}}/></button>
+                                  <button className="quick-btn" onClick={()=>setEditValorId(null)}><X style={{width:12,height:12}}/></button>
                                 </div>
-                                <div style={{flex:1}}/>
-                                {renderQuickActions(emp)}
-                                <button onClick={ev=>{ev.stopPropagation();navigate(`/clientes/${emp.empresa_id}`);}} style={{width:24,height:24,borderRadius:6,border:"1px solid rgba(200,225,240,0.7)",background:"rgba(255,255,255,0.7)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
-                                  <Eye style={{width:11,height:11,color:"#2980b9"}}/>
+                              ):(
+                                <button onClick={e=>{e.stopPropagation();setEditValorId(emp.empresa_id);setValorDraft(emp.ticket_medio_estimado?.toString()||"");}} style={{width:"100%",height:28,borderRadius:8,border:"1px solid rgba(39,174,96,0.25)",background:"rgba(39,174,96,0.07)",color:"#16a34a",fontSize:12,fontWeight:900,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 9px"}}>
+                                  <span>{formatMoney(emp.ticket_medio_estimado)}</span><Edit3 style={{width:11,height:11}}/>
                                 </button>
-                              </div>
+                              )}
+                            </div>
 
-                              {/* Status dropdown */}
-                              <div onClick={e=>e.stopPropagation()} style={{position:"relative"}}>
-                                <select
-                                  className="mini-status-select"
-                                  value={emp.status}
-                                  onChange={e=>updateStatus(emp.empresa_id, e.target.value)}
-                                  style={{borderColor:`${col.color}50`,background:`${col.color}10`,color:col.color}}
-                                >
-                                  {PIPELINE.map(p=>(
-                                    <option key={p.key} value={p.key}>
-                                      {p.key===emp.status ? `● ${p.label}` : `→ Mover para ${p.label}`}
-                                    </option>
-                                  ))}
-                                </select>
-                                <ChevronRight style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%) rotate(90deg)",width:12,height:12,color:col.color,pointerEvents:"none"}}/>
+                            {/* Próxima ação + data */}
+                            <div style={{display:"flex",gap:5,marginBottom:8}} onClick={e=>e.stopPropagation()}>
+                              <select className="mini-select" style={{flex:"1 1 0",minWidth:0}} value={emp.proxima_acao||""} onChange={e=>updateNextAction(emp.empresa_id,{proxima_acao:e.target.value})}>
+                                <option value="">Próxima ação</option>
+                                {PROXIMAS_ACOES.map(a=><option key={a}>{a}</option>)}
+                              </select>
+                              <input
+                                className="mini-input"
+                                type="date"
+                                style={{width:120,flexShrink:0}}
+                                value={dateOnly(emp.data_proxima_acao)}
+                                onChange={e=>updateNextAction(emp.empresa_id,{data_proxima_acao:e.target.value || null})}
+                              />
+                            </div>
+
+                            <div style={{height:1,background:"rgba(200,225,240,0.5)",marginBottom:8}}/>
+
+                            {/* Temperatura + ações rápidas + status */}
+                            <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:7}}>
+                              <div style={{display:"flex",gap:3}}>
+                                {TEMPS.map(t=>(
+                                  <button key={t.key} onClick={ev=>updateTemp(emp.empresa_id,t.key,ev)} title={t.key} style={{width:26,height:26,borderRadius:5,border:`1.5px solid ${emp.temperatura===t.key?t.color:"rgba(200,225,240,0.7)"}`,background:emp.temperatura===t.key?t.bg:"rgba(255,255,255,0.6)",cursor:"pointer",fontSize:13,transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                                    {t.icon}
+                                  </button>
+                                ))}
                               </div>
+                              <div style={{flex:1}}/>
+                              {renderQuickActions(emp)}
+                              <button onClick={ev=>{ev.stopPropagation();navigate(`/clientes/${emp.empresa_id}`);}} style={{width:24,height:24,borderRadius:6,border:"1px solid rgba(200,225,240,0.7)",background:"rgba(255,255,255,0.7)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+                                <Eye style={{width:11,height:11,color:"#2980b9"}}/>
+                              </button>
+                            </div>
+
+                            {/* Status dropdown */}
+                            <div onClick={e=>e.stopPropagation()} style={{position:"relative"}}>
+                              <select
+                                className="mini-status-select"
+                                value={emp.status}
+                                onChange={e=>updateStatus(emp.empresa_id, e.target.value)}
+                                style={{borderColor:`${col.color}50`,background:`${col.color}10`,color:col.color}}
+                              >
+                                {PIPELINE.map(p=>(
+                                  <option key={p.key} value={p.key}>
+                                    {p.key===emp.status ? `● ${p.label}` : `→ Mover para ${p.label}`}
+                                  </option>
+                                ))}
+                              </select>
+                              <ChevronRight style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%) rotate(90deg)",width:12,height:12,color:col.color,pointerEvents:"none"}}/>
                             </div>
                           </motion.div>
                         );
