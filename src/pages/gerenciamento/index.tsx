@@ -4,9 +4,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Search, Building2, Users, ClipboardList,
   Calendar, BarChart3, Plus, RefreshCw, Eye,
-  ChevronRight, MapPin, TrendingUp, ArrowRight,
+  ChevronRight, MapPin, TrendingUp,
   Phone, Mail, MessageCircle, History, Save, X,
-  CalendarClock, Clock, Filter, Edit3,
+  CalendarClock, Clock, Filter, Edit3, AlertCircle,
 } from "lucide-react";
 
 const css = `
@@ -19,22 +19,70 @@ const css = `
   @keyframes float5 { 0%,100%{transform:translate(0,0) scale(1)}45%{transform:translate(35px,-20px) scale(1.06)}80%{transform:translate(-15px,30px) scale(0.96)} }
   @keyframes gradientShift { 0%,100%{background-position:0% 50%}50%{background-position:100% 50%} }
   @keyframes shimmer { 0%{background-position:-200% 0}100%{background-position:200% 0} }
+  @keyframes pulse-red { 0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,0.3)}50%{box-shadow:0 0 0 6px rgba(220,38,38,0)} }
+
   .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:10px; cursor:pointer; font-size:13.5px; font-weight:500; color:rgba(255,255,255,0.65); transition:all 0.18s; user-select:none; }
   .nav-item:hover { background:rgba(255,255,255,0.08); color:#fff; }
   .nav-item.active { background:rgba(255,255,255,0.14); color:#fff; font-weight:600; }
-  .kanban-card { background:rgba(255,255,255,0.88); border:1px solid rgba(200,225,240,0.7); border-radius:14px; padding:16px; cursor:pointer; transition:all 0.2s; position:relative; overflow:hidden; }
-  .kanban-card:hover { transform:translateY(-3px); box-shadow:0 12px 32px rgba(41,128,185,0.15); border-color:rgba(41,128,185,0.35); }
+
+  .kanban-card {
+    background:rgba(255,255,255,0.88);
+    border:1px solid rgba(200,225,240,0.7);
+    border-radius:14px;
+    padding:13px 13px 10px;
+    cursor:pointer;
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+    position:relative;
+    overflow:hidden;
+    z-index:1;
+  }
+  .kanban-card:hover {
+    transform:translateY(-2px) scale(1.01);
+    box-shadow:0 16px 40px rgba(41,128,185,0.18);
+    border-color:rgba(41,128,185,0.4);
+    z-index:10;
+  }
+
+  .card-expand-section {
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.22s ease;
+    pointer-events: none;
+  }
+  .kanban-card:hover .card-expand-section {
+    max-height: 240px;
+    opacity: 1;
+    pointer-events: all;
+  }
+
   .drop-active { border-color:rgba(41,128,185,0.55)!important; background:rgba(41,128,185,0.06)!important; }
   .skeleton { background:linear-gradient(90deg,rgba(200,225,240,0.4) 25%,rgba(220,240,252,0.7) 50%,rgba(200,225,240,0.4) 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:8px; }
-  .move-btn { padding:4px 9px; border-radius:6px; font-size:9px; font-weight:700; cursor:pointer; border:none; transition:all 0.15s; white-space:nowrap; }
-  .move-btn:hover { opacity:0.85; transform:scale(1.03); }
+
   .list-row { background:rgba(255,255,255,0.78); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.9); border-radius:12px; transition:all 0.18s; }
   .list-row:hover { box-shadow:0 4px 16px rgba(41,128,185,0.1); border-color:rgba(41,128,185,0.25); transform:translateY(-1px); }
+
   .mini-status-select { width:100%; height:30px; border-radius:8px; border:1px solid rgba(200,225,240,0.85); background:rgba(255,255,255,0.85); font-size:11px; font-weight:700; outline:none; padding:0 26px 0 10px; cursor:pointer; appearance:none; }
   .mini-status-select:focus { border-color:rgba(41,128,185,0.55); box-shadow:0 0 0 2px rgba(41,128,185,0.08); }
+
+  .mini-input { height:30px; border-radius:8px; border:1px solid rgba(200,225,240,0.85); background:rgba(255,255,255,0.85); font-size:11px; font-weight:500; outline:none; padding:0 8px; width:100%; color:#1a2e40; transition:border-color 0.15s; }
+  .mini-input:focus { border-color:rgba(41,128,185,0.55); box-shadow:0 0 0 2px rgba(41,128,185,0.08); }
+  .mini-input[type="date"] { padding:0 6px; font-size:10.5px; }
+
+  .mini-select { height:30px; border-radius:8px; border:1px solid rgba(200,225,240,0.85); background:rgba(255,255,255,0.85); font-size:11px; font-weight:600; outline:none; padding:0 8px; cursor:pointer; width:100%; color:#1a2e40; transition:border-color 0.15s; }
+  .mini-select:focus { border-color:rgba(41,128,185,0.55); }
+
   .quick-btn { width:24px; height:24px; border-radius:6px; border:1px solid rgba(200,225,240,0.75); background:rgba(255,255,255,0.72); display:flex; align-items:center; justify-content:center; cursor:pointer; color:#2980b9; text-decoration:none; transition:all 0.15s; }
   .quick-btn:hover { transform:translateY(-1px); border-color:rgba(41,128,185,0.45); background:#fff; }
+
   .chip-select { height:32px; border-radius:9px; border:1px solid rgba(200,225,240,0.75); background:rgba(255,255,255,0.68); color:rgba(20,45,70,0.66); font-size:11px; font-weight:700; outline:none; padding:0 9px; cursor:pointer; }
+
+  .overdue-btn { display:flex; align-items:center; gap:6px; padding:6px 14px; border-radius:10px; border:1.5px solid rgba(220,38,38,0.35); background:rgba(220,38,38,0.07); cursor:pointer; transition:all 0.18s; animation:pulse-red 2.5s infinite; }
+  .overdue-btn:hover { background:rgba(220,38,38,0.14); border-color:rgba(220,38,38,0.55); transform:translateY(-1px); animation:none; }
+
+  .overdue-row { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; border:1px solid rgba(220,38,38,0.2); background:rgba(255,255,255,0.9); transition:all 0.15s; }
+  .overdue-row:hover { border-color:rgba(220,38,38,0.4); box-shadow:0 3px 12px rgba(220,38,38,0.1); }
+
   ::-webkit-scrollbar { width:4px; height:4px; }
   ::-webkit-scrollbar-track { background:transparent; }
   ::-webkit-scrollbar-thumb { background:rgba(41,128,185,0.25); border-radius:4px; }
@@ -95,24 +143,17 @@ const PIPELINE = [
   { key:"Perdido", label:"Perdido", color:"#dc2626", light:"rgba(220,38,38,0.1)", dot:"#f87171" },
 ];
 
+// ✅ MUDANÇA 1: Ícones de temperatura alterados para emojis
 const TEMPS = [
-  { key:"Quente", icon:"Q", color:"#c0392b", bg:"rgba(192,57,43,0.1)" },
-  { key:"Morno", icon:"M", color:"#d68910", bg:"rgba(214,137,16,0.1)" },
-  { key:"Frio", icon:"F", color:"#2980b9", bg:"rgba(41,128,185,0.1)" },
+  { key:"Quente", icon:"🔥", color:"#c0392b", bg:"rgba(192,57,43,0.1)" },
+  { key:"Morno",  icon:"🌡️", color:"#d68910", bg:"rgba(214,137,16,0.1)" },
+  { key:"Frio",   icon:"❄️", color:"#2980b9", bg:"rgba(41,128,185,0.1)" },
 ];
 
 const PROXIMAS_ACOES = [
-  "Ligar",
-  "Enviar WhatsApp",
-  "Enviar email",
-  "Conectar no LinkedIn",
-  "Agendar reunião",
-  "Agendar visita",
-  "Enviar apresentação",
-  "Enviar proposta",
-  "Fazer follow-up",
-  "Solicitar documentos",
-  "Aguardar retorno",
+  "Ligar","Enviar WhatsApp","Enviar email","Conectar no LinkedIn",
+  "Agendar reunião","Agendar visita","Enviar apresentação","Enviar proposta",
+  "Fazer follow-up","Solicitar documentos","Aguardar retorno",
 ];
 
 function initials(n: string) { return n?.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase()||"?"; }
@@ -146,9 +187,7 @@ function parseMoney(v: string) {
   const parsed = Number(normalized);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
-function phoneDigits(v?: string | null) {
-  return (v||"").replace(/\D/g, "");
-}
+function phoneDigits(v?: string | null) { return (v||"").replace(/\D/g, ""); }
 function whatsappUrl(v?: string | null) {
   const d = phoneDigits(v);
   if(!d) return "";
@@ -168,6 +207,13 @@ function daysBetween(value?: string | null) {
 function daysInStage(e: Empresa) {
   return Math.max(0, daysBetween(e.status_atualizado_em || e.ultima_interacao));
 }
+
+// ✅ MUDANÇA 2: Pluralização correta de "dia" / "dias"
+function daysLabel(d: number) {
+  if(d === 0) return "0 dias na etapa";
+  return `${d} ${d === 1 ? "dia" : "dias"} na etapa`;
+}
+
 function nextActionInfo(e: Empresa) {
   const date = dateOnly(e.data_proxima_acao);
   if(!date) return { label:"Sem data", status:"sem-data", color:"rgba(20,45,70,0.45)", bg:"rgba(200,225,240,0.35)" };
@@ -204,6 +250,10 @@ export default function Gerenciamento() {
   const [historyEmpresa, setHistoryEmpresa] = useState<Empresa|null>(null);
   const [historyItems, setHistoryItems] = useState<HistoricoStatus[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+
+  // ✅ MUDANÇA 3: Painel de atrasadas
+  const [showOverduePanel, setShowOverduePanel] = useState(false);
+
   const token = localStorage.getItem("token")||"";
   const hdrs = { "Content-Type":"application/json", Authorization:`Bearer ${token}` };
 
@@ -233,7 +283,6 @@ export default function Gerenciamento() {
   const updateStatus = async (id: string, status: string) => {
     const current = empresas.find(e=>e.empresa_id===id);
     if(!current || current.status===status) return;
-
     let motivo_perdido: string | null | undefined = undefined;
     if(status==="Perdido") {
       const motivo = window.prompt("Motivo da perda");
@@ -242,7 +291,6 @@ export default function Gerenciamento() {
     } else {
       motivo_perdido = null;
     }
-
     setMovingId(id);
     updateLocal(id,{status,motivo_perdido,status_atualizado_em:new Date().toISOString()});
     try { await savePatch(id,{status,motivo_perdido}); } catch {}
@@ -312,6 +360,14 @@ export default function Gerenciamento() {
   const conversao=empresas.length>0?((totalFechado/empresas.length)*100).toFixed(1):"0";
   const perda=empresas.length>0?((totalPerdido/empresas.length)*100).toFixed(1):"0";
 
+  // ✅ MUDANÇA 3: Lista de empresas com ação atrasada
+  const overdueEmpresas = empresas.filter(e => nextActionInfo(e).status === "atrasada")
+    .sort((a,b) => {
+      const da = dateOnly(a.data_proxima_acao) || "";
+      const db = dateOnly(b.data_proxima_acao) || "";
+      return da.localeCompare(db);
+    });
+
   const renderQuickActions = (emp: Empresa) => {
     const phone = emp.contato_celular || emp.contato_whatsapp;
     return (
@@ -328,6 +384,7 @@ export default function Gerenciamento() {
     <div style={{display:"flex",height:"100vh",overflow:"hidden",position:"relative"}}>
       <style>{css}</style>
 
+      {/* Background */}
       <div style={{position:"fixed",inset:0,zIndex:0,overflow:"hidden",pointerEvents:"none"}}>
         <div style={{position:"absolute",inset:0,background:"linear-gradient(145deg,#c8e8f5 0%,#d6eef5 30%,#cceee8 65%,#c5eae0 100%)"}}/>
         <div style={{position:"absolute",inset:0,opacity:0.4,backgroundImage:"radial-gradient(circle,rgba(41,128,185,0.2) 1px,transparent 1px)",backgroundSize:"22px 22px"}}/>
@@ -342,6 +399,7 @@ export default function Gerenciamento() {
         ))}
       </div>
 
+      {/* Sidebar */}
       <div style={{width:220,flexShrink:0,height:"100vh",overflowY:"auto",position:"relative",zIndex:10,background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)",boxShadow:"4px 0 24px rgba(0,0,0,0.18)",display:"flex",flexDirection:"column",padding:"0 12px 20px"}}>
         <div style={{padding:"22px 4px 24px",borderBottom:"1px solid rgba(255,255,255,0.08)",marginBottom:16}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -375,7 +433,10 @@ export default function Gerenciamento() {
         </div>
       </div>
 
+      {/* Main content */}
       <div style={{flex:1,height:"100vh",overflow:"hidden",display:"flex",flexDirection:"column",position:"relative",zIndex:5}}>
+
+        {/* Header */}
         <div style={{padding:"16px 28px",background:"rgba(210,238,248,0.85)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,0.6)",flexShrink:0}}>
           <div style={{display:"flex",alignItems:"flex-start",gap:16,marginBottom:14}}>
             <div style={{flex:1}}>
@@ -469,6 +530,7 @@ export default function Gerenciamento() {
           </div>
         </div>
 
+        {/* Board */}
         <div style={{flex:1,overflow:"auto",padding:"18px 24px"}}>
           {view==="kanban"&&(
             <div style={{display:"flex",gap:14,minWidth:"max-content",alignItems:"flex-start"}}>
@@ -484,6 +546,7 @@ export default function Gerenciamento() {
                     onDragLeave={()=>setDragOverStatus(null)}
                     onDrop={ev=>{ev.preventDefault();const id=ev.dataTransfer.getData("text/plain")||draggedId;if(id)updateStatus(id,col.key);setDraggedId(null);setDragOverStatus(null);}}
                   >
+                    {/* Column header */}
                     <div className={dragOverStatus===col.key?"drop-active":""} style={{marginBottom:12,padding:"12px 14px",borderRadius:12,background:"rgba(255,255,255,0.65)",backdropFilter:"blur(12px)",border:"1px solid rgba(255,255,255,0.85)"}}>
                       <div style={{height:3,borderRadius:3,background:col.color,marginBottom:10}}/>
                       <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:3}}>
@@ -496,8 +559,10 @@ export default function Gerenciamento() {
                         <span>{avgStageDays}d médios</span>
                       </div>
                     </div>
-                    <div style={{display:"flex",flexDirection:"column",gap:10,overflowY:"auto",maxHeight:"calc(100vh - 385px)",paddingRight:2,paddingBottom:8,minHeight:120}}>
-                      {loading?([1,2].map(i=><div key={i} className="skeleton" style={{height:190,borderRadius:14}}/>)):
+
+                    {/* Cards */}
+                    <div style={{display:"flex",flexDirection:"column",gap:8,overflowY:"auto",maxHeight:"calc(100vh - 385px)",paddingRight:2,paddingBottom:8,minHeight:120}}>
+                      {loading?([1,2].map(i=><div key={i} className="skeleton" style={{height:100,borderRadius:14}}/>)):
                       cards.length===0?(
                         <div style={{padding:"28px 0",textAlign:"center",border:"2px dashed rgba(200,225,240,0.6)",borderRadius:14,background:"rgba(255,255,255,0.35)"}}>
                           <Building2 style={{width:22,height:22,color:"rgba(41,128,185,0.3)",margin:"0 auto 8px"}}/>
@@ -527,85 +592,117 @@ export default function Gerenciamento() {
                             transition={{duration:0.2,delay:idx*0.04}}
                             onClick={()=>navigate(`/clientes/${emp.empresa_id}`)}
                           >
+                            {/* Top accent bar */}
                             <div style={{position:"absolute",top:0,left:0,right:0,height:3,borderRadius:"14px 14px 0 0",background:col.color}}/>
-                            <div style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:10,paddingTop:4}}>
-                              <div style={{width:36,height:36,borderRadius:10,background:avatarColor(emp.nome),display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:"#fff",flexShrink:0,boxShadow:`0 4px 10px ${avatarColor(emp.nome)}40`}}>{initials(emp.nome)}</div>
-                              <div style={{flex:1,minWidth:0}}>
-                                <div style={{fontSize:12,fontWeight:700,color:"#0f2133",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{emp.nome}</div>
-                                <div style={{fontSize:10,color:"rgba(20,45,70,0.45)",marginTop:1}}>{emp.segmento||"—"}</div>
-                              </div>
-                              <div style={{flexShrink:0,padding:"2px 6px",borderRadius:6,background:sc.bg,color:sc.color,fontSize:9,fontWeight:800}}>{score}</div>
-                            </div>
-                            <div style={{display:"flex",flexDirection:"column",gap:4,marginBottom:10}}>
-                              {emp.cidade&&<div style={{display:"flex",alignItems:"center",gap:5,fontSize:10,color:"rgba(20,45,70,0.55)"}}><MapPin style={{width:9,height:9,flexShrink:0,color:"#2980b9"}}/><span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{emp.cidade}</span></div>}
-                              {emp.responsavel_principal&&<div style={{display:"flex",alignItems:"center",gap:5,fontSize:10,color:"rgba(20,45,70,0.55)"}}><Users style={{width:9,height:9,flexShrink:0,color:"#8e44ad"}}/><span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{emp.responsavel_principal}</span></div>}
-                              <div style={{display:"flex",alignItems:"center",gap:5,fontSize:10,color:next.color,fontWeight:700}}>
-                                <CalendarClock style={{width:9,height:9,flexShrink:0}}/>
-                                <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{emp.proxima_acao||"Sem próxima ação"} · {next.label}</span>
-                              </div>
-                              {emp.status==="Perdido"&&emp.motivo_perdido&&<div style={{fontSize:10,color:"#dc2626",fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>Motivo: {emp.motivo_perdido}</div>}
-                            </div>
-                            <div style={{display:"flex",gap:4,marginBottom:10,flexWrap:"wrap"}}>
-                              {emp.porte&&<span style={{fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:4,background:pi.bg,color:pi.color}}>{emp.porte}</span>}
-                              {emp.origem_lead&&<span style={{fontSize:9,fontWeight:600,padding:"2px 6px",borderRadius:4,background:"rgba(200,225,240,0.4)",color:"rgba(20,45,70,0.5)"}}>{emp.origem_lead}</span>}
-                              <span style={{fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:4,background:"rgba(41,128,185,0.08)",color:"#2980b9"}}>{daysInStage(emp)}d na etapa</span>
-                            </div>
-                            <div style={{marginBottom:10}} onClick={e=>e.stopPropagation()}>
-                              {editValorId===emp.empresa_id?(
-                                <div style={{display:"flex",gap:5}}>
-                                  <input className="mini-input" autoFocus value={valorDraft} onChange={e=>setValorDraft(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")saveValor(emp.empresa_id);if(e.key==="Escape")setEditValorId(null);}} placeholder="Valor contrato" style={{flex:1}}/>
-                                  <button className="quick-btn" onClick={e=>saveValor(emp.empresa_id,e)}><Save style={{width:12,height:12}}/></button>
-                                  <button className="quick-btn" onClick={()=>setEditValorId(null)}><X style={{width:12,height:12}}/></button>
+
+                            {/* ── SEÇÃO SEMPRE VISÍVEL ── */}
+                            <div style={{paddingTop:4}}>
+                              {/* Nome + score */}
+                              <div style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:7}}>
+                                <div style={{width:32,height:32,borderRadius:9,background:avatarColor(emp.nome),display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:"#fff",flexShrink:0,boxShadow:`0 3px 8px ${avatarColor(emp.nome)}40`}}>{initials(emp.nome)}</div>
+                                <div style={{flex:1,minWidth:0}}>
+                                  <div style={{fontSize:12,fontWeight:700,color:"#0f2133",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{emp.nome}</div>
+                                  <div style={{fontSize:10,color:"rgba(20,45,70,0.45)",marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{emp.segmento||"—"}</div>
                                 </div>
-                              ):(
-                                <button onClick={e=>{e.stopPropagation();setEditValorId(emp.empresa_id);setValorDraft(emp.ticket_medio_estimado?.toString()||"");}} style={{width:"100%",height:28,borderRadius:8,border:"1px solid rgba(39,174,96,0.25)",background:"rgba(39,174,96,0.07)",color:"#16a34a",fontSize:12,fontWeight:900,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 9px"}}>
-                                  <span>{formatMoney(emp.ticket_medio_estimado)}</span><Edit3 style={{width:11,height:11}}/>
+                                <div style={{flexShrink:0,padding:"2px 6px",borderRadius:6,background:sc.bg,color:sc.color,fontSize:9,fontWeight:800}}>{score}</div>
+                              </div>
+
+                              {/* Info compacta */}
+                              <div style={{display:"flex",flexDirection:"column",gap:3,marginBottom:7}}>
+                                {emp.cidade&&(
+                                  <div style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:"rgba(20,45,70,0.55)"}}>
+                                    <MapPin style={{width:9,height:9,flexShrink:0,color:"#2980b9"}}/>
+                                    <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{emp.cidade}</span>
+                                    {emp.responsavel_principal&&<><span style={{color:"rgba(20,45,70,0.3)"}}>·</span><span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:"rgba(20,45,70,0.45)"}}>{emp.responsavel_principal}</span></>}
+                                  </div>
+                                )}
+                                {/* ✅ Próxima ação + status badge */}
+                                <div style={{display:"flex",alignItems:"center",gap:5,fontSize:10}}>
+                                  <CalendarClock style={{width:9,height:9,flexShrink:0,color:next.color}}/>
+                                  <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:"rgba(20,45,70,0.6)",flex:1}}>{emp.proxima_acao||"Sem próxima ação"}</span>
+                                  <span style={{flexShrink:0,padding:"1px 6px",borderRadius:5,background:next.bg,color:next.color,fontWeight:700,fontSize:9}}>{next.label}</span>
+                                </div>
+                                {emp.status==="Perdido"&&emp.motivo_perdido&&(
+                                  <div style={{fontSize:9,color:"#dc2626",fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>Motivo: {emp.motivo_perdido}</div>
+                                )}
+                              </div>
+
+                              {/* Tags compactas */}
+                              <div style={{display:"flex",gap:3,flexWrap:"wrap",marginBottom:6}}>
+                                {emp.porte&&<span style={{fontSize:9,fontWeight:700,padding:"1px 5px",borderRadius:4,background:pi.bg,color:pi.color}}>{emp.porte}</span>}
+                                {emp.origem_lead&&<span style={{fontSize:9,fontWeight:600,padding:"1px 5px",borderRadius:4,background:"rgba(200,225,240,0.4)",color:"rgba(20,45,70,0.5)"}}>{emp.origem_lead}</span>}
+                                {/* ✅ MUDANÇA 5: dia / dias correto */}
+                                <span style={{fontSize:9,fontWeight:700,padding:"1px 5px",borderRadius:4,background:"rgba(41,128,185,0.08)",color:"#2980b9"}}>{daysLabel(daysInStage(emp))}</span>
+                              </div>
+                            </div>
+
+                            {/* ── SEÇÃO EXPANSÍVEL NO HOVER ── */}
+                            <div className="card-expand-section">
+                              {/* Valor */}
+                              <div style={{marginBottom:8}} onClick={e=>e.stopPropagation()}>
+                                {editValorId===emp.empresa_id?(
+                                  <div style={{display:"flex",gap:5}}>
+                                    <input className="mini-input" autoFocus value={valorDraft} onChange={e=>setValorDraft(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")saveValor(emp.empresa_id);if(e.key==="Escape")setEditValorId(null);}} placeholder="Ex: 5000"/>
+                                    <button className="quick-btn" onClick={e=>saveValor(emp.empresa_id,e)}><Save style={{width:12,height:12}}/></button>
+                                    <button className="quick-btn" onClick={()=>setEditValorId(null)}><X style={{width:12,height:12}}/></button>
+                                  </div>
+                                ):(
+                                  <button onClick={e=>{e.stopPropagation();setEditValorId(emp.empresa_id);setValorDraft(emp.ticket_medio_estimado?.toString()||"");}} style={{width:"100%",height:28,borderRadius:8,border:"1px solid rgba(39,174,96,0.25)",background:"rgba(39,174,96,0.07)",color:"#16a34a",fontSize:12,fontWeight:900,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 9px"}}>
+                                    <span>{formatMoney(emp.ticket_medio_estimado)}</span><Edit3 style={{width:11,height:11}}/>
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* ✅ MUDANÇA 4: Data com layout corrigido - flex em vez de grid */}
+                              <div style={{display:"flex",gap:5,marginBottom:8}} onClick={e=>e.stopPropagation()}>
+                                <select className="mini-select" style={{flex:"1 1 0",minWidth:0}} value={emp.proxima_acao||""} onChange={e=>updateNextAction(emp.empresa_id,{proxima_acao:e.target.value})}>
+                                  <option value="">Próxima ação</option>
+                                  {PROXIMAS_ACOES.map(a=><option key={a}>{a}</option>)}
+                                </select>
+                                <input
+                                  className="mini-input"
+                                  type="date"
+                                  style={{width:120,flexShrink:0}}
+                                  value={dateOnly(emp.data_proxima_acao)}
+                                  onChange={e=>updateNextAction(emp.empresa_id,{data_proxima_acao:e.target.value || null})}
+                                />
+                              </div>
+
+                              <div style={{height:1,background:"rgba(200,225,240,0.5)",marginBottom:8}}/>
+
+                              {/* Temperatura + ações rápidas + status */}
+                              <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:7}}>
+                                <div style={{display:"flex",gap:3}}>
+                                  {TEMPS.map(t=>(
+                                    <button key={t.key} onClick={ev=>updateTemp(emp.empresa_id,t.key,ev)} title={t.key} style={{width:26,height:26,borderRadius:5,border:`1.5px solid ${emp.temperatura===t.key?t.color:"rgba(200,225,240,0.7)"}`,background:emp.temperatura===t.key?t.bg:"rgba(255,255,255,0.6)",cursor:"pointer",fontSize:13,transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                                      {t.icon}
+                                    </button>
+                                  ))}
+                                </div>
+                                <div style={{flex:1}}/>
+                                {renderQuickActions(emp)}
+                                <button onClick={ev=>{ev.stopPropagation();navigate(`/clientes/${emp.empresa_id}`);}} style={{width:24,height:24,borderRadius:6,border:"1px solid rgba(200,225,240,0.7)",background:"rgba(255,255,255,0.7)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+                                  <Eye style={{width:11,height:11,color:"#2980b9"}}/>
                                 </button>
-                              )}
-                            </div>
-                            <div style={{display:"grid",gridTemplateColumns:"1fr 110px",gap:5,marginBottom:10}} onClick={e=>e.stopPropagation()}>
-                              <select className="mini-select" value={emp.proxima_acao||""} onChange={e=>updateNextAction(emp.empresa_id,{proxima_acao:e.target.value})}>
-                                <option value="">Próxima ação</option>
-                                {PROXIMAS_ACOES.map(a=><option key={a}>{a}</option>)}
-                              </select>
-                              <input className="mini-input" type="date" value={dateOnly(emp.data_proxima_acao)} onChange={e=>updateNextAction(emp.empresa_id,{data_proxima_acao:e.target.value || null})}/>
-                            </div>
-                            <div style={{height:1,background:"rgba(200,225,240,0.5)",marginBottom:10}}/>
+                              </div>
 
-                          {/* Linha 1: temperatura + quick actions + ver */}
-                          <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:8}}>
-                            <div style={{display:"flex",gap:3}}>
-                              {TEMPS.map(t=>(
-                                <button key={t.key} onClick={ev=>updateTemp(emp.empresa_id,t.key,ev)} style={{width:24,height:24,borderRadius:5,border:`1.5px solid ${emp.temperatura===t.key?t.color:"rgba(200,225,240,0.7)"}`,background:emp.temperatura===t.key?t.bg:"rgba(255,255,255,0.6)",cursor:"pointer",fontSize:10,fontWeight:800,color:emp.temperatura===t.key?t.color:"rgba(20,45,70,0.5)",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center"}}>{t.icon}</button>
-                              ))}
+                              {/* Status dropdown */}
+                              <div onClick={e=>e.stopPropagation()} style={{position:"relative"}}>
+                                <select
+                                  className="mini-status-select"
+                                  value={emp.status}
+                                  onChange={e=>updateStatus(emp.empresa_id, e.target.value)}
+                                  style={{borderColor:`${col.color}50`,background:`${col.color}10`,color:col.color}}
+                                >
+                                  {PIPELINE.map(p=>(
+                                    <option key={p.key} value={p.key}>
+                                      {p.key===emp.status ? `● ${p.label}` : `→ Mover para ${p.label}`}
+                                    </option>
+                                  ))}
+                                </select>
+                                <ChevronRight style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%) rotate(90deg)",width:12,height:12,color:col.color,pointerEvents:"none"}}/>
+                              </div>
                             </div>
-                            <div style={{flex:1}}/>
-                            {renderQuickActions(emp)}
-                            <button onClick={ev=>{ev.stopPropagation();navigate(`/clientes/${emp.empresa_id}`);}} style={{width:24,height:24,borderRadius:6,border:"1px solid rgba(200,225,240,0.7)",background:"rgba(255,255,255,0.7)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
-                              <Eye style={{width:11,height:11,color:"#2980b9"}}/>
-                            </button>
-                          </div>
-
-                          {/* Linha 2: dropdown de mover status */}
-                          <div onClick={e=>e.stopPropagation()} style={{position:"relative"}}>
-                            <select 
-                              className="mini-status-select"
-                              value={emp.status}
-                              onChange={e=>updateStatus(emp.empresa_id, e.target.value)}
-                              style={{
-                                borderColor: `${col.color}50`,
-                                background: `${col.color}10`,
-                                color: col.color,
-                              }}
-                            >
-                              {PIPELINE.map(p=>(
-                                <option key={p.key} value={p.key}>
-                                  {p.key===emp.status ? `● ${p.label}` : `→ Mover para ${p.label}`}
-                                </option>
-                              ))}
-                            </select>
-                            <ChevronRight style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%) rotate(90deg)",width:12,height:12,color:col.color,pointerEvents:"none"}}/>
-                          </div>
                           </motion.div>
                         );
                       })}
@@ -646,7 +743,9 @@ export default function Gerenciamento() {
                     </select>
                     <div style={{display:"flex",gap:3}}>
                       {TEMPS.map(t=>(
-                        <button key={t.key} onClick={ev=>updateTemp(emp.empresa_id,t.key,ev)} style={{width:26,height:26,borderRadius:6,border:`1.5px solid ${emp.temperatura===t.key?t.color:"rgba(200,225,240,0.7)"}`,background:emp.temperatura===t.key?t.bg:"rgba(255,255,255,0.6)",cursor:"pointer",fontSize:10,fontWeight:800,color:emp.temperatura===t.key?t.color:"rgba(20,45,70,0.5)",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center"}}>{t.icon}</button>
+                        <button key={t.key} onClick={ev=>updateTemp(emp.empresa_id,t.key,ev)} title={t.key} style={{width:28,height:28,borderRadius:6,border:`1.5px solid ${emp.temperatura===t.key?t.color:"rgba(200,225,240,0.7)"}`,background:emp.temperatura===t.key?t.bg:"rgba(255,255,255,0.6)",cursor:"pointer",fontSize:14,transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                          {t.icon}
+                        </button>
                       ))}
                     </div>
                     <span style={{fontSize:12,color:"rgba(20,45,70,0.6)"}}>{emp.cidade||"—"}</span>
@@ -672,7 +771,8 @@ export default function Gerenciamento() {
                         </button>
                       )}
                     </div>
-                    <span style={{fontSize:12,fontWeight:700,color:"rgba(20,45,70,0.55)"}}>{daysInStage(emp)} dias</span>
+                    {/* ✅ MUDANÇA 5: dia / dias na lista */}
+                    <span style={{fontSize:12,fontWeight:700,color:"rgba(20,45,70,0.55)"}}>{daysInStage(emp)} {daysInStage(emp)===1?"dia":"dias"}</span>
                     <div style={{display:"flex",gap:5,alignItems:"center"}}>
                       {renderQuickActions(emp)}
                       <button onClick={()=>navigate(`/clientes/${emp.empresa_id}`)} style={{width:30,height:30,borderRadius:8,border:"1px solid rgba(200,225,240,0.7)",background:"rgba(255,255,255,0.7)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
@@ -686,6 +786,7 @@ export default function Gerenciamento() {
           )}
         </div>
 
+        {/* Footer */}
         <div style={{padding:"12px 28px",background:"rgba(210,238,248,0.85)",backdropFilter:"blur(20px)",borderTop:"1px solid rgba(255,255,255,0.6)",display:"flex",alignItems:"center",gap:24,flexShrink:0}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <div style={{width:38,height:38,borderRadius:10,background:"linear-gradient(135deg,#2980b9,#1abc9c)",display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -710,16 +811,137 @@ export default function Gerenciamento() {
               </div>
             </div>
           ))}
-          <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}>
-            <Clock style={{width:18,height:18,color:"#2980b9"}}/>
-            <div>
-              <div style={{fontSize:12,fontWeight:800,color:"#2980b9"}}>{filtered.filter(e=>nextActionInfo(e).status==="atrasada").length} atrasadas</div>
-              <div style={{fontSize:9,color:"rgba(20,45,70,0.4)"}}>próximas ações</div>
-            </div>
+
+          {/* ✅ MUDANÇA 3: Botão de atrasadas clicável com animação */}
+          <div style={{marginLeft:"auto"}}>
+            <button
+              className="overdue-btn"
+              onClick={()=>setShowOverduePanel(true)}
+              disabled={overdueEmpresas.length===0}
+              style={{opacity:overdueEmpresas.length===0?0.5:1,cursor:overdueEmpresas.length===0?"default":"pointer"}}
+            >
+              <Clock style={{width:16,height:16,color:"#dc2626"}}/>
+              <div>
+                <div style={{fontSize:13,fontWeight:800,color:"#dc2626"}}>{overdueEmpresas.length} {overdueEmpresas.length===1?"atrasada":"atrasadas"}</div>
+                <div style={{fontSize:9,color:"rgba(20,45,70,0.4)"}}>clique para ver</div>
+              </div>
+              {overdueEmpresas.length>0&&<AlertCircle style={{width:14,height:14,color:"#dc2626"}}/>}
+            </button>
           </div>
         </div>
       </div>
 
+      {/* ✅ MUDANÇA 3: Painel lateral de ações atrasadas */}
+      <AnimatePresence>
+        {showOverduePanel&&(
+          <motion.div
+            initial={{opacity:0}}
+            animate={{opacity:1}}
+            exit={{opacity:0}}
+            style={{position:"fixed",inset:0,zIndex:40,background:"rgba(10,31,51,0.32)",display:"flex",justifyContent:"flex-end"}}
+            onClick={()=>setShowOverduePanel(false)}
+          >
+            <motion.div
+              initial={{x:400}}
+              animate={{x:0}}
+              exit={{x:400}}
+              transition={{duration:0.22,ease:[0.4,0,0.2,1]}}
+              style={{width:400,height:"100%",background:"rgba(248,252,255,0.98)",boxShadow:"-16px 0 40px rgba(10,31,51,0.2)",display:"flex",flexDirection:"column"}}
+              onClick={e=>e.stopPropagation()}
+            >
+              {/* Header do painel */}
+              <div style={{padding:"20px 20px 16px",borderBottom:"1px solid rgba(220,38,38,0.12)",background:"rgba(255,255,255,0.9)"}}>
+                <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8}}>
+                  <div style={{width:38,height:38,borderRadius:11,background:"rgba(220,38,38,0.1)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                    <AlertCircle style={{width:18,height:18,color:"#dc2626"}}/>
+                  </div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:15,fontWeight:900,color:"#0f2133"}}>Ações Atrasadas</div>
+                    <div style={{fontSize:11,color:"rgba(20,45,70,0.5)"}}>{overdueEmpresas.length} {overdueEmpresas.length===1?"empresa precisa":"empresas precisam"} de atenção</div>
+                  </div>
+                  <button onClick={()=>setShowOverduePanel(false)} className="quick-btn" style={{width:30,height:30}}><X style={{width:14,height:14}}/></button>
+                </div>
+                <p style={{fontSize:11,color:"rgba(20,45,70,0.5)",lineHeight:1.5}}>
+                  Essas empresas têm ações que passaram da data prevista. Acesse o perfil da empresa ou a agenda para registrar o contato.
+                </p>
+              </div>
+
+              {/* Lista de atrasadas */}
+              <div style={{flex:1,overflowY:"auto",padding:"14px 16px",display:"flex",flexDirection:"column",gap:8}}>
+                {overdueEmpresas.length===0?(
+                  <div style={{padding:"40px 0",textAlign:"center",color:"rgba(20,45,70,0.4)"}}>
+                    <div style={{fontSize:32,marginBottom:8}}>✅</div>
+                    <p style={{fontSize:13,fontWeight:700}}>Sem ações atrasadas</p>
+                    <p style={{fontSize:11,marginTop:4}}>Tudo em dia!</p>
+                  </div>
+                ):overdueEmpresas.map((emp,idx)=>{
+                  const next=nextActionInfo(emp);
+                  const si=PIPELINE.find(p=>p.key===emp.status)||PIPELINE[0];
+                  const daysLate = dateOnly(emp.data_proxima_acao)
+                    ? Math.abs(Math.round((new Date(`${dateOnly(emp.data_proxima_acao)}T00:00:00`).getTime()-Date.now())/86400000))
+                    : 0;
+                  return(
+                    <motion.div
+                      key={emp.empresa_id}
+                      className="overdue-row"
+                      initial={{opacity:0,x:20}}
+                      animate={{opacity:1,x:0}}
+                      transition={{delay:idx*0.04}}
+                    >
+                      <div style={{width:36,height:36,borderRadius:9,background:avatarColor(emp.nome),display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:"#fff",flexShrink:0}}>{initials(emp.nome)}</div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:12,fontWeight:700,color:"#0f2133",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{emp.nome}</div>
+                        <div style={{display:"flex",alignItems:"center",gap:5,marginTop:2}}>
+                          <span style={{fontSize:9,fontWeight:700,padding:"1px 5px",borderRadius:4,background:si.light,color:si.color}}>{emp.status}</span>
+                          <span style={{fontSize:10,color:"#dc2626",fontWeight:700}}>
+                            {emp.proxima_acao||"Ação sem nome"} · há {daysLate} {daysLate===1?"dia":"dias"}
+                          </span>
+                        </div>
+                        <div style={{fontSize:9,color:"rgba(20,45,70,0.4)",marginTop:1}}>
+                          Previsto: {formatDate(emp.data_proxima_acao)} · {emp.responsavel_principal||"Sem responsável"}
+                        </div>
+                      </div>
+                      {/* Ações rápidas */}
+                      <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0}}>
+                        <button
+                          onClick={()=>navigate(`/clientes/${emp.empresa_id}`)}
+                          style={{height:26,padding:"0 9px",borderRadius:7,border:"1px solid rgba(41,128,185,0.3)",background:"rgba(41,128,185,0.08)",color:"#2980b9",fontSize:10,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}
+                        >
+                          <Eye style={{width:10,height:10}}/> Ver empresa
+                        </button>
+                        <button
+                          onClick={()=>navigate("/calendario")}
+                          style={{height:26,padding:"0 9px",borderRadius:7,border:"1px solid rgba(22,163,74,0.3)",background:"rgba(22,163,74,0.08)",color:"#16a34a",fontSize:10,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}
+                        >
+                          <Calendar style={{width:10,height:10}}/> Ver agenda
+                        </button>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+
+              {/* Footer do painel */}
+              <div style={{padding:"14px 16px",borderTop:"1px solid rgba(200,225,240,0.5)",background:"rgba(255,255,255,0.9)",display:"flex",gap:8}}>
+                <button
+                  onClick={()=>{setShowOverduePanel(false);setFilterAction("atrasada");}}
+                  style={{flex:1,height:38,borderRadius:10,border:"none",background:"linear-gradient(135deg,#dc2626,#ef4444)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}
+                >
+                  <Filter style={{width:13,height:13}}/> Filtrar atrasadas no pipeline
+                </button>
+                <button
+                  onClick={()=>navigate("/calendario")}
+                  style={{height:38,padding:"0 16px",borderRadius:10,border:"1px solid rgba(41,128,185,0.3)",background:"rgba(41,128,185,0.08)",color:"#2980b9",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}
+                >
+                  <Calendar style={{width:13,height:13}}/> Agenda
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Painel histórico */}
       <AnimatePresence>
         {historyEmpresa&&(
           <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} style={{position:"fixed",inset:0,zIndex:40,background:"rgba(10,31,51,0.32)",display:"flex",justifyContent:"flex-end"}} onClick={()=>setHistoryEmpresa(null)}>
