@@ -282,6 +282,11 @@ export default function Gerenciamento() {
 
   const savePatch = async (id: string, patch: Partial<Empresa>) => {
     const res = await fetch(`${API}/empresas/${id}`,{method:"PUT",headers:hdrs(),body:JSON.stringify(patch)});
+    if(res.status === 401) {
+      localStorage.removeItem("token");
+      navigate("/login");
+      return;
+    }
     if(!res.ok) throw new Error(`Erro ao salvar: ${res.status}`);
   };
 
