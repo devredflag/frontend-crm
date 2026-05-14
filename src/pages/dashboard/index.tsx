@@ -7,7 +7,7 @@ import {
   TrendingUp, ChevronDown, ChevronRight,
   ClipboardList, BarChart3, RefreshCw,
   MapPin, Phone, Mail, User, Flame, ArrowRight,
-  Eye, X, CalendarCheck, Repeat,
+  Eye, X, CalendarCheck, Repeat, FileText, Edit3,
 } from "lucide-react";
 
 const css = `
@@ -20,6 +20,7 @@ const css = `
   @keyframes float5 { 0%,100%{transform:translate(0,0) scale(1)}45%{transform:translate(35px,-20px) scale(1.06)}80%{transform:translate(-15px,30px) scale(0.96)} }
   @keyframes gradientShift { 0%,100%{background-position:0% 50%}50%{background-position:100% 50%} }
   @keyframes shimmer { 0%{background-position:-200% 0}100%{background-position:200% 0} }
+  @keyframes pulseDraft { 0%,100%{opacity:1} 50%{opacity:0.55} }
   .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:10px; cursor:pointer; font-size:13.5px; font-weight:500; color:rgba(255,255,255,0.65); transition:all 0.18s; user-select:none; }
   .nav-item:hover { background:rgba(255,255,255,0.08); color:#fff; }
   .nav-item.active { background:rgba(255,255,255,0.14); color:#fff; font-weight:600; }
@@ -28,11 +29,15 @@ const css = `
   .metric-card:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(41,128,185,0.15); }
   .preview-row { display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr; align-items:center; padding:11px 18px; border-bottom:1px solid rgba(200,225,240,0.35); cursor:pointer; transition:background 0.13s; }
   .preview-row:hover { background:rgba(41,128,185,0.04); }
+  .preview-row.draft-row { background:rgba(142,68,173,0.03); border-left:3px solid rgba(142,68,173,0.3); }
+  .preview-row.draft-row:hover { background:rgba(142,68,173,0.07); }
   .preview-row:last-child { border-bottom:none; }
   .preview-th { display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr; align-items:center; padding:8px 18px; border-bottom:1px solid rgba(200,225,240,0.5); }
   .chip { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:20px; font-size:10px; font-weight:700; white-space:nowrap; }
   .action-item { padding:12px 14px; border-radius:12px; background:rgba(255,255,255,0.55); border:1px solid rgba(200,225,240,0.6); cursor:pointer; transition:all 0.18s; }
   .action-item:hover { background:rgba(255,255,255,0.85); border-color:rgba(41,128,185,0.3); transform:translateY(-1px); }
+  .draft-item { padding:10px 14px; border-radius:12px; background:rgba(142,68,173,0.04); border:1px solid rgba(142,68,173,0.18); cursor:pointer; transition:all 0.18s; display:flex; align-items:center; gap:10px; }
+  .draft-item:hover { background:rgba(142,68,173,0.1); border-color:rgba(142,68,173,0.35); transform:translateY(-1px); }
   .skeleton { background:linear-gradient(90deg,rgba(200,225,240,0.4) 25%,rgba(220,240,252,0.7) 50%,rgba(200,225,240,0.4) 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:6px; }
   ::-webkit-scrollbar { width:4px; height:4px; }
   ::-webkit-scrollbar-track { background:transparent; }
@@ -65,7 +70,9 @@ function avatarColor(n: string) {
   return c[(n?.charCodeAt(0)||0)%c.length];
 }
 function initials(n: string) { return n?.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase()||"?"; }
+
 function statusColor(s: string) {
+  if(s==="Rascunho")        return { bg:"rgba(142,68,173,0.12)",  text:"#7d3c98",  border:"rgba(142,68,173,0.3)"  };
   if(s==="Fechado")         return { bg:"rgba(39,174,96,0.12)",   text:"#1e8449",  border:"rgba(39,174,96,0.3)"   };
   if(s==="Negociação")      return { bg:"rgba(217,119,6,0.12)",   text:"#b45309",  border:"rgba(217,119,6,0.3)"   };
   if(s==="Proposta")        return { bg:"rgba(142,68,173,0.12)",  text:"#7d3c98",  border:"rgba(142,68,173,0.3)"  };
@@ -84,7 +91,7 @@ function Sparkline({ color }: { color: string }) {
   );
 }
 
-type FilterKey = "total"|"lead"|"em_contato"|"visita"|"proposta"|"negociacao"|"fechado"|"quente";
+type FilterKey = "total"|"rascunho"|"lead"|"em_contato"|"visita"|"proposta"|"negociacao"|"fechado"|"quente";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -128,48 +135,51 @@ export default function Dashboard() {
     else { setSelectedAction(emp); fetchContatos(emp.empresa_id); }
   };
 
-  const total      = empresas.length;
+  // ── Contagens ─────────────────────────────────────────────
+  const rascunhos  = empresas.filter(e=>e.status==="Rascunho");
+  const total      = empresas.filter(e=>e.status!=="Rascunho").length;
   const leads      = empresas.filter(e=>e.status==="Lead").length;
   const emContato  = empresas.filter(e=>e.status==="Em contato").length;
   const visitas    = empresas.filter(e=>e.status==="Visita agendada").length;
   const propostas  = empresas.filter(e=>e.status==="Proposta").length;
   const negociacao = empresas.filter(e=>e.status==="Negociação").length;
   const fechados   = empresas.filter(e=>e.status==="Fechado").length;
-  const quentes    = empresas.filter(e=>e.temperatura==="Quente").length;
-  const ticketMedio = total>0 ? Math.round(empresas.reduce((a,e)=>a+(e.ticket_medio_estimado||0),0)/total) : 0;
+  const quentes    = empresas.filter(e=>e.temperatura==="Quente"&&e.status!=="Rascunho").length;
+  const ticketMedio = total>0 ? Math.round(empresas.filter(e=>e.status!=="Rascunho").reduce((a,e)=>a+(e.ticket_medio_estimado||0),0)/total) : 0;
   const conversao   = total>0 ? ((fechados/total)*100).toFixed(1) : "0.0";
 
   const metricCards = [
-    { key:"total"      as FilterKey, icon:Building2,     label:"Total",            value:total,      color:"#2980b9", bg:"rgba(41,128,185,0.1)"  },
-    { key:"lead"       as FilterKey, icon:Users,         label:"Leads",            value:leads,      color:"#64748b", bg:"rgba(100,116,139,0.1)" },
-    { key:"em_contato" as FilterKey, icon:MessageCircle, label:"Em contato",       value:emContato,  color:"#e67e22", bg:"rgba(230,126,34,0.1)"  },
-    { key:"visita"     as FilterKey, icon:CalendarCheck, label:"Visita agendada",  value:visitas,    color:"#0d9488", bg:"rgba(13,148,136,0.1)"   },
-    { key:"proposta"   as FilterKey, icon:Send,          label:"Propostas",        value:propostas,  color:"#8e44ad", bg:"rgba(142,68,173,0.1)"  },
-    { key:"negociacao" as FilterKey, icon:Repeat,        label:"Negociação",       value:negociacao, color:"#d97706", bg:"rgba(217,119,6,0.1)"   },
-    { key:"fechado"    as FilterKey, icon:Handshake,     label:"Fechados",         value:fechados,   color:"#27ae60", bg:"rgba(39,174,96,0.1)"   },
-    { key:"quente"     as FilterKey, icon:Flame,         label:"Quentes 🔥",       value:quentes,    color:"#c0392b", bg:"rgba(192,57,43,0.1)"   },
+    { key:"total"      as FilterKey, icon:Building2,     label:"Total",            value:total,           color:"#2980b9", bg:"rgba(41,128,185,0.1)"  },
+    { key:"rascunho"   as FilterKey, icon:FileText,      label:"Rascunhos",        value:rascunhos.length, color:"#8e44ad", bg:"rgba(142,68,173,0.1)" },
+    { key:"lead"       as FilterKey, icon:Users,         label:"Leads",            value:leads,           color:"#64748b", bg:"rgba(100,116,139,0.1)" },
+    { key:"em_contato" as FilterKey, icon:MessageCircle, label:"Em contato",       value:emContato,       color:"#e67e22", bg:"rgba(230,126,34,0.1)"  },
+    { key:"visita"     as FilterKey, icon:CalendarCheck, label:"Visita agendada",  value:visitas,         color:"#0d9488", bg:"rgba(13,148,136,0.1)"   },
+    { key:"proposta"   as FilterKey, icon:Send,          label:"Propostas",        value:propostas,       color:"#8e44ad", bg:"rgba(142,68,173,0.1)"  },
+    { key:"negociacao" as FilterKey, icon:Repeat,        label:"Negociação",       value:negociacao,      color:"#d97706", bg:"rgba(217,119,6,0.1)"   },
+    { key:"fechado"    as FilterKey, icon:Handshake,     label:"Fechados",         value:fechados,        color:"#27ae60", bg:"rgba(39,174,96,0.1)"   },
   ];
 
   const filterMap: Record<FilterKey, Empresa[]> = {
-    total:      empresas,
+    total:      empresas.filter(e=>e.status!=="Rascunho"),
+    rascunho:   rascunhos,
     lead:       empresas.filter(e=>e.status==="Lead"),
     em_contato: empresas.filter(e=>e.status==="Em contato"),
     visita:     empresas.filter(e=>e.status==="Visita agendada"),
     proposta:   empresas.filter(e=>e.status==="Proposta"),
     negociacao: empresas.filter(e=>e.status==="Negociação"),
     fechado:    empresas.filter(e=>e.status==="Fechado"),
-    quente:     empresas.filter(e=>e.temperatura==="Quente"),
+    quente:     empresas.filter(e=>e.temperatura==="Quente"&&e.status!=="Rascunho"),
   };
 
   const filterLabels: Record<FilterKey, string> = {
-    total:"Todas as empresas", lead:"Leads", em_contato:"Em contato",
-    visita:"Visita agendada", proposta:"Propostas enviadas",
+    total:"Todas as empresas", rascunho:"Rascunhos pendentes", lead:"Leads",
+    em_contato:"Em contato", visita:"Visita agendada", proposta:"Propostas enviadas",
     negociacao:"Em negociação", fechado:"Clientes fechados", quente:"Leads quentes 🔥",
   };
 
   const previewList = filterMap[activeFilter];
-  const activeCard  = metricCards.find(m=>m.key===activeFilter)!;
-  const proximasAcoes = empresas.filter(e=>e.proxima_acao).slice(0,4);
+  const activeCard  = metricCards.find(m=>m.key===activeFilter) || metricCards[0];
+  const proximasAcoes = empresas.filter(e=>e.proxima_acao && e.status!=="Rascunho").slice(0,4);
   const nomeUsuario = usuario?.nome||"...";
   const cargoUsuario = usuario?.cargo||"Administrador";
   const iniciaisUsuario = usuario ? initials(usuario.nome) : "?";
@@ -257,13 +267,56 @@ export default function Dashboard() {
 
         <div style={{padding:"22px 28px 32px",display:"flex",flexDirection:"column",gap:18}}>
 
-          {/* Metric cards — 8 cards em 4 colunas x 2 linhas */}
+          {/* ── Banner de rascunhos pendentes ── */}
+          <AnimatePresence>
+            {rascunhos.length > 0 && (
+              <motion.div
+                initial={{opacity:0,y:-8}}
+                animate={{opacity:1,y:0}}
+                exit={{opacity:0,y:-8}}
+                style={{
+                  display:"flex",alignItems:"center",gap:14,
+                  padding:"14px 20px",borderRadius:14,
+                  background:"rgba(142,68,173,0.07)",
+                  border:"1.5px solid rgba(142,68,173,0.22)",
+                  backdropFilter:"blur(8px)",
+                }}
+              >
+                <div style={{width:40,height:40,borderRadius:11,background:"rgba(142,68,173,0.12)",border:"1px solid rgba(142,68,173,0.2)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,animation:"pulseDraft 2.5s ease infinite"}}>
+                  <FileText style={{width:18,height:18,color:"#8e44ad"}}/>
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:13,fontWeight:700,color:"#0f2133"}}>
+                    {rascunhos.length} rascunho{rascunhos.length!==1?"s":""} pendente{rascunhos.length!==1?"s":""}
+                  </div>
+                  <div style={{fontSize:11,color:"rgba(20,45,70,0.5)",marginTop:1}}>
+                    Complete as informações obrigatórias para transformar em lead
+                  </div>
+                </div>
+                <button
+                  onClick={()=>setActiveFilter("rascunho")}
+                  style={{padding:"7px 14px",borderRadius:8,border:"1.5px solid rgba(142,68,173,0.3)",background:"rgba(142,68,173,0.1)",color:"#8e44ad",fontSize:12,fontWeight:700,cursor:"pointer",transition:"all 0.18s",flexShrink:0}}
+                  onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(142,68,173,0.18)";}}
+                  onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(142,68,173,0.1)";}}
+                >
+                  Ver rascunhos
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Metric cards — 4 colunas x 2 linhas */}
           <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}>
             {metricCards.map((m,i)=>(
               <motion.div
                 key={m.key}
                 className="metric-card"
-                style={{borderColor:activeFilter===m.key?m.color:undefined,boxShadow:activeFilter===m.key?`0 0 0 3px ${m.color}22`:undefined}}
+                style={{
+                  borderColor:activeFilter===m.key?m.color:undefined,
+                  boxShadow:activeFilter===m.key?`0 0 0 3px ${m.color}22`:undefined,
+                  // destaque especial para rascunho com dados
+                  outline: m.key==="rascunho" && m.value>0 && activeFilter!=="rascunho" ? `1.5px dashed rgba(142,68,173,0.35)` : undefined,
+                }}
                 initial={{opacity:0,y:14}}
                 animate={{opacity:1,y:0}}
                 transition={{duration:0.35,delay:i*0.04}}
@@ -273,7 +326,14 @@ export default function Dashboard() {
                   <div style={{width:32,height:32,borderRadius:9,background:m.bg,display:"flex",alignItems:"center",justifyContent:"center"}}>
                     <m.icon style={{width:15,height:15,color:m.color}}/>
                   </div>
-                  {activeFilter===m.key&&<div style={{width:8,height:8,borderRadius:"50%",background:m.color}}/>}
+                  <div style={{display:"flex",alignItems:"center",gap:5}}>
+                    {m.key==="rascunho" && m.value>0 && (
+                      <span style={{fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:4,background:"rgba(142,68,173,0.12)",color:"#8e44ad",border:"1px solid rgba(142,68,173,0.2)",animation:"pulseDraft 2s ease infinite"}}>
+                        PENDENTE
+                      </span>
+                    )}
+                    {activeFilter===m.key&&<div style={{width:8,height:8,borderRadius:"50%",background:m.color}}/>}
+                  </div>
                 </div>
                 {loading?<div className="skeleton" style={{height:24,width:"50%",marginBottom:4}}/>:(
                   <div style={{fontSize:24,fontWeight:900,color:"#0f2133",letterSpacing:"-0.03em"}}>{m.value}</div>
@@ -308,7 +368,9 @@ export default function Dashboard() {
             ):previewList.length===0?(
               <div style={{padding:"40px 20px",textAlign:"center"}}>
                 <Building2 style={{width:32,height:32,color:"rgba(41,128,185,0.25)",margin:"0 auto 10px"}}/>
-                <p style={{fontSize:13,fontWeight:600,color:"rgba(20,45,70,0.4)"}}>Nenhuma empresa nesta categoria</p>
+                <p style={{fontSize:13,fontWeight:600,color:"rgba(20,45,70,0.4)"}}>
+                  {activeFilter==="rascunho" ? "Nenhum rascunho pendente" : "Nenhuma empresa nesta categoria"}
+                </p>
                 <button onClick={()=>navigate("/empresas/nova")} style={{marginTop:12,padding:"7px 16px",borderRadius:8,border:"none",background:"linear-gradient(135deg,#2980b9,#1abc9c)",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer"}}>
                   + Cadastrar empresa
                 </button>
@@ -316,27 +378,60 @@ export default function Dashboard() {
             ):(
               <>
                 <div className="preview-th">
-                  {["Empresa","Status","Temperatura","Cidade","Ticket"].map(h=>(
-                    <span key={h} style={{fontSize:10,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:"rgba(20,45,70,0.45)"}}>{h}</span>
-                  ))}
+                  {activeFilter==="rascunho"
+                    ? ["Empresa","Segmento","Cidade","Status","Completar"].map(h=>(
+                        <span key={h} style={{fontSize:10,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:"rgba(20,45,70,0.45)"}}>{h}</span>
+                      ))
+                    : ["Empresa","Status","Temperatura","Cidade","Ticket"].map(h=>(
+                        <span key={h} style={{fontSize:10,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:"rgba(20,45,70,0.45)"}}>{h}</span>
+                      ))
+                  }
                 </div>
                 <div style={{maxHeight:220,overflowY:"auto"}}>
                   <AnimatePresence mode="wait">
                     {previewList.slice(0,10).map((emp,idx)=>{
                       const sc=statusColor(emp.status);
+                      const isDraft = emp.status==="Rascunho";
                       return(
-                        <motion.div key={emp.empresa_id} className="preview-row" initial={{opacity:0,x:-8}} animate={{opacity:1,x:0}} exit={{opacity:0}} transition={{duration:0.18,delay:idx*0.03}} onClick={()=>navigate(`/clientes/${emp.empresa_id}`)}>
+                        <motion.div
+                          key={emp.empresa_id}
+                          className={`preview-row${isDraft?" draft-row":""}`}
+                          initial={{opacity:0,x:-8}} animate={{opacity:1,x:0}} exit={{opacity:0}}
+                          transition={{duration:0.18,delay:idx*0.03}}
+                          onClick={()=>navigate(isDraft?`/clientes/${emp.empresa_id}/editar`:`/clientes/${emp.empresa_id}`)}
+                        >
                           <div style={{display:"flex",alignItems:"center",gap:10}}>
-                            <div style={{width:28,height:28,borderRadius:8,background:avatarColor(emp.nome),display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#fff",flexShrink:0}}>{initials(emp.nome)}</div>
+                            <div style={{width:28,height:28,borderRadius:8,background:isDraft?"rgba(142,68,173,0.15)":avatarColor(emp.nome),display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:isDraft?"#8e44ad":"#fff",flexShrink:0,border:isDraft?"1.5px dashed rgba(142,68,173,0.4)":"none"}}>
+                              {isDraft?<FileText style={{width:12,height:12}}/>:initials(emp.nome)}
+                            </div>
                             <div>
                               <div style={{fontSize:12,fontWeight:700,color:"#0f2133"}}>{emp.nome}</div>
-                              <div style={{fontSize:10,color:"rgba(20,45,70,0.4)"}}>{emp.segmento||"—"}</div>
+                              <div style={{fontSize:10,color:"rgba(20,45,70,0.4)"}}>{emp.segmento||"Segmento não definido"}</div>
                             </div>
                           </div>
-                          <span className="chip" style={{background:sc.bg,color:sc.text,border:`1px solid ${sc.border}`}}>{emp.status||"—"}</span>
-                          <span style={{fontSize:12,color:tempColor(emp.temperatura)}}>{tempIcon(emp.temperatura)} {emp.temperatura||"—"}</span>
-                          <span style={{fontSize:11,color:"rgba(20,45,70,0.6)"}}>{emp.cidade||"—"}</span>
-                          <span style={{fontSize:12,fontWeight:700,color:"#0f2133"}}>{emp.ticket_medio_estimado?`R$ ${emp.ticket_medio_estimado.toLocaleString("pt-BR")}`:"—"}</span>
+
+                          {isDraft ? (
+                            <>
+                              <span style={{fontSize:11,color:"rgba(20,45,70,0.5)"}}>{emp.segmento||"—"}</span>
+                              <span style={{fontSize:11,color:"rgba(20,45,70,0.5)"}}>{emp.cidade||"—"}</span>
+                              <span className="chip" style={{background:sc.bg,color:sc.text,border:`1px solid ${sc.border}`,animation:"pulseDraft 2s ease infinite"}}>{emp.status}</span>
+                              <button
+                                onClick={e=>{e.stopPropagation();navigate(`/clientes/${emp.empresa_id}/editar`);}}
+                                style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:7,border:"1.5px solid rgba(142,68,173,0.3)",background:"rgba(142,68,173,0.08)",color:"#8e44ad",fontSize:11,fontWeight:700,cursor:"pointer",transition:"all 0.15s"}}
+                                onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(142,68,173,0.16)";}}
+                                onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(142,68,173,0.08)";}}
+                              >
+                                <Edit3 style={{width:10,height:10}}/> Completar
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <span className="chip" style={{background:sc.bg,color:sc.text,border:`1px solid ${sc.border}`}}>{emp.status||"—"}</span>
+                              <span style={{fontSize:12,color:tempColor(emp.temperatura)}}>{tempIcon(emp.temperatura)} {emp.temperatura||"—"}</span>
+                              <span style={{fontSize:11,color:"rgba(20,45,70,0.6)"}}>{emp.cidade||"—"}</span>
+                              <span style={{fontSize:12,fontWeight:700,color:"#0f2133"}}>{emp.ticket_medio_estimado?`R$ ${emp.ticket_medio_estimado.toLocaleString("pt-BR")}`:"—"}</span>
+                            </>
+                          )}
                         </motion.div>
                       );
                     })}
@@ -452,11 +547,11 @@ export default function Dashboard() {
               <div style={{fontSize:13,fontWeight:700,color:"#0f2133",marginBottom:14}}>Por Temperatura</div>
               <div style={{display:"flex",flexDirection:"column",gap:8}}>
                 {[
-                  {label:"Quente 🔥",value:empresas.filter(e=>e.temperatura==="Quente").length,color:"#c0392b",bg:"rgba(192,57,43,0.07)",key:"quente" as FilterKey},
-                  {label:"Morno 🌡️", value:empresas.filter(e=>e.temperatura==="Morno").length, color:"#d68910",bg:"rgba(214,137,16,0.07)",key:"total" as FilterKey},
-                  {label:"Frio ❄️",  value:empresas.filter(e=>e.temperatura==="Frio").length,  color:"#2980b9",bg:"rgba(41,128,185,0.07)", key:"total" as FilterKey},
+                  {label:"Quente 🔥",value:empresas.filter(e=>e.temperatura==="Quente"&&e.status!=="Rascunho").length,color:"#c0392b",bg:"rgba(192,57,43,0.07)"},
+                  {label:"Morno 🌡️", value:empresas.filter(e=>e.temperatura==="Morno"&&e.status!=="Rascunho").length, color:"#d68910",bg:"rgba(214,137,16,0.07)"},
+                  {label:"Frio ❄️",  value:empresas.filter(e=>e.temperatura==="Frio"&&e.status!=="Rascunho").length,  color:"#2980b9",bg:"rgba(41,128,185,0.07)"},
                 ].map(t=>(
-                  <div key={t.label} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:10,background:t.bg,border:`1px solid ${t.color}20`,cursor:"pointer"}} onClick={()=>setActiveFilter(t.key)}>
+                  <div key={t.label} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:10,background:t.bg,border:`1px solid ${t.color}20`}}>
                     <div style={{flex:1,fontSize:12,fontWeight:600,color:"#0f2133"}}>{t.label}</div>
                     <span style={{fontSize:18,fontWeight:900,color:t.color}}>{t.value}</span>
                   </div>
@@ -498,6 +593,21 @@ export default function Dashboard() {
                   <span style={{fontSize:12,fontWeight:800,color:f.color,minWidth:20,textAlign:"right"}}>{f.value}</span>
                 </div>
               ))}
+
+              {/* Rascunhos no funil */}
+              {rascunhos.length > 0 && (
+                <div style={{marginTop:8,paddingTop:8,borderTop:"1px dashed rgba(142,68,173,0.2)"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onClick={()=>setActiveFilter("rascunho")}>
+                    <div style={{flex:1,position:"relative",height:28}}>
+                      <div style={{position:"absolute",inset:0,borderRadius:6,background:"rgba(142,68,173,0.08)",border:"1px dashed rgba(142,68,173,0.25)"}}/>
+                      <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",padding:"0 10px"}}>
+                        <span style={{fontSize:10,fontWeight:600,color:"#8e44ad",whiteSpace:"nowrap"}}>Rascunhos</span>
+                      </div>
+                    </div>
+                    <span style={{fontSize:12,fontWeight:800,color:"#8e44ad",minWidth:20,textAlign:"right",animation:"pulseDraft 2s ease infinite"}}>{rascunhos.length}</span>
+                  </div>
+                </div>
+              )}
             </motion.div>
           </div>
         </div>
