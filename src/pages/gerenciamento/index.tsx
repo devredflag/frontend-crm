@@ -304,21 +304,39 @@ export default function Gerenciamento() {
 
   const updateTemp = async (id: string, temperatura: string, ev?: React.MouseEvent) => {
     ev?.stopPropagation();
-    updateLocal(id,{temperatura});
-    try { await savePatch(id,{temperatura}); } catch {}
+    const anterior = empresas.find(e => e.empresa_id === id)?.temperatura;
+    updateLocal(id, { temperatura });
+    try {
+      await savePatch(id, { temperatura });
+    } catch {
+      updateLocal(id, { temperatura: anterior });
+    }
   };
 
   const saveValor = async (id: string, ev?: React.MouseEvent) => {
     ev?.stopPropagation();
     const valor = parseMoney(valorDraft);
-    updateLocal(id,{ticket_medio_estimado:valor});
+    const valorAnterior = empresas.find(e => e.empresa_id === id)?.ticket_medio_estimado;
+    updateLocal(id, { ticket_medio_estimado: valor });
     setEditValorId(null);
-    try { await savePatch(id,{ticket_medio_estimado:valor}); } catch {}
+    try {
+      await savePatch(id, { ticket_medio_estimado: valor });
+    } catch (err) {
+      // Reverte localmente se a API falhar
+      updateLocal(id, { ticket_medio_estimado: valorAnterior });
+      alert("Erro ao salvar o valor. Verifique sua conexão e tente novamente.");
+      console.error("saveValor error:", err);
+    }
   };
 
   const updateNextAction = async (id: string, patch: Partial<Empresa>) => {
+    const anterior = empresas.find(e => e.empresa_id === id);
     updateLocal(id, patch);
-    try { await savePatch(id, patch); } catch {}
+    try {
+      await savePatch(id, patch);
+    } catch {
+      if (anterior) updateLocal(id, anterior);
+    }
   };
 
   const openHistory = async (emp: Empresa, ev: React.MouseEvent) => {
