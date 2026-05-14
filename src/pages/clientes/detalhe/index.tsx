@@ -5,8 +5,17 @@ import {
   BarChart3, LayoutDashboard, Search, Building2, Users,
   ClipboardList, Calendar, ArrowLeft, Edit3,
   MapPin, Tag, Thermometer, TrendingUp, DollarSign,
-  Phone, Mail, User, Clock, ChevronRight,
+  Phone, Mail, User, Clock, ChevronRight, MessageCircle, Link2,
 } from "lucide-react";
+
+// ── Import do modal de seleção de destinatários ───────────────
+import SelectRecipientsModal, {
+  SendChannel,
+  Recipient,
+} from "../../../components/SelectRecipientsModal";
+// Ajuste o caminho conforme onde você colocou o componente
+
+const API = "https://backend-crm-production-157b.up.railway.app";
 
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
@@ -20,42 +29,15 @@ const css = `
   @keyframes gradientShift { 0%,100%{background-position:0% 50%}50%{background-position:100% 50%} }
   @keyframes shimmer { 0%{background-position:-200% 0}100%{background-position:200% 0} }
 
-  .nav-item {
-    display:flex; align-items:center; gap:10px;
-    padding:10px 16px; border-radius:10px; cursor:pointer;
-    font-size:13.5px; font-weight:500; color:rgba(255,255,255,0.65);
-    transition:all 0.18s; user-select:none;
-  }
+  .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:10px; cursor:pointer; font-size:13.5px; font-weight:500; color:rgba(255,255,255,0.65); transition:all 0.18s; user-select:none; }
   .nav-item:hover { background:rgba(255,255,255,0.08); color:#fff; }
   .nav-item.active { background:rgba(255,255,255,0.14); color:#fff; font-weight:600; }
-
-  .glass-card {
-    background:rgba(255,255,255,0.72);
-    backdrop-filter:blur(16px);
-    border:1px solid rgba(255,255,255,0.9);
-    border-radius:16px;
-  }
-
-  .chip {
-    display:inline-flex; align-items:center; gap:4px;
-    padding:4px 12px; border-radius:20px;
-    font-size:12px; font-weight:700;
-  }
-
-  .info-row {
-    display:flex; align-items:center; gap:10px;
-    padding:10px 0;
-    border-bottom:1px solid rgba(200,225,240,0.4);
-  }
+  .glass-card { background:rgba(255,255,255,0.72); backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.9); border-radius:16px; }
+  .chip { display:inline-flex; align-items:center; gap:4px; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; }
+  .info-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid rgba(200,225,240,0.4); }
   .info-row:last-child { border-bottom:none; }
-
-  .skeleton {
-    background: linear-gradient(90deg, rgba(200,225,240,0.4) 25%, rgba(220,240,252,0.7) 50%, rgba(200,225,240,0.4) 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.4s infinite;
-    border-radius: 6px;
-  }
-
+  .send-btn { display:flex; align-items:center; gap:5px; padding:6px 12px; border-radius:8px; border:1.5px solid; font-size:11px; font-weight:700; cursor:pointer; transition:all 0.18s; font-family:'Plus Jakarta Sans',sans-serif; }
+  .skeleton { background:linear-gradient(90deg,rgba(200,225,240,0.4) 25%,rgba(220,240,252,0.7) 50%,rgba(200,225,240,0.4) 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:6px; }
   ::-webkit-scrollbar { width:4px; }
   ::-webkit-scrollbar-track { background:transparent; }
   ::-webkit-scrollbar-thumb { background:rgba(41,128,185,0.25); border-radius:4px; }
@@ -73,9 +55,14 @@ const navItems = [
 interface Contato {
   contato_id: string;
   nome: string;
+  funcao?: string;
   cargo?: string;
   email?: string;
+  celular?: string;
+  whatsapp?: string;
   telefone?: string;
+  linkedin?: string;
+  decisor?: boolean;
 }
 
 interface Empresa {
@@ -93,7 +80,6 @@ interface Empresa {
   ultima_interacao: string | null;
   proxima_acao: string;
   observacoes?: string;
-  contatos?: Contato[];
 }
 
 function statusColor(s: string) {
@@ -102,73 +88,105 @@ function statusColor(s: string) {
   if (s === "Em contato") return { bg:"rgba(41,128,185,0.12)",  text:"#1a5276",  border:"rgba(41,128,185,0.25)"  };
   return                         { bg:"rgba(149,165,166,0.15)", text:"#566573",  border:"rgba(149,165,166,0.3)"  };
 }
-
 function tempColor(t: string) {
   if (t === "Quente") return { text:"#c0392b", bg:"rgba(192,57,43,0.1)",  icon:"🔥" };
   if (t === "Morno")  return { text:"#d68910", bg:"rgba(214,137,16,0.1)", icon:"🌡️" };
   return                     { text:"#2980b9", bg:"rgba(41,128,185,0.1)", icon:"❄️" };
 }
-
 function initials(name: string) {
-  return name.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase();
+  return name?.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase() || "?";
 }
-
 function avatarColor(name: string) {
   const colors = ["#2980b9", "#1abc9c", "#8e44ad", "#e67e22", "#27ae60", "#e74c3c"];
-  return colors[name.charCodeAt(0) % colors.length];
+  return colors[(name?.charCodeAt(0) || 0) % colors.length];
 }
-
 function formatDate(d: string | null) {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("pt-BR");
 }
 
-const MOCK: Empresa = {
-  empresa_id: "1",
-  nome: "TechSolutions Ltda",
-  segmento: "Tecnologia",
-  porte: "Grande",
-  cidade: "São Paulo",
-  estado: "SP",
-  status: "Em contato",
-  temperatura: "Quente",
-  ticket_medio_estimado: 15000,
-  responsavel_principal: "André Ferreira",
-  origem_lead: "LinkedIn",
-  ultima_interacao: "2025-06-10",
-  proxima_acao: "Enviar proposta",
-  observacoes: "Empresa com alto potencial. Decisor é o CTO, demonstrou interesse na solução premium.",
-  contatos: [
-    { contato_id: "c1", nome: "Carlos Mendes",  cargo: "CTO",             email: "carlos@techsolutions.com", telefone: "(11) 9 8765-4321" },
-    { contato_id: "c2", nome: "Ana Beatriz",    cargo: "Gerente Comercial",email: "ana@techsolutions.com",   telefone: "(11) 9 5555-1234" },
-    { contato_id: "c3", nome: "Roberto Lima",   cargo: "CEO",             email: "roberto@techsolutions.com" },
-  ],
-};
+// ── Botão de envio reutilizável ───────────────────────────────
+function SendButton({
+  channel, color, bg, border, icon: Icon, label, onClick,
+}: {
+  channel: SendChannel; color: string; bg: string; border: string;
+  icon: React.ElementType; label: string; onClick: () => void;
+}) {
+  return (
+    <button
+      className="send-btn"
+      onClick={onClick}
+      style={{ background: bg, borderColor: border, color }}
+      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = "0.8"; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = "1"; }}
+    >
+      <Icon style={{ width: 11, height: 11 }} />
+      {label}
+    </button>
+  );
+}
 
 export default function EmpresaView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
+  const [contatos, setContatos] = useState<Contato[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // ── Estado do modal de destinatários ─────────────────────
+  const [sendChannel, setSendChannel] = useState<SendChannel | null>(null);
+
   useEffect(() => {
-    const fetchEmpresa = async () => {
+    const fetchAll = async () => {
       setLoading(true);
       try {
         const token = localStorage.getItem("token");
-        const res = await fetch(`https://backend-crm-production-157b.up.railway.app/empresas/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error();
-        const data = await res.json();
-        setEmpresa(data);
-      } catch {
-        setEmpresa({ ...MOCK, empresa_id: id || "1" });
-      }
+        const headers = { Authorization: `Bearer ${token}` };
+
+        const [empRes, contatosRes] = await Promise.all([
+          fetch(`${API}/empresas/${id}`, { headers }),
+          fetch(`${API}/empresas/${id}/contatos`, { headers }),
+        ]);
+
+        if (empRes.ok) setEmpresa(await empRes.json());
+        if (contatosRes.ok) setContatos(await contatosRes.json());
+      } catch {}
       setLoading(false);
     };
-    fetchEmpresa();
+    fetchAll();
   }, [id]);
+
+  // ── Montar lista de destinatários por canal ───────────────
+  const buildRecipients = (channel: SendChannel): Recipient[] => {
+    return contatos
+      .map((c, i) => {
+        let valor = "";
+        if (channel === "email")    valor = c.email || "";
+        if (channel === "whatsapp") valor = c.whatsapp || c.celular || "";
+        if (channel === "telefone") valor = c.celular || c.telefone || "";
+        if (channel === "linkedin") valor = c.linkedin || "";
+        return {
+          id: c.contato_id,
+          nome: c.nome,
+          funcao: c.funcao || c.cargo,
+          valor,
+          principal: i === 0,
+          decisor: c.decisor,
+        };
+      });
+  };
+
+  // ── Abrir link após confirmar destinatários ───────────────
+  const handleConfirmSend = (selected: Recipient[]) => {
+    setSendChannel(null);
+    selected.forEach(r => {
+      if (!r.valor) return;
+      if (sendChannel === "email")    window.open(`mailto:${r.valor}`);
+      if (sendChannel === "whatsapp") window.open(`https://wa.me/${r.valor.replace(/\D/g, "")}`);
+      if (sendChannel === "telefone") window.open(`tel:${r.valor}`);
+      if (sendChannel === "linkedin") window.open(r.valor.startsWith("http") ? r.valor : `https://${r.valor}`);
+    });
+  };
 
   const sc = empresa ? statusColor(empresa.status) : statusColor("");
   const tc = empresa ? tempColor(empresa.temperatura) : tempColor("");
@@ -176,6 +194,15 @@ export default function EmpresaView() {
   return (
     <div style={{ display:"flex", height:"100vh", overflow:"hidden", position:"relative" }}>
       <style>{css}</style>
+
+      {/* ── Modal de seleção de destinatários ── */}
+      <SelectRecipientsModal
+        open={!!sendChannel}
+        channel={sendChannel ?? "email"}
+        recipients={sendChannel ? buildRecipients(sendChannel) : []}
+        onConfirm={handleConfirmSend}
+        onClose={() => setSendChannel(null)}
+      />
 
       {/* Background */}
       <div style={{ position:"fixed", inset:0, zIndex:0, overflow:"hidden", pointerEvents:"none" }}>
@@ -207,27 +234,18 @@ export default function EmpresaView() {
         </div>
         <nav style={{ flex:1, display:"flex", flexDirection:"column", gap:2 }}>
           {navItems.map(item => (
-            <div
-              key={item.label}
-              className="nav-item"
-              onClick={() => {
-                if (item.label === "Dashboards") navigate("/dashboard");
-                if (item.label === "Cadastrar Empresas") navigate("/empresas/nova");
-                if (item.label === "Todos os clientes") navigate("/clientes");
-              }}
-            >
+            <div key={item.label} className="nav-item" onClick={() => {
+              if (item.label === "Dashboards") navigate("/dashboard");
+              if (item.label === "Cadastrar Empresas") navigate("/empresas/nova");
+              if (item.label === "Todos os clientes") navigate("/clientes");
+              if (item.label === "Gerenciamento de clientes") navigate("/gerenciamento");
+              if (item.label === "Calendário") navigate("/calendario");
+            }}>
               <item.icon style={{ width:16, height:16, flexShrink:0 }} />
               {item.label}
             </div>
           ))}
         </nav>
-        <div style={{ marginTop:16, padding:"12px", borderRadius:12, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.08)", display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
-          <div style={{ width:34, height:34, borderRadius:"50%", background:"linear-gradient(135deg,#2980b9,#1abc9c)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#fff", flexShrink:0 }}>KS</div>
-          <div>
-            <div style={{ fontSize:12, fontWeight:600, color:"#fff" }}>Kauê Silva</div>
-            <div style={{ fontSize:10, color:"rgba(255,255,255,0.45)" }}>Administrador</div>
-          </div>
-        </div>
       </div>
 
       {/* Main */}
@@ -235,10 +253,7 @@ export default function EmpresaView() {
 
         {/* Top bar */}
         <div style={{ position:"sticky", top:0, zIndex:20, padding:"14px 28px", background:"rgba(210,238,248,0.75)", backdropFilter:"blur(20px)", borderBottom:"1px solid rgba(255,255,255,0.6)", display:"flex", alignItems:"center", gap:14 }}>
-          <button
-            onClick={() => navigate("/clientes")}
-            style={{ width:36, height:36, borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.75)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}
-          >
+          <button onClick={() => navigate("/clientes")} style={{ width:36, height:36, borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.75)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
             <ArrowLeft style={{ width:15, height:15, color:"#2980b9" }} />
           </button>
           <div style={{ flex:1 }}>
@@ -251,10 +266,17 @@ export default function EmpresaView() {
               <span>{loading ? "..." : empresa?.nome}</span>
             </p>
           </div>
-          <button
-            onClick={() => navigate(`/clientes/${id}/editar`)}
-            style={{ height:38, padding:"0 16px", borderRadius:10, border:"none", cursor:"pointer", background:"linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)", backgroundSize:"200% 200%", animation:"gradientShift 4s ease infinite", color:"#fff", fontSize:13, fontWeight:700, display:"flex", alignItems:"center", gap:6, boxShadow:"0 4px 14px rgba(41,128,185,0.35)" }}
-          >
+
+          {/* ── Botões de envio rápido no topo ── */}
+          {!loading && contatos.length > 0 && (
+            <div style={{ display:"flex", gap:6 }}>
+              <SendButton channel="email"    color="#2980b9" bg="rgba(41,128,185,0.08)"  border="rgba(41,128,185,0.3)"  icon={Mail}           label="E-mail"    onClick={() => setSendChannel("email")} />
+              <SendButton channel="whatsapp" color="#27ae60" bg="rgba(39,174,96,0.08)"   border="rgba(39,174,96,0.3)"   icon={MessageCircle}  label="WhatsApp"  onClick={() => setSendChannel("whatsapp")} />
+              <SendButton channel="telefone" color="#e67e22" bg="rgba(230,126,34,0.08)"  border="rgba(230,126,34,0.3)"  icon={Phone}          label="Ligar"     onClick={() => setSendChannel("telefone")} />
+            </div>
+          )}
+
+          <button onClick={() => navigate(`/clientes/${id}/editar`)} style={{ height:38, padding:"0 16px", borderRadius:10, border:"none", cursor:"pointer", background:"linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)", backgroundSize:"200% 200%", animation:"gradientShift 4s ease infinite", color:"#fff", fontSize:13, fontWeight:700, display:"flex", alignItems:"center", gap:6, boxShadow:"0 4px 14px rgba(41,128,185,0.35)" }}>
             <Edit3 style={{ width:14, height:14 }} /> Editar
           </button>
         </div>
@@ -299,7 +321,7 @@ export default function EmpresaView() {
                       <div style={{ fontSize:10, color:"rgba(20,45,70,0.45)", fontWeight:600 }}>Ticket médio</div>
                     </div>
                     <div style={{ textAlign:"center" }}>
-                      <div style={{ fontSize:20, fontWeight:800, color:"#1abc9c" }}>{empresa.contatos?.length ?? "—"}</div>
+                      <div style={{ fontSize:20, fontWeight:800, color:"#1abc9c" }}>{contatos.length || "—"}</div>
                       <div style={{ fontSize:10, color:"rgba(20,45,70,0.45)", fontWeight:600 }}>Contatos</div>
                     </div>
                   </div>
@@ -307,19 +329,18 @@ export default function EmpresaView() {
               </motion.div>
 
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:18 }}>
-
                 {/* Informações */}
                 <motion.div className="glass-card" style={{ padding:"22px 24px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.07 }}>
                   <div style={{ fontSize:13, fontWeight:700, color:"#0f2133", marginBottom:16, display:"flex", alignItems:"center", gap:7 }}>
                     <Building2 style={{ width:15, height:15, color:"#2980b9" }} /> Informações da Empresa
                   </div>
                   {[
-                    { icon: Tag,         label:"Segmento",    value:empresa.segmento },
-                    { icon: Building2,   label:"Porte",       value:empresa.porte },
-                    { icon: MapPin,      label:"Cidade",      value:`${empresa.cidade}${empresa.estado ? ` / ${empresa.estado}` : ""}` },
+                    { icon: Tag,         label:"Segmento",       value:empresa.segmento },
+                    { icon: Building2,   label:"Porte",          value:empresa.porte },
+                    { icon: MapPin,      label:"Cidade",         value:`${empresa.cidade}${empresa.estado ? ` / ${empresa.estado}` : ""}` },
                     { icon: TrendingUp,  label:"Origem do lead", value:empresa.origem_lead },
-                    { icon: DollarSign,  label:"Ticket médio", value:empresa.ticket_medio_estimado ? `R$ ${empresa.ticket_medio_estimado.toLocaleString("pt-BR")}` : "Não informado" },
-                    { icon: Thermometer, label:"Temperatura", value:empresa.temperatura },
+                    { icon: DollarSign,  label:"Ticket médio",   value:empresa.ticket_medio_estimado ? `R$ ${empresa.ticket_medio_estimado.toLocaleString("pt-BR")}` : "Não informado" },
+                    { icon: Thermometer, label:"Temperatura",    value:empresa.temperatura },
                   ].map(({ icon: Icon, label, value }) => (
                     <div key={label} className="info-row">
                       <Icon style={{ width:14, height:14, color:"#2980b9", flexShrink:0 }} />
@@ -335,9 +356,9 @@ export default function EmpresaView() {
                     <ClipboardList style={{ width:15, height:15, color:"#2980b9" }} /> Relacionamento
                   </div>
                   {[
-                    { icon: User,  label:"Responsável",        value:empresa.responsavel_principal },
-                    { icon: Clock, label:"Última interação",   value:formatDate(empresa.ultima_interacao) },
-                    { icon: ChevronRight, label:"Próxima ação", value:empresa.proxima_acao },
+                    { icon: User,         label:"Responsável",      value:empresa.responsavel_principal },
+                    { icon: Clock,        label:"Última interação", value:formatDate(empresa.ultima_interacao) },
+                    { icon: ChevronRight, label:"Próxima ação",     value:empresa.proxima_acao },
                   ].map(({ icon: Icon, label, value }) => (
                     <div key={label} className="info-row">
                       <Icon style={{ width:14, height:14, color:"#2980b9", flexShrink:0 }} />
@@ -354,35 +375,87 @@ export default function EmpresaView() {
                 </motion.div>
               </div>
 
-              {/* Contatos */}
-              {empresa.contatos && empresa.contatos.length > 0 && (
+              {/* ── Contatos com botões de envio ── */}
+              {contatos.length > 0 && (
                 <motion.div className="glass-card" style={{ padding:"22px 24px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.18 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:"#0f2133", marginBottom:16, display:"flex", alignItems:"center", gap:7 }}>
-                    <Users style={{ width:15, height:15, color:"#2980b9" }} /> Contatos ({empresa.contatos.length})
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+                    <div style={{ fontSize:13, fontWeight:700, color:"#0f2133", display:"flex", alignItems:"center", gap:7 }}>
+                      <Users style={{ width:15, height:15, color:"#2980b9" }} /> Contatos ({contatos.length})
+                    </div>
+                    {/* Botões de envio em massa */}
+                    <div style={{ display:"flex", gap:6 }}>
+                      <SendButton channel="email"    color="#2980b9" bg="rgba(41,128,185,0.08)"  border="rgba(41,128,185,0.25)"  icon={Mail}          label="Enviar e-mail"   onClick={() => setSendChannel("email")} />
+                      <SendButton channel="whatsapp" color="#27ae60" bg="rgba(39,174,96,0.08)"   border="rgba(39,174,96,0.25)"   icon={MessageCircle} label="WhatsApp"        onClick={() => setSendChannel("whatsapp")} />
+                      <SendButton channel="telefone" color="#e67e22" bg="rgba(230,126,34,0.08)"  border="rgba(230,126,34,0.25)"  icon={Phone}         label="Ligar"           onClick={() => setSendChannel("telefone")} />
+                      <SendButton channel="linkedin" color="#0077b5" bg="rgba(0,119,181,0.08)"   border="rgba(0,119,181,0.25)"   icon={Link2}         label="LinkedIn"        onClick={() => setSendChannel("linkedin")} />
+                    </div>
                   </div>
+
                   <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(260px, 1fr))", gap:12 }}>
-                    {empresa.contatos.map(c => (
-                      <div key={c.contato_id} style={{ padding:"14px 16px", borderRadius:12, background:"rgba(255,255,255,0.55)", border:"1px solid rgba(200,225,240,0.6)", display:"flex", alignItems:"center", gap:12 }}>
-                        <div style={{ width:38, height:38, borderRadius:10, background:avatarColor(c.nome), display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700, color:"#fff", flexShrink:0 }}>
-                          {initials(c.nome)}
-                        </div>
-                        <div style={{ flex:1, minWidth:0 }}>
-                          <div style={{ fontSize:13, fontWeight:700, color:"#0f2133" }}>{c.nome}</div>
-                          {c.cargo && <div style={{ fontSize:11, color:"rgba(20,45,70,0.5)", marginTop:1 }}>{c.cargo}</div>}
-                          <div style={{ display:"flex", flexDirection:"column", gap:2, marginTop:5 }}>
-                            {c.email && (
-                              <div style={{ display:"flex", alignItems:"center", gap:5 }}>
-                                <Mail style={{ width:11, height:11, color:"#2980b9", flexShrink:0 }} />
-                                <span style={{ fontSize:11, color:"rgba(20,45,70,0.6)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{c.email}</span>
-                              </div>
-                            )}
-                            {c.telefone && (
-                              <div style={{ display:"flex", alignItems:"center", gap:5 }}>
-                                <Phone style={{ width:11, height:11, color:"#2980b9", flexShrink:0 }} />
-                                <span style={{ fontSize:11, color:"rgba(20,45,70,0.6)" }}>{c.telefone}</span>
-                              </div>
+                    {contatos.map((c, i) => (
+                      <div key={c.contato_id} style={{ padding:"14px 16px", borderRadius:12, background:"rgba(255,255,255,0.55)", border:"1px solid rgba(200,225,240,0.6)" }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:10 }}>
+                          <div style={{ width:38, height:38, borderRadius:10, background:avatarColor(c.nome), display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700, color:"#fff", flexShrink:0 }}>
+                            {initials(c.nome)}
+                          </div>
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{ fontSize:13, fontWeight:700, color:"#0f2133", display:"flex", alignItems:"center", gap:6 }}>
+                              {c.nome}
+                              {c.decisor && (
+                                <span style={{ fontSize:9, fontWeight:700, padding:"1px 6px", borderRadius:4, background:"rgba(39,174,96,0.1)", color:"#27ae60", border:"1px solid rgba(39,174,96,0.2)" }}>Decisor</span>
+                              )}
+                            </div>
+                            {(c.funcao || c.cargo) && (
+                              <div style={{ fontSize:11, color:"rgba(20,45,70,0.5)", marginTop:1 }}>{c.funcao || c.cargo}</div>
                             )}
                           </div>
+                        </div>
+
+                        {/* Contatos do card */}
+                        <div style={{ display:"flex", flexDirection:"column", gap:4, marginBottom:10 }}>
+                          {c.email && (
+                            <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+                              <Mail style={{ width:11, height:11, color:"#2980b9", flexShrink:0 }} />
+                              <span style={{ fontSize:11, color:"rgba(20,45,70,0.6)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{c.email}</span>
+                            </div>
+                          )}
+                          {(c.celular || c.telefone) && (
+                            <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+                              <Phone style={{ width:11, height:11, color:"#2980b9", flexShrink:0 }} />
+                              <span style={{ fontSize:11, color:"rgba(20,45,70,0.6)" }}>{c.celular || c.telefone}</span>
+                            </div>
+                          )}
+                          {c.whatsapp && (
+                            <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+                              <MessageCircle style={{ width:11, height:11, color:"#27ae60", flexShrink:0 }} />
+                              <span style={{ fontSize:11, color:"rgba(20,45,70,0.6)" }}>{c.whatsapp}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Botões de ação individuais por contato */}
+                        <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
+                          {c.email && (
+                            <button onClick={() => window.open(`mailto:${c.email}`)} style={{ flex:1, height:28, borderRadius:7, border:"1px solid rgba(41,128,185,0.25)", background:"rgba(41,128,185,0.06)", color:"#2980b9", fontSize:10, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:4, transition:"all 0.15s" }}
+                              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(41,128,185,0.14)"; }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(41,128,185,0.06)"; }}>
+                              <Mail style={{ width:10, height:10 }} /> Email
+                            </button>
+                          )}
+                          {(c.whatsapp || c.celular) && (
+                            <button onClick={() => window.open(`https://wa.me/${(c.whatsapp || c.celular || "").replace(/\D/g, "")}`)} style={{ flex:1, height:28, borderRadius:7, border:"1px solid rgba(39,174,96,0.25)", background:"rgba(39,174,96,0.06)", color:"#27ae60", fontSize:10, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:4, transition:"all 0.15s" }}
+                              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(39,174,96,0.14)"; }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(39,174,96,0.06)"; }}>
+                              <MessageCircle style={{ width:10, height:10 }} /> WhatsApp
+                            </button>
+                          )}
+                          {(c.celular || c.telefone) && (
+                            <button onClick={() => window.open(`tel:${c.celular || c.telefone}`)} style={{ flex:1, height:28, borderRadius:7, border:"1px solid rgba(230,126,34,0.25)", background:"rgba(230,126,34,0.06)", color:"#e67e22", fontSize:10, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:4, transition:"all 0.15s" }}
+                              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(230,126,34,0.14)"; }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(230,126,34,0.06)"; }}>
+                              <Phone style={{ width:10, height:10 }} /> Ligar
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
