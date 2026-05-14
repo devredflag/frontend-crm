@@ -11,6 +11,10 @@ import {
   AlertTriangle, ChevronUp,
 } from "lucide-react";
 
+// ── Import do modal de alterações não salvas ──────────────────
+import UnsavedChangesModal, { UnsavedChangesAction } from "../../../components/UnsavedChangesModal";
+// Ajuste o caminho acima conforme onde você colocou o componente
+
 const API = "https://backend-crm-production-157b.up.railway.app";
 
 const SEGMENTOS_PADRAO = [
@@ -101,7 +105,6 @@ const css = `
   .field-input-icon .icon{position:absolute;left:12px;color:rgba(20,45,70,0.3);pointer-events:none;}
   .field-input-icon .field-input{padding-left:36px;}
 
-  /* ── Autocomplete customizado ── */
   .seg-wrapper{position:relative;}
   .seg-input-wrap{position:relative;display:flex;align-items:center;}
   .seg-input{height:44px;padding:0 40px 0 36px;border-radius:10px;border:1.5px solid rgba(200,225,240,0.8);background:rgba(255,255,255,0.75);font-size:13px;color:#0f2133;outline:none;transition:border-color 0.18s,box-shadow 0.18s;width:100%;}
@@ -160,7 +163,6 @@ const contatoVazio = () => ({
   nivel_influencia: "", decisor: false, canal_preferido: "", data_ultimo_contato: "",
 });
 
-// ── Tipo do estado de validação ───────────────────────────────
 type ValidacaoStatus = "idle" | "buscando" | "encontrado" | "novo" | "erro";
 
 // ── Componente: Modal de Validação ────────────────────────────
@@ -243,71 +245,31 @@ function ValidacaoModal({
           position:"relative",
         }}
       >
-        {/* Barra colorida no topo */}
-        <div style={{
-          position:"absolute",top:0,left:0,right:0,height:4,
-          background:`linear-gradient(90deg, ${cfg.color}, ${cfg.color}88)`,
-          borderRadius:"20px 20px 0 0",
-        }}/>
-
-        {/* Ícone + texto */}
+        <div style={{position:"absolute",top:0,left:0,right:0,height:4,background:`linear-gradient(90deg, ${cfg.color}, ${cfg.color}88)`,borderRadius:"20px 20px 0 0"}}/>
         <div style={{textAlign:"center",marginBottom:20}}>
-          <div style={{
-            width:64,height:64,borderRadius:18,
-            background:cfg.bg,
-            border:`1.5px solid ${cfg.border}`,
-            display:"flex",alignItems:"center",justifyContent:"center",
-            margin:"0 auto 14px",
-          }}>
+          <div style={{width:64,height:64,borderRadius:18,background:cfg.bg,border:`1.5px solid ${cfg.border}`,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}>
             {cfg.icon}
           </div>
-          <div style={{fontSize:17,fontWeight:800,color:"#0f2133",marginBottom:6}}>
-            {cfg.title}
-          </div>
-          <div style={{fontSize:13,color:"rgba(20,45,70,0.55)",lineHeight:1.55,maxWidth:320,margin:"0 auto"}}>
-            {cfg.sub}
-          </div>
+          <div style={{fontSize:17,fontWeight:800,color:"#0f2133",marginBottom:6}}>{cfg.title}</div>
+          <div style={{fontSize:13,color:"rgba(20,45,70,0.55)",lineHeight:1.55,maxWidth:320,margin:"0 auto"}}>{cfg.sub}</div>
         </div>
-
-        {/* Barra de progresso animada para "buscando" */}
         {status==="buscando"&&(
           <div style={{marginBottom:8}}>
             <div style={{height:3,borderRadius:3,background:"rgba(200,225,240,0.5)",overflow:"hidden"}}>
-              <motion.div
-                initial={{x:"-100%"}}
-                animate={{x:"100%"}}
-                transition={{repeat:Infinity,duration:1.2,ease:"easeInOut"}}
-                style={{height:"100%",width:"60%",borderRadius:3,background:`linear-gradient(90deg,transparent,${cfg.color},transparent)`}}
-              />
+              <motion.div initial={{x:"-100%"}} animate={{x:"100%"}} transition={{repeat:Infinity,duration:1.2,ease:"easeInOut"}} style={{height:"100%",width:"60%",borderRadius:3,background:`linear-gradient(90deg,transparent,${cfg.color},transparent)`}}/>
             </div>
           </div>
         )}
-
-        {/* Botões */}
         {cfg.showButtons&&(
           <div style={{display:"flex",gap:10,marginTop:8}}>
-            <button
-              onClick={onCancel}
-              className="btn-ghost"
-              style={{flex:1,height:44,fontSize:13}}
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={onConfirm}
-              className="btn-grad"
-              style={{flex:2,height:44,fontSize:13}}
-            >
+            <button onClick={onCancel} className="btn-ghost" style={{flex:1,height:44,fontSize:13}}>Cancelar</button>
+            <button onClick={onConfirm} className="btn-grad" style={{flex:2,height:44,fontSize:13}}>
               {status==="encontrado"?<><Save style={{width:14,height:14}}/> Salvar empresa</>:<><Plus style={{width:14,height:14}}/> Adicionar e salvar</>}
             </button>
           </div>
         )}
-
-        {/* Botão de fechar para erro */}
         {status==="erro"&&(
-          <button onClick={onCancel} className="btn-ghost" style={{width:"100%",height:44,fontSize:13,marginTop:8}}>
-            Voltar e corrigir
-          </button>
+          <button onClick={onCancel} className="btn-ghost" style={{width:"100%",height:44,fontSize:13,marginTop:8}}>Voltar e corrigir</button>
         )}
       </motion.div>
     </motion.div>
@@ -342,38 +304,23 @@ function SegmentoAutocomplete({
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  const select = (v: string) => {
-    onChange(v);
-    setOpen(false);
-    setHighlighted(-1);
-  };
+  const select = (v: string) => { onChange(v); setOpen(false); setHighlighted(-1); };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     const total = filtered.length + (showNew ? 1 : 0);
-    if (e.key === "ArrowDown") {
+    if (e.key === "ArrowDown") { e.preventDefault(); setHighlighted(h => (h + 1) % total); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setHighlighted(h => (h - 1 + total) % total); }
+    else if (e.key === "Enter") {
       e.preventDefault();
-      setHighlighted(h => (h + 1) % total);
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setHighlighted(h => (h - 1 + total) % total);
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      if (highlighted >= 0 && highlighted < filtered.length) {
-        select(filtered[highlighted]);
-      } else if (highlighted === filtered.length && showNew) {
-        select(value.trim());
-      }
-    } else if (e.key === "Escape") {
-      setOpen(false);
-    }
+      if (highlighted >= 0 && highlighted < filtered.length) select(filtered[highlighted]);
+      else if (highlighted === filtered.length && showNew) select(value.trim());
+    } else if (e.key === "Escape") setOpen(false);
   };
 
   return (
@@ -392,37 +339,17 @@ function SegmentoAutocomplete({
         />
         <ChevronDown className={`seg-chevron${open?" open":""}`}/>
       </div>
-
       <AnimatePresence>
         {open&&(
-          <motion.div
-            className="seg-dropdown"
-            initial={{opacity:0,y:-6,scaleY:0.95}}
-            animate={{opacity:1,y:0,scaleY:1}}
-            exit={{opacity:0,y:-6,scaleY:0.95}}
-            transition={{duration:0.15,ease:[0.4,0,0.2,1]}}
-            style={{transformOrigin:"top"}}
-          >
-            {filtered.length===0&&!showNew&&(
-              <div className="seg-empty">Nenhum segmento encontrado</div>
-            )}
+          <motion.div className="seg-dropdown" initial={{opacity:0,y:-6,scaleY:0.95}} animate={{opacity:1,y:0,scaleY:1}} exit={{opacity:0,y:-6,scaleY:0.95}} transition={{duration:0.15,ease:[0.4,0,0.2,1]}} style={{transformOrigin:"top"}}>
+            {filtered.length===0&&!showNew&&<div className="seg-empty">Nenhum segmento encontrado</div>}
             {filtered.map((opt, i) => (
-              <div
-                key={opt}
-                className={`seg-option${normalizeSegmento(opt)===normalizeSegmento(value)?" selected":""}${highlighted===i?" highlighted":""}`}
-                onMouseDown={e => { e.preventDefault(); select(opt); }}
-                onMouseEnter={() => setHighlighted(i)}
-              >
-                <div style={{width:6,height:6,borderRadius:"50%",background:"rgba(41,128,185,0.35)",flexShrink:0}}/>
-                {opt}
+              <div key={opt} className={`seg-option${normalizeSegmento(opt)===normalizeSegmento(value)?" selected":""}${highlighted===i?" highlighted":""}`} onMouseDown={e=>{e.preventDefault();select(opt);}} onMouseEnter={()=>setHighlighted(i)}>
+                <div style={{width:6,height:6,borderRadius:"50%",background:"rgba(41,128,185,0.35)",flexShrink:0}}/>{opt}
               </div>
             ))}
             {showNew&&(
-              <div
-                className={`seg-option-new${highlighted===filtered.length?" highlighted":""}`}
-                onMouseDown={e => { e.preventDefault(); select(value.trim()); }}
-                onMouseEnter={() => setHighlighted(filtered.length)}
-              >
+              <div className={`seg-option-new${highlighted===filtered.length?" highlighted":""}`} onMouseDown={e=>{e.preventDefault();select(value.trim());}} onMouseEnter={()=>setHighlighted(filtered.length)}>
                 <Plus style={{width:13,height:13}}/> Adicionar "{value.trim()}" como novo segmento
               </div>
             )}
@@ -520,6 +447,11 @@ export default function NovaEmpresa() {
   const [segmentos, setSegmentos] = useState<string[]>(SEGMENTOS_PADRAO);
   const [contatos, setContatos] = useState([contatoVazio()]);
 
+  // ── States novos: proteção de navegação ──────────────────
+  const [showUnsaved, setShowUnsaved] = useState(false);
+  const [pendingNavPath, setPendingNavPath] = useState<string | null>(null);
+  const [formTouched, setFormTouched] = useState(false);
+
   // Estado da validação
   const [validacaoStatus, setValidacaoStatus] = useState<ValidacaoStatus>("idle");
   const [validacaoSegmento, setValidacaoSegmento] = useState("");
@@ -533,7 +465,11 @@ export default function NovaEmpresa() {
     ultima_interacao:todayInputValue(),proxima_acao:"",temperatura:"",
   });
 
-  const setEmp = (key: string, val: string) => setEmpresa(p=>({...p,[key]:val}));
+  // ── setEmp marca o form como tocado ──────────────────────
+  const setEmp = (key: string, val: string) => {
+    setEmpresa(p => ({ ...p, [key]: val }));
+    setFormTouched(true);
+  };
 
   const segmentosOrdenados = useMemo(() => uniqueSorted(segmentos), [segmentos]);
 
@@ -561,8 +497,9 @@ export default function NovaEmpresa() {
     const novos = [...contatos];
     novos[index] = { ...novos[index], [field]: value };
     setContatos(novos);
+    setFormTouched(true);
   };
-  const addContato = () => setContatos(prev => [...prev, contatoVazio()]);
+  const addContato = () => { setContatos(prev => [...prev, contatoVazio()]); setFormTouched(true); };
   const removeContato = (id: number) => setContatos(prev => prev.filter(c => c.id !== id));
 
   // ── Lógica principal de submit ────────────────────────────
@@ -603,6 +540,7 @@ export default function NovaEmpresa() {
           });
         }
       }
+      setFormTouched(false);
       navigate("/dashboard");
     } catch (error) {
       alert(error instanceof Error ? error.message : "Erro ao salvar");
@@ -619,13 +557,11 @@ export default function NovaEmpresa() {
     setValidacaoSegmento(seg);
 
     if (segmentoExiste) {
-      // Segmento já está na lista local — mostra modal "encontrado" rapidamente
       setValidacaoStatus("buscando");
       await new Promise(r => setTimeout(r, 700));
       setValidacaoStatus("encontrado");
       submitCallbackRef.current = async () => { await doSave(seg); };
     } else {
-      // Segmento novo: valida com a API
       setValidacaoStatus("buscando");
       try {
         const res = await fetch(`${API}/segmentos`, {
@@ -663,11 +599,81 @@ export default function NovaEmpresa() {
     submitCallbackRef.current = null;
   };
 
+  // ── Navegação protegida ───────────────────────────────────
+  const handleNavigateAway = (path: string) => {
+    if (!formTouched) { navigate(path); return; }
+    setPendingNavPath(path);
+    setShowUnsaved(true);
+  };
+
+  // ── Ação do modal de alterações não salvas ────────────────
+  const handleUnsavedAction = async (action: UnsavedChangesAction) => {
+    setShowUnsaved(false);
+    if (action === "save") {
+      await handleSubmit();
+    } else if (action === "draft") {
+      await handleSaveDraft();
+    } else if (action === "discard") {
+      setFormTouched(false);
+      navigate(pendingNavPath || "/dashboard");
+    }
+    // "continue" → só fecha o modal, não faz nada
+  };
+
+  // ── Salvar como rascunho ──────────────────────────────────
+  const handleSaveDraft = async () => {
+    if (!empresa.nome.trim()) {
+      alert("Informe ao menos o nome da empresa para salvar o rascunho");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/empresas`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nome: empresa.nome,
+          segmento: empresa.segmento || "Não definido",
+          porte: empresa.porte || "Pequeno",
+          cidade: empresa.cidade,
+          endereco: empresa.endereco,
+          cep: empresa.cep,
+          bairro: empresa.bairro,
+          regiao: empresa.regiao,
+          observacoes: empresa.observacoes,
+          cnpj: empresa.cnpj,
+          site: empresa.site,
+          linkedin_empresa: empresa.linkedin_empresa,
+          responsavel_principal: empresa.responsavel_principal,
+          status: "Rascunho",
+          origem_lead: empresa.origem_lead || "Manual",
+          ultima_interacao: dateInputToIso(empresa.ultima_interacao),
+          proxima_acao: empresa.proxima_acao,
+          temperatura: empresa.temperatura || "Frio",
+        }),
+      });
+      if (!res.ok) throw new Error("Erro ao salvar rascunho");
+      setFormTouched(false);
+      navigate(pendingNavPath || "/dashboard");
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Erro ao salvar rascunho");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div style={{display:"flex",height:"100vh",overflow:"hidden",position:"relative"}}>
       <style>{css}</style>
 
-      {/* Modal de validação */}
+      {/* ── Modal: alterações não salvas ── */}
+      <UnsavedChangesModal
+        open={showUnsaved}
+        canSave={!!empresa.nome.trim() && !!empresa.segmento.trim()}
+        onAction={handleUnsavedAction}
+      />
+
+      {/* ── Modal: validação de segmento ── */}
       <AnimatePresence>
         {validacaoStatus !== "idle" && (
           <ValidacaoModal
@@ -709,7 +715,8 @@ export default function NovaEmpresa() {
         </div>
         <nav style={{flex:1,display:"flex",flexDirection:"column",gap:2}}>
           {navItems.map(item=>(
-            <div key={item.label} onClick={()=>item.path&&navigate(item.path)} className={`nav-item${item.active?" active":""}`} style={{cursor:item.path?"pointer":"default"}}>
+            // ── handleNavigateAway protege a navegação do sidebar ──
+            <div key={item.label} onClick={()=>item.path&&handleNavigateAway(item.path)} className={`nav-item${item.active?" active":""}`} style={{cursor:item.path?"pointer":"default"}}>
               <item.icon style={{width:16,height:16}}/>{item.label}
             </div>
           ))}
@@ -721,7 +728,8 @@ export default function NovaEmpresa() {
 
         {/* Top bar */}
         <div style={{position:"sticky",top:0,zIndex:20,padding:"14px 28px",background:"rgba(210,238,248,0.75)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,0.6)",display:"flex",alignItems:"center",gap:16}}>
-          <button className="btn-ghost" style={{height:38,padding:"0 14px",fontSize:13}} onClick={()=>navigate("/dashboard")}>
+          {/* ── Botão Voltar protegido ── */}
+          <button className="btn-ghost" style={{height:38,padding:"0 14px",fontSize:13}} onClick={()=>handleNavigateAway("/dashboard")}>
             <ArrowLeft style={{width:15,height:15}}/> Voltar
           </button>
           <div style={{flex:1}}>
@@ -757,7 +765,6 @@ export default function NovaEmpresa() {
                       <IconInput icon={Building2} placeholder="Nome completo da empresa" value={empresa.nome} onChange={(e:any)=>setEmp("nome",e.target.value)}/>
                     </Field>
                   </div>
-                  {/* ✅ Autocomplete customizado — sem mais datalist preto */}
                   <Field label="Segmento *">
                     <SegmentoAutocomplete
                       value={empresa.segmento}
@@ -956,7 +963,8 @@ export default function NovaEmpresa() {
 
           {/* Rodapé */}
           <div style={{marginTop:28,display:"flex",justifyContent:"flex-end",gap:10}}>
-            <button className="btn-ghost" style={{height:44,padding:"0 20px",fontSize:13}} onClick={()=>navigate("/dashboard")}>Cancelar</button>
+            {/* ── Botão Cancelar protegido ── */}
+            <button className="btn-ghost" style={{height:44,padding:"0 20px",fontSize:13}} onClick={()=>handleNavigateAway("/dashboard")}>Cancelar</button>
             <button className="btn-grad" style={{height:44,padding:"0 28px",fontSize:14,opacity:loading?0.75:1}} onClick={handleSubmit} disabled={loading}>
               <Save style={{width:16,height:16}}/> {loading?"Salvando...":"Salvar Empresa"}
             </button>
