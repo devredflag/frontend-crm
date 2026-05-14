@@ -633,7 +633,7 @@ export default function NovaEmpresa() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           nome: empresa.nome,
-          segmento: empresa.segmento || "Não definido",
+          segmento: empresa.segmento?.trim() || null,
           porte: empresa.porte || "Pequeno",
           cidade: empresa.cidade,
           endereco: empresa.endereco,
