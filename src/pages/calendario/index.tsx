@@ -5,6 +5,7 @@ import {
   LayoutDashboard, Search, Building2, Users, ClipboardList,
   Calendar, BarChart3, ChevronLeft, ChevronRight,
   Plus, X, Phone, Eye, Users2, FileText, Trash2, Clock,
+  Mail, CheckCircle2, Link2, AlertCircle,
 } from "lucide-react";
 
 const css = `
@@ -12,6 +13,7 @@ const css = `
   * { font-family: 'Plus Jakarta Sans', sans-serif; box-sizing: border-box; margin: 0; padding: 0; }
   @keyframes gradientShift { 0%,100%{background-position:0% 50%}50%{background-position:100% 50%} }
   @keyframes shimmer { 0%{background-position:-200% 0}100%{background-position:200% 0} }
+  @keyframes spin { from{transform:rotate(0deg)}to{transform:rotate(360deg)} }
   .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:10px; cursor:pointer; font-size:13.5px; font-weight:500; color:rgba(255,255,255,0.65); transition:all 0.18s; user-select:none; }
   .nav-item:hover { background:rgba(255,255,255,0.08); color:#fff; }
   .nav-item.active { background:rgba(255,255,255,0.14); color:#fff; font-weight:600; }
@@ -30,6 +32,11 @@ const css = `
   .textarea-field { width:100%; padding:10px 14px; border-radius:10px; border:1px solid rgba(200,225,240,0.9); background:rgba(255,255,255,0.85); font-size:13px; color:#1a2e40; outline:none; resize:vertical; min-height:70px; transition:border 0.18s; }
   .textarea-field:focus { border-color:rgba(41,128,185,0.5); box-shadow:0 0 0 3px rgba(41,128,185,0.1); }
   .select-field { width:100%; height:44px; padding:0 14px; border-radius:10px; border:1px solid rgba(200,225,240,0.9); background:rgba(255,255,255,0.85); font-size:13px; color:#1a2e40; outline:none; cursor:pointer; }
+  .connect-card { display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:12px; border:1.5px solid; cursor:pointer; transition:all 0.18s; }
+  .connect-card:hover { transform:translateY(-1px); box-shadow:0 4px 16px rgba(0,0,0,0.08); }
+  .toggle-box { display:flex; align-items:center; gap:10px; padding:12px 14px; border-radius:12px; border:1.5px solid rgba(200,225,240,0.9); background:rgba(255,255,255,0.6); cursor:pointer; transition:all 0.18s; margin-bottom:8px; }
+  .toggle-box:hover { border-color:rgba(41,128,185,0.4); }
+  .toggle-box.active { border-color:rgba(41,128,185,0.5); background:rgba(41,128,185,0.06); }
   ::-webkit-scrollbar { width:4px; height:4px; }
   ::-webkit-scrollbar-track { background:transparent; }
   ::-webkit-scrollbar-thumb { background:rgba(41,128,185,0.25); border-radius:4px; }
@@ -47,7 +54,7 @@ const TIPOS = [
 
 const DIAS_SEMANA = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
 const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-const HORAS = Array.from({length:14}, (_,i) => i + 7); // 07h às 20h
+const HORAS = Array.from({length:14}, (_,i) => i + 7);
 
 interface Evento {
   evento_id: string;
@@ -98,6 +105,26 @@ function avatarColor(name: string) {
   return c[(name?.charCodeAt(0)||0)%c.length];
 }
 
+// ── Ícone SVG Outlook ──
+const OutlookIcon = ({ size = 18 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <rect width="24" height="24" rx="4" fill="#0078D4"/>
+    <path d="M13 6h7v12h-7V6z" fill="#50B3FF" opacity="0.5"/>
+    <path d="M4 8h9v8H4V8z" fill="white"/>
+    <ellipse cx="8.5" cy="12" rx="2.5" ry="2.5" fill="#0078D4"/>
+  </svg>
+);
+
+// ── Ícone SVG Google ──
+const GoogleIcon = ({ size = 18 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24">
+    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+  </svg>
+);
+
 export default function Calendario() {
   const navigate = useNavigate();
   const today = new Date();
@@ -107,8 +134,6 @@ export default function Calendario() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [usuario, setUsuario] = useState<{nome:string;cargo:string}|null>(null);
   const [showModal, setShowModal] = useState(false);
-  const [selectedDate, setSelectedDate] = useState("");
-  const [selectedHour, setSelectedHour] = useState("");
   const [editEvento, setEditEvento] = useState<Evento|null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -116,7 +141,25 @@ export default function Calendario() {
     empresa_id:"", empresa_nome:"", descricao:"",
   });
 
-  useEffect(() => { fetchAll(); }, []);
+  // ── Estados de integração ──
+  const [outlookConectado, setOutlookConectado] = useState(false);
+  const [googleConectado, setGoogleConectado] = useState(false);
+  const [agendarOutlook, setAgendarOutlook] = useState(false);
+  const [agendarGoogle, setAgendarGoogle] = useState(false);
+  const [emailConvidado, setEmailConvidado] = useState("");
+  const [conectandoOutlook, setConectandoOutlook] = useState(false);
+  const [showConectarBanner, setShowConectarBanner] = useState(false);
+
+  useEffect(() => { fetchAll(); checkIntegrations(); }, []);
+
+  // Verifica se voltou do OAuth do Outlook (URL tem ?outlook=connected)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("outlook") === "connected") {
+      setOutlookConectado(true);
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
 
   const token = () => localStorage.getItem("token") || "";
   const headers = () => ({ "Content-Type":"application/json", Authorization:`Bearer ${token()}` });
@@ -134,8 +177,38 @@ export default function Calendario() {
     } catch {}
   };
 
+  const checkIntegrations = async () => {
+    try {
+      const res = await fetch(`${API}/auth/outlook/status`, { headers: headers() });
+      if (res.ok) {
+        const data = await res.json();
+        setOutlookConectado(data.conectado);
+      }
+    } catch {}
+  };
+
+  const conectarOutlook = async () => {
+    setConectandoOutlook(true);
+    try {
+      const res = await fetch(`${API}/auth/outlook/login`, { headers: headers() });
+      const data = await res.json();
+      if (data.auth_url) window.location.href = data.auth_url;
+    } catch {
+      setConectandoOutlook(false);
+    }
+  };
+
+  const desconectarOutlook = async () => {
+    await fetch(`${API}/auth/outlook/disconnect`, { method:"DELETE", headers: headers() });
+    setOutlookConectado(false);
+    setAgendarOutlook(false);
+  };
+
   const openNew = (date: string, hour?: string) => {
     setEditEvento(null);
+    setAgendarOutlook(false);
+    setAgendarGoogle(false);
+    setEmailConvidado("");
     setForm({ titulo:"", tipo:"call", data:date, hora_inicio:hour||"09:00", hora_fim:hour?`${padZero(parseInt(hour)+1)}:00`:"10:00", empresa_id:"", empresa_nome:"", descricao:"" });
     setShowModal(true);
   };
@@ -143,6 +216,9 @@ export default function Calendario() {
   const openEdit = (ev: Evento, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditEvento(ev);
+    setAgendarOutlook(false);
+    setAgendarGoogle(false);
+    setEmailConvidado("");
     setForm({
       titulo: ev.titulo, tipo: ev.tipo, data: ev.data,
       hora_inicio: ev.hora_inicio?.slice(0,5)||"09:00",
@@ -161,7 +237,30 @@ export default function Calendario() {
       const url = editEvento ? `${API}/eventos/${editEvento.evento_id}` : `${API}/eventos`;
       const method = editEvento ? "PUT" : "POST";
       const res = await fetch(url, { method, headers: headers(), body: JSON.stringify(body) });
-      if (res.ok) { setShowModal(false); fetchAll(); }
+
+      if (res.ok) {
+        const data = await res.json();
+        const eventoId = editEvento ? editEvento.evento_id : data.id;
+
+        // Agenda no Outlook se selecionado
+        if (agendarOutlook && outlookConectado && eventoId) {
+          await fetch(`${API}/eventos/${eventoId}/agendar-outlook`, {
+            method: "POST",
+            headers: headers(),
+            body: JSON.stringify({
+              titulo: form.titulo,
+              descricao: form.descricao || "",
+              data: form.data,
+              hora_inicio: form.hora_inicio,
+              hora_fim: form.hora_fim,
+              email_convidado: emailConvidado || null,
+            }),
+          });
+        }
+
+        setShowModal(false);
+        fetchAll();
+      }
     } catch {}
     setSaving(false);
   };
@@ -177,7 +276,6 @@ export default function Calendario() {
   const eventosNaHora = (dateStr: string, hora: number) =>
     eventos.filter(e => e.data===dateStr && parseInt(e.hora_inicio)===hora);
 
-  // ── Navegação ──
   const prev = () => {
     const d = new Date(currentDate);
     if (view==="mes") d.setMonth(d.getMonth()-1);
@@ -193,7 +291,6 @@ export default function Calendario() {
     setCurrentDate(d);
   };
 
-  // ── Cabeçalho ──
   const headerLabel = () => {
     if (view==="mes") return `${MESES[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
     if (view==="dia") return `${currentDate.getDate()} de ${MESES[currentDate.getMonth()]}`;
@@ -203,7 +300,6 @@ export default function Calendario() {
     return `${start.getDate()} - ${end.getDate()} de ${MESES[end.getMonth()]}`;
   };
 
-  // ── Dias do mês ──
   const buildMonth = () => {
     const y = currentDate.getFullYear(), m = currentDate.getMonth();
     const first = new Date(y, m, 1).getDay();
@@ -221,7 +317,6 @@ export default function Calendario() {
     return days;
   };
 
-  // ── Dias da semana ──
   const buildWeek = () => {
     const start = new Date(currentDate);
     start.setDate(start.getDate() - start.getDay());
@@ -243,6 +338,64 @@ export default function Calendario() {
       </div>
     );
   };
+
+  // ── Bloco de integração de calendário ──
+  const IntegrationBar = () => (
+    <div style={{ padding:"10px 28px", background:"rgba(210,238,248,0.6)", borderBottom:"1px solid rgba(200,225,240,0.5)", display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
+      <span style={{ fontSize:11, fontWeight:700, color:"rgba(20,45,70,0.45)", letterSpacing:"0.05em", textTransform:"uppercase", marginRight:4 }}>Calendários</span>
+
+      {/* Outlook */}
+      <div
+        className="connect-card"
+        onClick={outlookConectado ? desconectarOutlook : conectarOutlook}
+        style={{
+          borderColor: outlookConectado ? "rgba(0,120,212,0.4)" : "rgba(200,225,240,0.9)",
+          background: outlookConectado ? "rgba(0,120,212,0.07)" : "rgba(255,255,255,0.7)",
+        }}
+      >
+        <OutlookIcon size={16} />
+        <span style={{ fontSize:12, fontWeight:600, color: outlookConectado ? "#0078D4" : "rgba(20,45,70,0.6)" }}>
+          {conectandoOutlook ? "Conectando..." : outlookConectado ? "Outlook conectado" : "Conectar Outlook"}
+        </span>
+        {outlookConectado
+          ? <CheckCircle2 style={{ width:13, height:13, color:"#0078D4" }} />
+          : <Link2 style={{ width:13, height:13, color:"rgba(20,45,70,0.35)" }} />
+        }
+      </div>
+
+      {/* Google Calendar */}
+      <div
+        className="connect-card"
+        onClick={() => setShowConectarBanner(true)}
+        style={{
+          borderColor: googleConectado ? "rgba(66,133,244,0.4)" : "rgba(200,225,240,0.9)",
+          background: googleConectado ? "rgba(66,133,244,0.07)" : "rgba(255,255,255,0.7)",
+        }}
+      >
+        <GoogleIcon size={16} />
+        <span style={{ fontSize:12, fontWeight:600, color: googleConectado ? "#4285F4" : "rgba(20,45,70,0.6)" }}>
+          {googleConectado ? "Google conectado" : "Conectar Google"}
+        </span>
+        {googleConectado
+          ? <CheckCircle2 style={{ width:13, height:13, color:"#4285F4" }} />
+          : <Link2 style={{ width:13, height:13, color:"rgba(20,45,70,0.35)" }} />
+        }
+      </div>
+
+      {/* Banner em breve */}
+      <AnimatePresence>
+        {showConectarBanner && (
+          <motion.div initial={{ opacity:0, x:10 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0 }} style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 12px", borderRadius:8, background:"rgba(251,188,5,0.1)", border:"1px solid rgba(251,188,5,0.4)" }}>
+            <AlertCircle style={{ width:13, height:13, color:"#f59e0b" }} />
+            <span style={{ fontSize:11, color:"#92400e", fontWeight:600 }}>Google Calendar — em breve</span>
+            <button onClick={() => setShowConectarBanner(false)} style={{ background:"none", border:"none", cursor:"pointer", padding:0, display:"flex" }}>
+              <X style={{ width:12, height:12, color:"#92400e" }} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 
   return (
     <div style={{ display:"flex", height:"100vh", overflow:"hidden", position:"relative" }}>
@@ -300,7 +453,6 @@ export default function Calendario() {
             <p style={{ fontSize:12, color:"rgba(20,45,70,0.5)", marginTop:1 }}>Agenda e planejamento de atividades</p>
           </div>
 
-          {/* Navegação */}
           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
             <button onClick={prev} style={{ width:32, height:32, borderRadius:8, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.75)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
               <ChevronLeft style={{ width:15, height:15, color:"#2980b9" }} />
@@ -314,7 +466,6 @@ export default function Calendario() {
             </button>
           </div>
 
-          {/* Views */}
           <div style={{ display:"flex", gap:4, background:"rgba(255,255,255,0.6)", borderRadius:10, padding:4 }}>
             {(["mes","semana","dia"] as const).map(v => (
               <button key={v} className="view-btn" onClick={() => setView(v)} style={{ background: view===v ? "#2980b9" : "transparent", color: view===v ? "#fff" : "rgba(20,45,70,0.6)" }}>
@@ -331,6 +482,9 @@ export default function Calendario() {
           </button>
         </div>
 
+        {/* Barra de integrações */}
+        <IntegrationBar />
+
         {/* Conteúdo do calendário */}
         <div style={{ flex:1, padding:"20px 28px", overflow:"hidden", display:"flex", flexDirection:"column" }}>
           <div className="glass" style={{ flex:1, overflow:"hidden", display:"flex", flexDirection:"column" }}>
@@ -338,13 +492,11 @@ export default function Calendario() {
             {/* ── VISÃO MÊS ── */}
             {view==="mes" && (
               <>
-                {/* Header dias */}
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", borderBottom:"1px solid rgba(200,225,240,0.5)" }}>
                   {DIAS_SEMANA.map(d => (
                     <div key={d} style={{ padding:"10px 0", textAlign:"center", fontSize:11, fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", color:"rgba(20,45,70,0.45)" }}>{d}</div>
                   ))}
                 </div>
-                {/* Células */}
                 <div style={{ flex:1, display:"grid", gridTemplateColumns:"repeat(7,1fr)", gridAutoRows:"1fr", overflow:"auto" }}>
                   {buildMonth().map((day, i) => {
                     const dateStr = toDateStr(day.y, day.m, day.d);
@@ -369,7 +521,6 @@ export default function Calendario() {
             {/* ── VISÃO SEMANA ── */}
             {view==="semana" && (
               <div style={{ flex:1, overflow:"auto", display:"flex", flexDirection:"column" }}>
-                {/* Header */}
                 <div style={{ display:"grid", gridTemplateColumns:"60px repeat(7,1fr)", borderBottom:"1px solid rgba(200,225,240,0.5)", flexShrink:0 }}>
                   <div />
                   {buildWeek().map((d, i) => {
@@ -384,7 +535,6 @@ export default function Calendario() {
                     );
                   })}
                 </div>
-                {/* Horas */}
                 <div style={{ flex:1, overflow:"auto" }}>
                   {HORAS.map(hora => (
                     <div key={hora} style={{ display:"grid", gridTemplateColumns:"60px repeat(7,1fr)", minHeight:56 }}>
@@ -411,7 +561,6 @@ export default function Calendario() {
             {/* ── VISÃO DIA ── */}
             {view==="dia" && (
               <div style={{ flex:1, overflow:"auto", display:"flex", flexDirection:"column" }}>
-                {/* Header */}
                 <div style={{ padding:"14px 20px", borderBottom:"1px solid rgba(200,225,240,0.5)", display:"flex", alignItems:"center", gap:12, flexShrink:0 }}>
                   <div style={{ width:40, height:40, borderRadius:12, background: isToday(currentDate.getFullYear(),currentDate.getMonth(),currentDate.getDate()) ? "#2980b9" : "rgba(41,128,185,0.1)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, fontWeight:900, color: isToday(currentDate.getFullYear(),currentDate.getMonth(),currentDate.getDate()) ? "#fff" : "#2980b9" }}>
                     {currentDate.getDate()}
@@ -423,7 +572,6 @@ export default function Calendario() {
                     </div>
                   </div>
                 </div>
-                {/* Horas */}
                 <div style={{ flex:1, overflow:"auto" }}>
                   {HORAS.map(hora => {
                     const dateStr = toDateStr(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
@@ -474,7 +622,7 @@ export default function Calendario() {
       <AnimatePresence>
         {showModal && (
           <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }} style={{ position:"fixed", inset:0, zIndex:100, background:"rgba(10,30,50,0.45)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }} onClick={() => setShowModal(false)}>
-            <motion.div initial={{ opacity:0, scale:0.94, y:20 }} animate={{ opacity:1, scale:1, y:0 }} exit={{ opacity:0, scale:0.94 }} transition={{ duration:0.22 }} onClick={e => e.stopPropagation()} style={{ width:"100%", maxWidth:520, borderRadius:20, background:"rgba(230,245,252,0.97)", backdropFilter:"blur(24px)", border:"1px solid rgba(255,255,255,0.9)", boxShadow:"0 24px 80px rgba(41,128,185,0.2)", padding:28 }}>
+            <motion.div initial={{ opacity:0, scale:0.94, y:20 }} animate={{ opacity:1, scale:1, y:0 }} exit={{ opacity:0, scale:0.94 }} transition={{ duration:0.22 }} onClick={e => e.stopPropagation()} style={{ width:"100%", maxWidth:540, borderRadius:20, background:"rgba(230,245,252,0.97)", backdropFilter:"blur(24px)", border:"1px solid rgba(255,255,255,0.9)", boxShadow:"0 24px 80px rgba(41,128,185,0.2)", padding:28, maxHeight:"90vh", overflowY:"auto" }}>
 
               {/* Header modal */}
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
@@ -540,9 +688,68 @@ export default function Calendario() {
               </div>
 
               {/* Descrição */}
-              <div style={{ marginBottom:20 }}>
+              <div style={{ marginBottom:16 }}>
                 <label style={{ fontSize:10, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"rgba(20,45,70,0.5)", display:"block", marginBottom:6 }}>Descrição</label>
                 <textarea className="textarea-field" value={form.descricao} onChange={e => setForm({...form, descricao:e.target.value})} placeholder="Detalhes do evento..." />
+              </div>
+
+              {/* ── Seção de agendamento externo ── */}
+              <div style={{ marginBottom:20 }}>
+                <label style={{ fontSize:10, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"rgba(20,45,70,0.5)", display:"block", marginBottom:8 }}>
+                  <Mail style={{ width:11, height:11, display:"inline", marginRight:4 }} />
+                  Também agendar em
+                </label>
+
+                {/* Outlook */}
+                <div
+                  className={`toggle-box${agendarOutlook?" active":""}`}
+                  onClick={() => {
+                    if (!outlookConectado) { conectarOutlook(); return; }
+                    setAgendarOutlook(!agendarOutlook);
+                  }}
+                >
+                  <OutlookIcon size={18} />
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:13, fontWeight:600, color: outlookConectado ? "#0f2133" : "rgba(20,45,70,0.4)" }}>
+                      Outlook Calendar
+                    </div>
+                    <div style={{ fontSize:11, color:"rgba(20,45,70,0.4)" }}>
+                      {outlookConectado ? "Cria o evento e envia convite ao cliente" : "Clique para conectar primeiro"}
+                    </div>
+                  </div>
+                  <div style={{ width:20, height:20, borderRadius:6, border:`2px solid ${agendarOutlook && outlookConectado ? "#0078D4" : "rgba(200,225,240,0.9)"}`, background: agendarOutlook && outlookConectado ? "#0078D4" : "transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                    {agendarOutlook && outlookConectado && <CheckCircle2 style={{ width:12, height:12, color:"#fff" }} />}
+                  </div>
+                </div>
+
+                {/* Google */}
+                <div className="toggle-box" onClick={() => setShowConectarBanner(true)} style={{ opacity:0.55, cursor:"not-allowed" }}>
+                  <GoogleIcon size={18} />
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:13, fontWeight:600, color:"rgba(20,45,70,0.4)" }}>Google Calendar</div>
+                    <div style={{ fontSize:11, color:"rgba(20,45,70,0.35)" }}>Em breve</div>
+                  </div>
+                  <span style={{ fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:6, background:"rgba(251,188,5,0.15)", color:"#92400e" }}>Em breve</span>
+                </div>
+
+                {/* Campo email convidado */}
+                <AnimatePresence>
+                  {agendarOutlook && outlookConectado && (
+                    <motion.div initial={{ opacity:0, height:0 }} animate={{ opacity:1, height:"auto" }} exit={{ opacity:0, height:0 }} style={{ overflow:"hidden", marginTop:10 }}>
+                      <label style={{ fontSize:10, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"rgba(20,45,70,0.5)", display:"block", marginBottom:6 }}>
+                        E-mail do cliente para convite (opcional)
+                      </label>
+                      <input
+                        className="input-field"
+                        type="email"
+                        value={emailConvidado}
+                        onChange={e => setEmailConvidado(e.target.value)}
+                        placeholder="cliente@empresa.com"
+                        onClick={e => e.stopPropagation()}
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* Botão salvar */}
@@ -551,7 +758,7 @@ export default function Calendario() {
                 disabled={saving || !form.titulo || !form.data}
                 style={{ width:"100%", height:48, borderRadius:12, border:"none", cursor: saving||!form.titulo||!form.data ? "not-allowed" : "pointer", background: saving||!form.titulo||!form.data ? "rgba(41,128,185,0.4)" : "linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)", backgroundSize:"200% 200%", animation:"gradientShift 4s ease infinite", color:"#fff", fontSize:14, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}
               >
-                {saving ? "Salvando..." : editEvento ? "Salvar alterações" : "Criar evento"}
+                {saving ? "Salvando..." : editEvento ? "Salvar alterações" : agendarOutlook ? "Criar evento + Agendar no Outlook" : "Criar evento"}
               </button>
             </motion.div>
           </motion.div>
