@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Search, Building2, Users, ClipboardList,
   Calendar, BarChart3, ChevronLeft, ChevronRight,
   Plus, X, Phone, Eye, Users2, FileText, Trash2, Clock,
-  Mail, CheckCircle2, Link2, AlertCircle, ChevronDown,
+  Mail, CheckCircle2, Link2, ChevronDown,
 } from "lucide-react";
 
 const css = `
@@ -120,24 +120,19 @@ export default function Calendario() {
   const [editEvento, setEditEvento] = useState<Evento|null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ titulo:"", tipo:"call", data:"", hora_inicio:"09:00", hora_fim:"10:00", empresa_id:"", empresa_nome:"", descricao:"" });
+
+  // Integrações
   const [outlookConectado, setOutlookConectado] = useState(false);
-  const [googleConectado] = useState(false);
+  const [googleConectado, setGoogleConectado] = useState(false);
   const [agendarOutlook, setAgendarOutlook] = useState(false);
+  const [agendarGoogle, setAgendarGoogle] = useState(false);
   const [emailConvidado, setEmailConvidado] = useState("");
   const [conectandoOutlook, setConectandoOutlook] = useState(false);
-  const [showConectarBanner, setShowConectarBanner] = useState(false);
+  const [conectandoGoogle, setConectandoGoogle] = useState(false);
   const [showEmailDropdown, setShowEmailDropdown] = useState(false);
   const emailDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { fetchAll(); checkIntegrations(); }, []);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("outlook") === "connected") {
-      setOutlookConectado(true);
-      window.history.replaceState({}, "", window.location.pathname);
-    }
-  }, []);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -181,8 +176,12 @@ export default function Calendario() {
 
   const checkIntegrations = async () => {
     try {
-      const res = await fetch(`${API}/auth/outlook/status`, { headers: headers() });
-      if (res.ok) { const data = await res.json(); setOutlookConectado(data.conectado); }
+      const [outlookRes, googleRes] = await Promise.all([
+        fetch(`${API}/auth/outlook/status`, { headers: headers() }),
+        fetch(`${API}/auth/google/status`, { headers: headers() }),
+      ]);
+      if (outlookRes.ok) { const d = await outlookRes.json(); setOutlookConectado(d.conectado); }
+      if (googleRes.ok)  { const d = await googleRes.json(); setGoogleConectado(d.conectado); }
     } catch {}
   };
 
@@ -200,15 +199,30 @@ export default function Calendario() {
     setOutlookConectado(false); setAgendarOutlook(false);
   };
 
+  const conectarGoogle = async () => {
+    setConectandoGoogle(true);
+    try {
+      const res = await fetch(`${API}/auth/google/login`, { headers: headers() });
+      const data = await res.json();
+      if (data.auth_url) window.location.href = data.auth_url;
+    } catch { setConectandoGoogle(false); }
+  };
+
+  const desconectarGoogle = async () => {
+    await fetch(`${API}/auth/google/disconnect`, { method:"DELETE", headers: headers() });
+    setGoogleConectado(false); setAgendarGoogle(false);
+  };
+
   const openNew = (date: string, hour?: string) => {
-    setEditEvento(null); setAgendarOutlook(false); setEmailConvidado(""); setContatos([]);
+    setEditEvento(null); setAgendarOutlook(false); setAgendarGoogle(false);
+    setEmailConvidado(""); setContatos([]);
     setForm({ titulo:"", tipo:"call", data:date, hora_inicio:hour||"09:00", hora_fim:hour?`${padZero(parseInt(hour)+1)}:00`:"10:00", empresa_id:"", empresa_nome:"", descricao:"" });
     setShowModal(true);
   };
 
   const openEdit = (ev: Evento, e: React.MouseEvent) => {
     e.stopPropagation();
-    setEditEvento(ev); setAgendarOutlook(false); setEmailConvidado("");
+    setEditEvento(ev); setAgendarOutlook(false); setAgendarGoogle(false); setEmailConvidado("");
     if (ev.empresa_id) fetchContatosEmpresa(ev.empresa_id); else setContatos([]);
     setForm({ titulo:ev.titulo, tipo:ev.tipo, data:ev.data, hora_inicio:ev.hora_inicio?.slice(0,5)||"09:00", hora_fim:ev.hora_fim?.slice(0,5)||"10:00", empresa_id:ev.empresa_id||"", empresa_nome:ev.empresa_nome||"", descricao:ev.descricao||"" });
     setShowModal(true);
@@ -224,11 +238,13 @@ export default function Calendario() {
       if (res.ok) {
         const data = await res.json();
         const eventoId = editEvento ? editEvento.evento_id : data.id;
+        const reuniaoPayload = { titulo:form.titulo, descricao:form.descricao||"", data:form.data, hora_inicio:form.hora_inicio, hora_fim:form.hora_fim, email_convidado:emailConvidado||null };
+
         if (agendarOutlook && outlookConectado && eventoId) {
-          await fetch(`${API}/eventos/${eventoId}/agendar-outlook`, {
-            method:"POST", headers:headers(),
-            body:JSON.stringify({ titulo:form.titulo, descricao:form.descricao||"", data:form.data, hora_inicio:form.hora_inicio, hora_fim:form.hora_fim, email_convidado:emailConvidado||null }),
-          });
+          await fetch(`${API}/eventos/${eventoId}/agendar-outlook`, { method:"POST", headers:headers(), body:JSON.stringify(reuniaoPayload) });
+        }
+        if (agendarGoogle && googleConectado && eventoId) {
+          await fetch(`${API}/eventos/${eventoId}/agendar-google`, { method:"POST", headers:headers(), body:JSON.stringify(reuniaoPayload) });
         }
         setShowModal(false); fetchAll();
       }
@@ -284,27 +300,26 @@ export default function Calendario() {
   const IntegrationBar = () => (
     <div style={{padding:"10px 28px",background:"rgba(210,238,248,0.6)",borderBottom:"1px solid rgba(200,225,240,0.5)",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
       <span style={{fontSize:11,fontWeight:700,color:"rgba(20,45,70,0.45)",letterSpacing:"0.05em",textTransform:"uppercase",marginRight:4}}>Calendários</span>
-      <div className="connect-card" onClick={outlookConectado?desconectarOutlook:conectarOutlook} style={{borderColor:outlookConectado?"rgba(0,120,212,0.4)":"rgba(200,225,240,0.9)",background:outlookConectado?"rgba(0,120,212,0.07)":"rgba(255,255,255,0.7)"}}>
+
+      {/* Outlook */}
+      <div className="connect-card" onClick={outlookConectado?desconectarOutlook:conectarOutlook}
+        style={{borderColor:outlookConectado?"rgba(0,120,212,0.4)":"rgba(200,225,240,0.9)",background:outlookConectado?"rgba(0,120,212,0.07)":"rgba(255,255,255,0.7)"}}>
         <OutlookIcon size={16}/>
         <span style={{fontSize:12,fontWeight:600,color:outlookConectado?"#0078D4":"rgba(20,45,70,0.6)"}}>
           {conectandoOutlook?"Conectando...":outlookConectado?"Outlook conectado":"Conectar Outlook"}
         </span>
         {outlookConectado?<CheckCircle2 style={{width:13,height:13,color:"#0078D4"}}/>:<Link2 style={{width:13,height:13,color:"rgba(20,45,70,0.35)"}}/>}
       </div>
-      <div className="connect-card" onClick={()=>setShowConectarBanner(true)} style={{borderColor:"rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.7)"}}>
+
+      {/* Google */}
+      <div className="connect-card" onClick={googleConectado?desconectarGoogle:conectarGoogle}
+        style={{borderColor:googleConectado?"rgba(66,133,244,0.4)":"rgba(200,225,240,0.9)",background:googleConectado?"rgba(66,133,244,0.07)":"rgba(255,255,255,0.7)"}}>
         <GoogleIcon size={16}/>
-        <span style={{fontSize:12,fontWeight:600,color:"rgba(20,45,70,0.6)"}}>Conectar Google</span>
-        <Link2 style={{width:13,height:13,color:"rgba(20,45,70,0.35)"}}/>
+        <span style={{fontSize:12,fontWeight:600,color:googleConectado?"#4285F4":"rgba(20,45,70,0.6)"}}>
+          {conectandoGoogle?"Conectando...":googleConectado?"Google conectado":"Conectar Google"}
+        </span>
+        {googleConectado?<CheckCircle2 style={{width:13,height:13,color:"#4285F4"}}/>:<Link2 style={{width:13,height:13,color:"rgba(20,45,70,0.35)"}}/>}
       </div>
-      <AnimatePresence>
-        {showConectarBanner&&(
-          <motion.div initial={{opacity:0,x:10}} animate={{opacity:1,x:0}} exit={{opacity:0}} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 12px",borderRadius:8,background:"rgba(251,188,5,0.1)",border:"1px solid rgba(251,188,5,0.4)"}}>
-            <AlertCircle style={{width:13,height:13,color:"#f59e0b"}}/>
-            <span style={{fontSize:11,color:"#92400e",fontWeight:600}}>Google Calendar — em breve</span>
-            <button onClick={()=>setShowConectarBanner(false)} style={{background:"none",border:"none",cursor:"pointer",padding:0,display:"flex"}}><X style={{width:12,height:12,color:"#92400e"}}/></button>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 
@@ -313,7 +328,6 @@ export default function Calendario() {
     const filtrados = emailConvidado
       ? contatosComEmail.filter(c => c.email!.toLowerCase().includes(emailConvidado.toLowerCase()) || c.nome.toLowerCase().includes(emailConvidado.toLowerCase()))
       : contatosComEmail;
-
     return (
       <motion.div initial={{opacity:0,height:0}} animate={{opacity:1,height:"auto"}} exit={{opacity:0,height:0}} style={{overflow:"visible",marginTop:10}}>
         <label style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(20,45,70,0.5)",display:"block",marginBottom:6}}>
@@ -321,16 +335,10 @@ export default function Calendario() {
         </label>
         <div ref={emailDropdownRef} style={{position:"relative"}}>
           <div style={{display:"flex",gap:8}}>
-            <input
-              className="input-field"
-              type="email"
-              value={emailConvidado}
+            <input className="input-field" type="email" value={emailConvidado}
               onChange={e=>{setEmailConvidado(e.target.value);setShowEmailDropdown(true);}}
               onFocus={()=>{if(filtrados.length>0)setShowEmailDropdown(true);}}
-              placeholder="Digite ou selecione o e-mail..."
-              onClick={e=>e.stopPropagation()}
-              style={{flex:1}}
-            />
+              placeholder="Digite ou selecione o e-mail..." onClick={e=>e.stopPropagation()} style={{flex:1}}/>
             {contatosComEmail.length>0&&(
               <button type="button" onClick={e=>{e.stopPropagation();setShowEmailDropdown(!showEmailDropdown);}}
                 style={{height:44,padding:"0 12px",borderRadius:10,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.85)",cursor:"pointer",display:"flex",alignItems:"center",gap:6,fontSize:12,fontWeight:600,color:"#2980b9",flexShrink:0}}>
@@ -338,15 +346,12 @@ export default function Calendario() {
               </button>
             )}
           </div>
-
           <AnimatePresence>
             {showEmailDropdown&&filtrados.length>0&&(
               <motion.div initial={{opacity:0,y:-4}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-4}} transition={{duration:0.15}}
                 style={{position:"absolute",top:"calc(100% + 6px)",left:0,right:0,zIndex:200,background:"rgba(240,250,255,0.98)",backdropFilter:"blur(16px)",border:"1px solid rgba(200,225,240,0.9)",borderRadius:12,boxShadow:"0 8px 32px rgba(41,128,185,0.15)",overflow:"hidden",maxHeight:200,overflowY:"auto"}}
                 onClick={e=>e.stopPropagation()}>
-                {form.empresa_nome&&(
-                  <div style={{padding:"8px 14px 4px",fontSize:10,fontWeight:700,color:"rgba(20,45,70,0.4)",letterSpacing:"0.06em",textTransform:"uppercase"}}>{form.empresa_nome}</div>
-                )}
+                {form.empresa_nome&&<div style={{padding:"8px 14px 4px",fontSize:10,fontWeight:700,color:"rgba(20,45,70,0.4)",letterSpacing:"0.06em",textTransform:"uppercase"}}>{form.empresa_nome}</div>}
                 {filtrados.map(c=>(
                   <div key={c.contato_id} className="email-option" onClick={()=>{setEmailConvidado(c.email!);setShowEmailDropdown(false);}}>
                     <span style={{fontWeight:600,color:"#0f2133"}}>{c.nome}</span>
@@ -359,7 +364,6 @@ export default function Calendario() {
               </motion.div>
             )}
           </AnimatePresence>
-
           {emailConvidado&&!showEmailDropdown&&(
             <div style={{marginTop:8,display:"flex",alignItems:"center",gap:8,padding:"6px 10px",borderRadius:8,background:"rgba(41,128,185,0.08)",border:"1px solid rgba(41,128,185,0.2)",width:"fit-content"}}>
               <Mail style={{width:12,height:12,color:"#2980b9"}}/>
@@ -370,6 +374,15 @@ export default function Calendario() {
         </div>
       </motion.div>
     );
+  };
+
+  const salvarLabel = () => {
+    if (saving) return "Salvando...";
+    if (editEvento) return "Salvar alterações";
+    if (agendarOutlook && agendarGoogle) return "Criar + Outlook + Google";
+    if (agendarOutlook) return "Criar evento + Outlook";
+    if (agendarGoogle) return "Criar evento + Google";
+    return "Criar evento";
   };
 
   return (
@@ -418,7 +431,6 @@ export default function Calendario() {
 
       {/* Main */}
       <div style={{flex:1,height:"100vh",overflowY:"auto",position:"relative",zIndex:5,display:"flex",flexDirection:"column"}}>
-        {/* Topbar */}
         <div style={{position:"sticky",top:0,zIndex:20,padding:"14px 28px",background:"rgba(210,238,248,0.85)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,0.6)",display:"flex",alignItems:"center",gap:14,flexShrink:0}}>
           <div style={{flex:1}}>
             <h1 style={{fontSize:18,fontWeight:800,color:"#0f2133"}}>Calendário</h1>
@@ -609,10 +621,13 @@ export default function Calendario() {
                 <textarea className="textarea-field" value={form.descricao} onChange={e=>setForm({...form,descricao:e.target.value})} placeholder="Detalhes do evento..."/>
               </div>
 
+              {/* Seção agendar em */}
               <div style={{marginBottom:20}}>
                 <label style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(20,45,70,0.5)",display:"block",marginBottom:8}}>
                   <Mail style={{width:11,height:11,display:"inline",marginRight:4}}/>Também agendar em
                 </label>
+
+                {/* Outlook toggle */}
                 <div className={`toggle-box${agendarOutlook?" active":""}`} onClick={()=>{if(!outlookConectado){conectarOutlook();return;}setAgendarOutlook(!agendarOutlook);}}>
                   <OutlookIcon size={18}/>
                   <div style={{flex:1}}>
@@ -623,22 +638,27 @@ export default function Calendario() {
                     {agendarOutlook&&outlookConectado&&<CheckCircle2 style={{width:12,height:12,color:"#fff"}}/>}
                   </div>
                 </div>
-                <div className="toggle-box" onClick={()=>setShowConectarBanner(true)} style={{opacity:0.55,cursor:"not-allowed"}}>
+
+                {/* Google toggle */}
+                <div className={`toggle-box${agendarGoogle?" active":""}`} onClick={()=>{if(!googleConectado){conectarGoogle();return;}setAgendarGoogle(!agendarGoogle);}}>
                   <GoogleIcon size={18}/>
                   <div style={{flex:1}}>
-                    <div style={{fontSize:13,fontWeight:600,color:"rgba(20,45,70,0.4)"}}>Google Calendar</div>
-                    <div style={{fontSize:11,color:"rgba(20,45,70,0.35)"}}>Em breve</div>
+                    <div style={{fontSize:13,fontWeight:600,color:googleConectado?"#0f2133":"rgba(20,45,70,0.4)"}}>Google Calendar</div>
+                    <div style={{fontSize:11,color:"rgba(20,45,70,0.4)"}}>{googleConectado?"Cria o evento e envia convite ao cliente":"Clique para conectar primeiro"}</div>
                   </div>
-                  <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:6,background:"rgba(251,188,5,0.15)",color:"#92400e"}}>Em breve</span>
+                  <div style={{width:20,height:20,borderRadius:6,border:`2px solid ${agendarGoogle&&googleConectado?"#4285F4":"rgba(200,225,240,0.9)"}`,background:agendarGoogle&&googleConectado?"#4285F4":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                    {agendarGoogle&&googleConectado&&<CheckCircle2 style={{width:12,height:12,color:"#fff"}}/>}
+                  </div>
                 </div>
+
                 <AnimatePresence>
-                  {agendarOutlook&&outlookConectado&&<EmailConvidadoField/>}
+                  {(agendarOutlook||agendarGoogle)&&<EmailConvidadoField/>}
                 </AnimatePresence>
               </div>
 
               <button onClick={handleSave} disabled={saving||!form.titulo||!form.data}
                 style={{width:"100%",height:48,borderRadius:12,border:"none",cursor:saving||!form.titulo||!form.data?"not-allowed":"pointer",background:saving||!form.titulo||!form.data?"rgba(41,128,185,0.4)":"linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)",backgroundSize:"200% 200%",animation:"gradientShift 4s ease infinite",color:"#fff",fontSize:14,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-                {saving?"Salvando...":editEvento?"Salvar alterações":agendarOutlook?"Criar evento + Agendar no Outlook":"Criar evento"}
+                {salvarLabel()}
               </button>
             </motion.div>
           </motion.div>
