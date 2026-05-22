@@ -12,6 +12,7 @@ import EmpresaEdit from "./pages/clientes/detalhe/editar";
 import Perfil from "./pages/perfil";
 import Calendario from "./pages/calendario";
 import Gerenciamento from "./pages/gerenciamento";
+import OutlookCallback from "./pages/auth/OutlookCallback";
 
 function App() {
   return (
@@ -26,10 +27,11 @@ function App() {
         <Route path="/clientes" element={<Clientes />} />
         <Route path="/clientes/:id" element={<EmpresaView />} />
         <Route path="/clientes/:id/editar" element={<EmpresaEdit />} />
-        <Route path="*" element={<div>Página não encontrada</div>} />
         <Route path="/perfil" element={<Perfil />} />
         <Route path="/calendario" element={<Calendario />} />
         <Route path="/gerenciamento" element={<Gerenciamento />} />
+        <Route path="/auth/outlook/callback" element={<OutlookCallback />} />
+        <Route path="*" element={<div>Página não encontrada</div>} />
       </Routes>
     </Router>
   );
