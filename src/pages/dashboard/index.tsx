@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Search, Bell, Calendar, Plus,
   TrendingUp, ChevronDown, ChevronRight,
   ClipboardList, BarChart3, RefreshCw,
-  MapPin, Phone, Mail, User, Flame, ArrowRight,
+  MapPin, Phone, Mail, User, ArrowRight,
   Eye, X, CalendarCheck, Repeat, FileText, Edit3,
 } from "lucide-react";
 
@@ -36,8 +36,6 @@ const css = `
   .chip { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:20px; font-size:10px; font-weight:700; white-space:nowrap; }
   .action-item { padding:12px 14px; border-radius:12px; background:rgba(255,255,255,0.55); border:1px solid rgba(200,225,240,0.6); cursor:pointer; transition:all 0.18s; }
   .action-item:hover { background:rgba(255,255,255,0.85); border-color:rgba(41,128,185,0.3); transform:translateY(-1px); }
-  .draft-item { padding:10px 14px; border-radius:12px; background:rgba(142,68,173,0.04); border:1px solid rgba(142,68,173,0.18); cursor:pointer; transition:all 0.18s; display:flex; align-items:center; gap:10px; }
-  .draft-item:hover { background:rgba(142,68,173,0.1); border-color:rgba(142,68,173,0.35); transform:translateY(-1px); }
   .skeleton { background:linear-gradient(90deg,rgba(200,225,240,0.4) 25%,rgba(220,240,252,0.7) 50%,rgba(200,225,240,0.4) 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:6px; }
   ::-webkit-scrollbar { width:4px; height:4px; }
   ::-webkit-scrollbar-track { background:transparent; }
@@ -135,7 +133,6 @@ export default function Dashboard() {
     else { setSelectedAction(emp); fetchContatos(emp.empresa_id); }
   };
 
-  // ── Contagens ──
   const rascunhos  = empresas.filter(e=>e.status==="Rascunho");
   const total      = empresas.filter(e=>e.status!=="Rascunho").length;
   const leads      = empresas.filter(e=>e.status==="Lead").length;
@@ -183,15 +180,6 @@ export default function Dashboard() {
   const cargoUsuario = usuario?.cargo||"Administrador";
   const iniciaisUsuario = usuario ? initials(usuario.nome) : "?";
   const corUsuario = usuario ? avatarColor(usuario.nome) : "#2980b9";
-
-  // ── Navega para gerenciamento em todos os cards exceto rascunho ──
-  const handleCardClick = (key: FilterKey) => {
-    if (key === "rascunho") {
-      setActiveFilter("rascunho");
-    } else {
-      navigate("/gerenciamento");
-    }
-  };
 
   return (
     <div style={{display:"flex",height:"100vh",overflow:"hidden",position:"relative"}}>
@@ -297,34 +285,30 @@ export default function Dashboard() {
             )}
           </AnimatePresence>
 
-          {/* Metric cards */}
+          {/* Metric cards — clique filtra o preview, rascunho continua igual */}
           <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}>
             {metricCards.map((m,i)=>(
               <motion.div key={m.key} className="metric-card"
                 style={{
-                  borderColor: activeFilter===m.key ? m.color : undefined,
-                  boxShadow: activeFilter===m.key ? `0 0 0 3px ${m.color}22` : undefined,
-                  outline: m.key==="rascunho" && m.value>0 && activeFilter!=="rascunho" ? `1.5px dashed rgba(142,68,173,0.35)` : undefined,
+                  borderColor:activeFilter===m.key?m.color:undefined,
+                  boxShadow:activeFilter===m.key?`0 0 0 3px ${m.color}22`:undefined,
+                  outline:m.key==="rascunho"&&m.value>0&&activeFilter!=="rascunho"?`1.5px dashed rgba(142,68,173,0.35)`:undefined,
                 }}
                 initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.35,delay:i*0.04}}
-                onClick={()=>handleCardClick(m.key)}
+                onClick={()=>setActiveFilter(m.key)}
               >
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
                   <div style={{width:32,height:32,borderRadius:9,background:m.bg,display:"flex",alignItems:"center",justifyContent:"center"}}>
                     <m.icon style={{width:15,height:15,color:m.color}}/>
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:5}}>
-                    {m.key==="rascunho" && m.value>0 && (
+                    {m.key==="rascunho"&&m.value>0&&(
                       <span style={{fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:4,background:"rgba(142,68,173,0.12)",color:"#8e44ad",border:"1px solid rgba(142,68,173,0.2)",animation:"pulseDraft 2s ease infinite"}}>PENDENTE</span>
                     )}
-                    {activeFilter===m.key && <div style={{width:8,height:8,borderRadius:"50%",background:m.color}}/>}
-                    {/* Indicador de navegação para cards não-rascunho */}
-                    {m.key!=="rascunho" && (
-                      <ArrowRight style={{width:11,height:11,color:"rgba(20,45,70,0.3)"}}/>
-                    )}
+                    {activeFilter===m.key&&<div style={{width:8,height:8,borderRadius:"50%",background:m.color}}/>}
                   </div>
                 </div>
-                {loading ? <div className="skeleton" style={{height:24,width:"50%",marginBottom:4}}/> : (
+                {loading?<div className="skeleton" style={{height:24,width:"50%",marginBottom:4}}/>:(
                   <div style={{fontSize:24,fontWeight:900,color:"#0f2133",letterSpacing:"-0.03em"}}>{m.value}</div>
                 )}
                 <div style={{fontSize:10,color:"rgba(20,45,70,0.5)",fontWeight:600,marginTop:2}}>{m.label}</div>
@@ -333,81 +317,99 @@ export default function Dashboard() {
             ))}
           </div>
 
-          {/* Painel preview — só aparece quando filtro é rascunho */}
-          {activeFilter === "rascunho" && (
-            <motion.div className="glass-card" style={{overflow:"hidden"}} initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.4,delay:0.3}}>
-              <div style={{padding:"16px 20px",borderBottom:"1px solid rgba(200,225,240,0.5)",display:"flex",alignItems:"center",justifyContent:"space-between",background:"linear-gradient(90deg,rgba(142,68,173,0.08),transparent)"}}>
-                <div style={{display:"flex",alignItems:"center",gap:10}}>
-                  <div style={{width:30,height:30,borderRadius:8,background:"rgba(142,68,173,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                    <FileText style={{width:14,height:14,color:"#8e44ad"}}/>
-                  </div>
-                  <div>
-                    <div style={{fontSize:13,fontWeight:700,color:"#0f2133"}}>Rascunhos pendentes</div>
-                    <div style={{fontSize:11,color:"rgba(20,45,70,0.45)"}}>{previewList.length} empresa{previewList.length!==1?"s":""}</div>
-                  </div>
+          {/* Painel preview central */}
+          <motion.div className="glass-card" style={{overflow:"hidden"}} initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.4,delay:0.3}}>
+            <div style={{padding:"16px 20px",borderBottom:"1px solid rgba(200,225,240,0.5)",display:"flex",alignItems:"center",justifyContent:"space-between",background:`linear-gradient(90deg,${activeCard.bg},transparent)`}}>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <div style={{width:30,height:30,borderRadius:8,background:activeCard.bg,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  <activeCard.icon style={{width:14,height:14,color:activeCard.color}}/>
                 </div>
-                <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                  <button onClick={()=>navigate("/clientes")} style={{display:"flex",alignItems:"center",gap:5,padding:"6px 12px",borderRadius:8,border:"1px solid rgba(142,68,173,0.3)",background:"rgba(142,68,173,0.08)",fontSize:11,fontWeight:600,color:"#8e44ad",cursor:"pointer"}}>
-                    Ver todos <ArrowRight style={{width:11,height:11}}/>
-                  </button>
-                  <button onClick={()=>setActiveFilter("total")} style={{width:28,height:28,borderRadius:7,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.7)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                    <X style={{width:13,height:13,color:"rgba(20,45,70,0.4)"}}/>
-                  </button>
+                <div>
+                  <div style={{fontSize:13,fontWeight:700,color:"#0f2133"}}>{filterLabels[activeFilter]}</div>
+                  <div style={{fontSize:11,color:"rgba(20,45,70,0.45)"}}>{previewList.length} empresa{previewList.length!==1?"s":""}</div>
                 </div>
               </div>
+              {/* ← BOTÃO ATUALIZADO: rascunho vai para /clientes, todos os outros para /gerenciamento */}
+              <button
+                onClick={()=>navigate(activeFilter==="rascunho" ? "/clientes" : "/gerenciamento")}
+                style={{display:"flex",alignItems:"center",gap:5,padding:"6px 12px",borderRadius:8,border:`1px solid ${activeCard.color}40`,background:activeCard.bg,fontSize:11,fontWeight:600,color:activeCard.color,cursor:"pointer"}}>
+                Ver no CRM <ArrowRight style={{width:11,height:11}}/>
+              </button>
+            </div>
 
-              {loading ? (
-                <div style={{padding:20,display:"flex",flexDirection:"column",gap:10}}>
-                  {[1,2,3].map(i=><div key={i} className="skeleton" style={{height:40}}/>)}
+            {loading?(
+              <div style={{padding:20,display:"flex",flexDirection:"column",gap:10}}>
+                {[1,2,3].map(i=><div key={i} className="skeleton" style={{height:40}}/>)}
+              </div>
+            ):previewList.length===0?(
+              <div style={{padding:"40px 20px",textAlign:"center"}}>
+                <Building2 style={{width:32,height:32,color:"rgba(41,128,185,0.25)",margin:"0 auto 10px"}}/>
+                <p style={{fontSize:13,fontWeight:600,color:"rgba(20,45,70,0.4)"}}>
+                  {activeFilter==="rascunho" ? "Nenhum rascunho pendente" : "Nenhuma empresa nesta categoria"}
+                </p>
+                <button onClick={()=>navigate("/empresas/nova")} style={{marginTop:12,padding:"7px 16px",borderRadius:8,border:"none",background:"linear-gradient(135deg,#2980b9,#1abc9c)",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer"}}>
+                  + Cadastrar empresa
+                </button>
+              </div>
+            ):(
+              <>
+                <div className="preview-th">
+                  {activeFilter==="rascunho"
+                    ? ["Empresa","Segmento","Cidade","Status","Completar"].map(h=>(
+                        <span key={h} style={{fontSize:10,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:"rgba(20,45,70,0.45)"}}>{h}</span>
+                      ))
+                    : ["Empresa","Status","Temperatura","Cidade","Ticket"].map(h=>(
+                        <span key={h} style={{fontSize:10,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:"rgba(20,45,70,0.45)"}}>{h}</span>
+                      ))
+                  }
                 </div>
-              ) : previewList.length===0 ? (
-                <div style={{padding:"40px 20px",textAlign:"center"}}>
-                  <FileText style={{width:32,height:32,color:"rgba(142,68,173,0.25)",margin:"0 auto 10px"}}/>
-                  <p style={{fontSize:13,fontWeight:600,color:"rgba(20,45,70,0.4)"}}>Nenhum rascunho pendente</p>
-                </div>
-              ) : (
-                <>
-                  <div className="preview-th">
-                    {["Empresa","Segmento","Cidade","Status","Completar"].map(h=>(
-                      <span key={h} style={{fontSize:10,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:"rgba(20,45,70,0.45)"}}>{h}</span>
-                    ))}
-                  </div>
-                  <div style={{maxHeight:220,overflowY:"auto"}}>
-                    <AnimatePresence mode="wait">
-                      {previewList.slice(0,10).map((emp,idx)=>{
-                        const sc=statusColor(emp.status);
-                        return (
-                          <motion.div key={emp.empresa_id} className="preview-row draft-row"
-                            initial={{opacity:0,x:-8}} animate={{opacity:1,x:0}} exit={{opacity:0}}
-                            transition={{duration:0.18,delay:idx*0.03}}
-                            onClick={()=>navigate(`/clientes/${emp.empresa_id}/editar`)}>
-                            <div style={{display:"flex",alignItems:"center",gap:10}}>
-                              <div style={{width:28,height:28,borderRadius:8,background:"rgba(142,68,173,0.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#8e44ad",flexShrink:0,border:"1.5px dashed rgba(142,68,173,0.4)"}}>
-                                <FileText style={{width:12,height:12}}/>
-                              </div>
-                              <div>
-                                <div style={{fontSize:12,fontWeight:700,color:"#0f2133"}}>{emp.nome}</div>
-                                <div style={{fontSize:10,color:"rgba(20,45,70,0.4)"}}>{emp.segmento||"Segmento não definido"}</div>
-                              </div>
+                <div style={{maxHeight:220,overflowY:"auto"}}>
+                  <AnimatePresence mode="wait">
+                    {previewList.slice(0,10).map((emp,idx)=>{
+                      const sc=statusColor(emp.status);
+                      const isDraft=emp.status==="Rascunho";
+                      return(
+                        <motion.div key={emp.empresa_id} className={`preview-row${isDraft?" draft-row":""}`}
+                          initial={{opacity:0,x:-8}} animate={{opacity:1,x:0}} exit={{opacity:0}}
+                          transition={{duration:0.18,delay:idx*0.03}}
+                          onClick={()=>navigate(isDraft?`/clientes/${emp.empresa_id}/editar`:`/clientes/${emp.empresa_id}`)}>
+                          <div style={{display:"flex",alignItems:"center",gap:10}}>
+                            <div style={{width:28,height:28,borderRadius:8,background:isDraft?"rgba(142,68,173,0.15)":avatarColor(emp.nome),display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:isDraft?"#8e44ad":"#fff",flexShrink:0,border:isDraft?"1.5px dashed rgba(142,68,173,0.4)":"none"}}>
+                              {isDraft?<FileText style={{width:12,height:12}}/>:initials(emp.nome)}
                             </div>
-                            <span style={{fontSize:11,color:"rgba(20,45,70,0.5)"}}>{emp.segmento||"—"}</span>
-                            <span style={{fontSize:11,color:"rgba(20,45,70,0.5)"}}>{emp.cidade||"—"}</span>
-                            <span className="chip" style={{background:sc.bg,color:sc.text,border:`1px solid ${sc.border}`,animation:"pulseDraft 2s ease infinite"}}>{emp.status}</span>
-                            <button onClick={e=>{e.stopPropagation();navigate(`/clientes/${emp.empresa_id}/editar`);}}
-                              style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:7,border:"1.5px solid rgba(142,68,173,0.3)",background:"rgba(142,68,173,0.08)",color:"#8e44ad",fontSize:11,fontWeight:700,cursor:"pointer"}}
-                              onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(142,68,173,0.16)";}}
-                              onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(142,68,173,0.08)";}}>
-                              <Edit3 style={{width:10,height:10}}/> Completar
-                            </button>
-                          </motion.div>
-                        );
-                      })}
-                    </AnimatePresence>
-                  </div>
-                </>
-              )}
-            </motion.div>
-          )}
+                            <div>
+                              <div style={{fontSize:12,fontWeight:700,color:"#0f2133"}}>{emp.nome}</div>
+                              <div style={{fontSize:10,color:"rgba(20,45,70,0.4)"}}>{emp.segmento||"Segmento não definido"}</div>
+                            </div>
+                          </div>
+                          {isDraft?(
+                            <>
+                              <span style={{fontSize:11,color:"rgba(20,45,70,0.5)"}}>{emp.segmento||"—"}</span>
+                              <span style={{fontSize:11,color:"rgba(20,45,70,0.5)"}}>{emp.cidade||"—"}</span>
+                              <span className="chip" style={{background:sc.bg,color:sc.text,border:`1px solid ${sc.border}`,animation:"pulseDraft 2s ease infinite"}}>{emp.status}</span>
+                              <button onClick={e=>{e.stopPropagation();navigate(`/clientes/${emp.empresa_id}/editar`);}}
+                                style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:7,border:"1.5px solid rgba(142,68,173,0.3)",background:"rgba(142,68,173,0.08)",color:"#8e44ad",fontSize:11,fontWeight:700,cursor:"pointer",transition:"all 0.15s"}}
+                                onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(142,68,173,0.16)";}}
+                                onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(142,68,173,0.08)";}}>
+                                <Edit3 style={{width:10,height:10}}/> Completar
+                              </button>
+                            </>
+                          ):(
+                            <>
+                              <span className="chip" style={{background:sc.bg,color:sc.text,border:`1px solid ${sc.border}`}}>{emp.status||"—"}</span>
+                              <span style={{fontSize:12,color:tempColor(emp.temperatura)}}>{tempIcon(emp.temperatura)} {emp.temperatura||"—"}</span>
+                              <span style={{fontSize:11,color:"rgba(20,45,70,0.6)"}}>{emp.cidade||"—"}</span>
+                              <span style={{fontSize:12,fontWeight:700,color:"#0f2133"}}>{emp.ticket_medio_estimado?`R$ ${emp.ticket_medio_estimado.toLocaleString("pt-BR")}`:"—"}</span>
+                            </>
+                          )}
+                        </motion.div>
+                      );
+                    })}
+                  </AnimatePresence>
+                </div>
+              </>
+            )}
+          </motion.div>
 
           {/* Bottom row */}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16}}>
@@ -420,18 +422,18 @@ export default function Dashboard() {
                   Ver todas <ArrowRight style={{width:10,height:10}}/>
                 </button>
               </div>
-              {loading ? (
+              {loading?(
                 <div style={{display:"flex",flexDirection:"column",gap:8}}>
                   {[1,2,3].map(i=><div key={i} className="skeleton" style={{height:52}}/>)}
                 </div>
-              ) : proximasAcoes.length===0 ? (
+              ):proximasAcoes.length===0?(
                 <div style={{textAlign:"center",padding:"16px 0",color:"rgba(20,45,70,0.4)",fontSize:12}}>Nenhuma ação pendente</div>
-              ) : (
+              ):(
                 <div style={{display:"flex",flexDirection:"column",gap:8}}>
                   {proximasAcoes.map(emp=>{
                     const isSelected=selectedAction?.empresa_id===emp.empresa_id;
                     const sc=statusColor(emp.status);
-                    return (
+                    return(
                       <div key={emp.empresa_id}>
                         <div className="action-item" onClick={()=>handleSelectAction(emp)}>
                           <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -444,7 +446,7 @@ export default function Dashboard() {
                           </div>
                         </div>
                         <AnimatePresence>
-                          {isSelected && (
+                          {isSelected&&(
                             <motion.div initial={{opacity:0,height:0}} animate={{opacity:1,height:"auto"}} exit={{opacity:0,height:0}} transition={{duration:0.22}} style={{overflow:"hidden"}}>
                               <div style={{margin:"6px 0 2px",padding:"14px",borderRadius:12,background:"rgba(255,255,255,0.9)",border:"1px solid rgba(200,225,240,0.8)",boxShadow:"0 4px 16px rgba(41,128,185,0.08)"}}>
                                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
@@ -474,11 +476,11 @@ export default function Dashboard() {
                                 </div>
                                 <div style={{borderTop:"1px solid rgba(200,225,240,0.5)",paddingTop:10}}>
                                   <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",color:"rgba(20,45,70,0.45)",marginBottom:8}}>Contatos</div>
-                                  {loadingContatos ? (
+                                  {loadingContatos?(
                                     <div style={{display:"flex",flexDirection:"column",gap:6}}>{[1,2].map(i=><div key={i} className="skeleton" style={{height:36}}/>)}</div>
-                                  ) : contatos.length===0 ? (
+                                  ):contatos.length===0?(
                                     <div style={{fontSize:11,color:"rgba(20,45,70,0.4)",padding:"6px 0",textAlign:"center"}}>Nenhum contato cadastrado</div>
-                                  ) : (
+                                  ):(
                                     <div style={{display:"flex",flexDirection:"column",gap:6}}>
                                       {contatos.map(c=>(
                                         <div key={c.contato_id} style={{padding:"8px 10px",borderRadius:8,background:"rgba(41,128,185,0.04)",border:"1px solid rgba(41,128,185,0.1)"}}>
@@ -550,7 +552,7 @@ export default function Dashboard() {
                 {label:"Negociação",      value:negociacao, color:"#d97706", key:"negociacao" as FilterKey},
                 {label:"Fechado",         value:fechados,   color:"#27ae60", key:"fechado"    as FilterKey},
               ] as {label:string;value:number;color:string;key:FilterKey}[]).map(f=>(
-                <div key={f.label} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,cursor:"pointer"}} onClick={()=>navigate("/gerenciamento")}>
+                <div key={f.label} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,cursor:"pointer"}} onClick={()=>setActiveFilter(f.key)}>
                   <div style={{flex:1,position:"relative",height:28}}>
                     <div style={{position:"absolute",inset:0,borderRadius:6,background:`${f.color}15`}}/>
                     <div style={{position:"absolute",top:0,left:0,bottom:0,width:`${total>0?Math.max((f.value/total)*100,f.value>0?8:0):0}%`,borderRadius:6,background:f.color,transition:"width 0.6s ease"}}/>
@@ -561,7 +563,6 @@ export default function Dashboard() {
                   <span style={{fontSize:12,fontWeight:800,color:f.color,minWidth:20,textAlign:"right"}}>{f.value}</span>
                 </div>
               ))}
-
               {rascunhos.length > 0 && (
                 <div style={{marginTop:8,paddingTop:8,borderTop:"1px dashed rgba(142,68,173,0.2)"}}>
                   <div style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onClick={()=>setActiveFilter("rascunho")}>
