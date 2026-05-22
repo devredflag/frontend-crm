@@ -4,8 +4,8 @@ import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Search, Building2, Users, ClipboardList,
   Calendar, BarChart3, ChevronDown, Plus, Filter,
-  Eye, Edit3, Trash2, CheckSquare, ArrowUpDown, RefreshCw,
-  Star, AlertTriangle, X,
+  Eye, Edit3, Trash2, ArrowUpDown, RefreshCw,
+  Star, AlertTriangle, X, FileText,
 } from "lucide-react";
 
 const css = `
@@ -18,17 +18,21 @@ const css = `
   @keyframes float5 { 0%,100%{transform:translate(0,0) scale(1)}45%{transform:translate(35px,-20px) scale(1.06)}80%{transform:translate(-15px,30px) scale(0.96)} }
   @keyframes gradientShift { 0%,100%{background-position:0% 50%}50%{background-position:100% 50%} }
   @keyframes shimmer { 0%{background-position:-200% 0}100%{background-position:200% 0} }
+  @keyframes pulseDraft { 0%,100%{opacity:1} 50%{opacity:0.6} }
   .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:10px; cursor:pointer; font-size:13.5px; font-weight:500; color:rgba(255,255,255,0.65); transition:all 0.18s; user-select:none; }
   .nav-item:hover { background:rgba(255,255,255,0.08); color:#fff; }
   .nav-item.active { background:rgba(255,255,255,0.14); color:#fff; font-weight:600; }
   .glass-card { background:rgba(255,255,255,0.72); backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.9); border-radius:16px; }
   .client-row { display:grid; grid-template-columns:2.4fr 1fr 1fr 1fr 1fr 120px; align-items:center; padding:14px 20px; border-bottom:1px solid rgba(200,225,240,0.4); cursor:pointer; transition:background 0.15s; user-select:none; }
   .client-row:hover { background:rgba(41,128,185,0.04); }
+  .client-row.draft-row { background:rgba(142,68,173,0.03); border-left:3px solid rgba(142,68,173,0.25); }
+  .client-row.draft-row:hover { background:rgba(142,68,173,0.07); }
   .client-row:last-child { border-bottom:none; }
   .th { display:grid; grid-template-columns:2.4fr 1fr 1fr 1fr 1fr 120px; align-items:center; padding:10px 20px; border-bottom:1px solid rgba(200,225,240,0.5); }
   .chip { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:700; white-space:nowrap; }
   .action-btn { width:30px; height:30px; border-radius:8px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
   .action-btn:hover { transform:translateY(-1px); }
+  .filter-tab { padding:6px 14px; border-radius:20px; border:1.5px solid; cursor:pointer; font-size:12px; font-weight:600; transition:all 0.18s; white-space:nowrap; }
   .skeleton { background:linear-gradient(90deg,rgba(200,225,240,0.4) 25%,rgba(220,240,252,0.7) 50%,rgba(200,225,240,0.4) 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:6px; }
   ::-webkit-scrollbar { width:4px; height:4px; }
   ::-webkit-scrollbar-track { background:transparent; }
@@ -38,20 +42,11 @@ const css = `
 const API = "https://backend-crm-production-157b.up.railway.app";
 
 interface Empresa {
-  empresa_id: string;
-  nome: string;
-  segmento: string;
-  porte: string;
-  cidade: string;
-  status: string;
-  temperatura: string;
-  ticket_medio_estimado: number | null;
-  responsavel_principal: string;
-  origem_lead: string;
-  ultima_interacao: string | null;
-  proxima_acao: string;
+  empresa_id: string; nome: string; segmento: string; porte: string;
+  cidade: string; status: string; temperatura: string;
+  ticket_medio_estimado: number | null; responsavel_principal: string;
+  origem_lead: string; ultima_interacao: string | null; proxima_acao: string;
 }
-
 interface Usuario { nome: string; cargo: string; }
 
 const navItems = [
@@ -102,57 +97,37 @@ function ScoreBar({ score }: { score: number }) {
   );
 }
 
-// ── Modal de Confirmação de Exclusão ─────────────────────────
 function DeleteModal({ empresa, onConfirm, onCancel, deleting }: {
   empresa: Empresa; onConfirm: () => void; onCancel: () => void; deleting: boolean;
 }) {
   return (
-    <motion.div
-      initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
+    <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
       style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(10,31,51,0.4)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center"}}
-      onClick={deleting?undefined:onCancel}
-    >
-      <motion.div
-        initial={{scale:0.88,opacity:0,y:20}} animate={{scale:1,opacity:1,y:0}} exit={{scale:0.92,opacity:0,y:12}}
-        transition={{duration:0.2,ease:[0.4,0,0.2,1]}}
-        onClick={e=>e.stopPropagation()}
-        style={{width:420,background:"rgba(255,255,255,0.97)",backdropFilter:"blur(24px)",borderRadius:20,border:"1.5px solid rgba(220,38,38,0.2)",boxShadow:"0 24px 64px rgba(10,31,51,0.2)",padding:"28px",position:"relative",overflow:"hidden"}}
-      >
-        {/* Barra vermelha no topo */}
+      onClick={deleting?undefined:onCancel}>
+      <motion.div initial={{scale:0.88,opacity:0,y:20}} animate={{scale:1,opacity:1,y:0}} exit={{scale:0.92,opacity:0,y:12}}
+        transition={{duration:0.2,ease:[0.4,0,0.2,1]}} onClick={e=>e.stopPropagation()}
+        style={{width:420,background:"rgba(255,255,255,0.97)",backdropFilter:"blur(24px)",borderRadius:20,border:"1.5px solid rgba(220,38,38,0.2)",boxShadow:"0 24px 64px rgba(10,31,51,0.2)",padding:"28px",position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",top:0,left:0,right:0,height:4,background:"linear-gradient(90deg,#dc2626,#ef4444)",borderRadius:"20px 20px 0 0"}}/>
-
         <div style={{textAlign:"center",marginBottom:20}}>
           <div style={{width:60,height:60,borderRadius:16,background:"rgba(220,38,38,0.08)",border:"1.5px solid rgba(220,38,38,0.2)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}>
             <AlertTriangle style={{width:28,height:28,color:"#dc2626"}}/>
           </div>
           <div style={{fontSize:17,fontWeight:800,color:"#0f2133",marginBottom:6}}>Confirmar Exclusão</div>
-          <div style={{fontSize:13,color:"rgba(20,45,70,0.55)",lineHeight:1.55}}>
-            Tem certeza que deseja excluir a empresa
-          </div>
+          <div style={{fontSize:13,color:"rgba(20,45,70,0.55)",lineHeight:1.55}}>Tem certeza que deseja excluir a empresa</div>
           <div style={{marginTop:8,padding:"10px 16px",borderRadius:10,background:"rgba(220,38,38,0.06)",border:"1px solid rgba(220,38,38,0.15)"}}>
             <div style={{fontSize:15,fontWeight:800,color:"#dc2626"}}>{empresa.nome}</div>
             {empresa.segmento&&<div style={{fontSize:11,color:"rgba(20,45,70,0.5)",marginTop:3}}>{empresa.segmento} · {empresa.cidade||"—"}</div>}
           </div>
-          <div style={{marginTop:10,fontSize:12,color:"rgba(220,38,38,0.7)",fontWeight:600}}>
-            ⚠️ Esta ação não pode ser desfeita. Todos os dados e contatos serão removidos permanentemente.
-          </div>
+          <div style={{marginTop:10,fontSize:12,color:"rgba(220,38,38,0.7)",fontWeight:600}}>⚠️ Esta ação não pode ser desfeita.</div>
         </div>
-
         <div style={{display:"flex",gap:10}}>
-          <button
-            onClick={onCancel}
-            disabled={deleting}
-            style={{flex:1,height:44,borderRadius:10,border:"1.5px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.8)",fontSize:13,fontWeight:600,color:"rgba(20,45,70,0.6)",cursor:deleting?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,opacity:deleting?0.5:1}}
-          >
+          <button onClick={onCancel} disabled={deleting}
+            style={{flex:1,height:44,borderRadius:10,border:"1.5px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.8)",fontSize:13,fontWeight:600,color:"rgba(20,45,70,0.6)",cursor:deleting?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,opacity:deleting?0.5:1}}>
             <X style={{width:14,height:14}}/> Cancelar
           </button>
-          <button
-            onClick={onConfirm}
-            disabled={deleting}
-            style={{flex:2,height:44,borderRadius:10,border:"none",background:deleting?"rgba(220,38,38,0.5)":"linear-gradient(135deg,#dc2626,#ef4444)",fontSize:13,fontWeight:700,color:"#fff",cursor:deleting?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,boxShadow:"0 4px 14px rgba(220,38,38,0.3)",transition:"all 0.18s"}}
-          >
-            <Trash2 style={{width:14,height:14}}/>
-            {deleting?"Excluindo...":"Sim, excluir empresa"}
+          <button onClick={onConfirm} disabled={deleting}
+            style={{flex:2,height:44,borderRadius:10,border:"none",background:deleting?"rgba(220,38,38,0.5)":"linear-gradient(135deg,#dc2626,#ef4444)",fontSize:13,fontWeight:700,color:"#fff",cursor:deleting?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,boxShadow:"0 4px 14px rgba(220,38,38,0.3)"}}>
+            <Trash2 style={{width:14,height:14}}/>{deleting?"Excluindo...":"Sim, excluir empresa"}
           </button>
         </div>
       </motion.div>
@@ -167,16 +142,14 @@ export default function TodosClientes() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterPorte, setFilterPorte] = useState("Todos");
+  const [filterRascunho, setFilterRascunho] = useState(false);
   const [sortField, setSortField] = useState<"nome"|"score"|"ticket_medio_estimado"|"porte">("score");
   const [sortDir, setSortDir] = useState<"asc"|"desc">("desc");
-
-  // ── Estado de exclusão com modal ──────────────────────────
   const [deleteTarget, setDeleteTarget] = useState<Empresa|null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const token = () => localStorage.getItem("token")||"";
   const headers = () => ({ Authorization:`Bearer ${token()}` });
-  const jsonHeaders = () => ({ "Content-Type":"application/json", Authorization:`Bearer ${token()}` });
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -193,26 +166,16 @@ export default function TodosClientes() {
     setLoading(false);
   };
 
-  // ── Exclusão real com confirmação modal ───────────────────
   const confirmDelete = async () => {
     if(!deleteTarget) return;
     setDeleting(true);
     try {
-      const res = await fetch(`${API}/empresas/${deleteTarget.empresa_id}`, {
-        method: "DELETE",
-        headers: headers(),
-      });
-      if(!res.ok) {
-        const err = await res.json().catch(()=>({}));
-        throw new Error(err.detail || `Erro ${res.status}`);
-      }
-      setEmpresas(prev => prev.filter(e => e.empresa_id !== deleteTarget.empresa_id));
+      const res = await fetch(`${API}/empresas/${deleteTarget.empresa_id}`, { method:"DELETE", headers: headers() });
+      if(!res.ok) { const err = await res.json().catch(()=>({})); throw new Error(err.detail||`Erro ${res.status}`); }
+      setEmpresas(prev=>prev.filter(e=>e.empresa_id!==deleteTarget.empresa_id));
       setDeleteTarget(null);
-    } catch(e) {
-      alert(e instanceof Error ? e.message : "Erro ao excluir empresa");
-    } finally {
-      setDeleting(false);
-    }
+    } catch(e) { alert(e instanceof Error?e.message:"Erro ao excluir empresa"); }
+    finally { setDeleting(false); }
   };
 
   const toggleSort = (field: typeof sortField) => {
@@ -220,14 +183,16 @@ export default function TodosClientes() {
     else { setSortField(field); setSortDir("desc"); }
   };
 
-  const empresasComScore = empresas.map(e => ({ ...e, score: calcScore(e) }));
+  const empresasComScore = empresas.map(e=>({...e, score:calcScore(e)}));
+  const totalRascunhos = empresas.filter(e=>e.status==="Rascunho").length;
 
   const filtered = empresasComScore
     .filter(e => {
       const q = search.toLowerCase();
       const ms = !q || e.nome.toLowerCase().includes(q) || e.cidade?.toLowerCase().includes(q) || e.segmento?.toLowerCase().includes(q);
       const mp = filterPorte==="Todos" || e.porte===filterPorte;
-      return ms && mp;
+      const mr = filterRascunho ? e.status==="Rascunho" : true;
+      return ms && mp && mr;
     })
     .sort((a,b) => {
       let va: any, vb: any;
@@ -240,8 +205,7 @@ export default function TodosClientes() {
 
   const SortTh = ({ label, field }: { label:string; field:typeof sortField }) => (
     <button onClick={()=>toggleSort(field)} style={{display:"flex",alignItems:"center",gap:4,background:"none",border:"none",cursor:"pointer",fontSize:11,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase" as const,color:"rgba(20,45,70,0.5)"}}>
-      {label}
-      <ArrowUpDown style={{width:10,height:10,opacity:sortField===field?1:0.4,color:sortField===field?"#2980b9":"inherit"}}/>
+      {label}<ArrowUpDown style={{width:10,height:10,opacity:sortField===field?1:0.4,color:sortField===field?"#2980b9":"inherit"}}/>
     </button>
   );
 
@@ -257,15 +221,10 @@ export default function TodosClientes() {
     <div style={{display:"flex",height:"100vh",overflow:"hidden",position:"relative"}}>
       <style>{css}</style>
 
-      {/* Modal de exclusão */}
       <AnimatePresence>
         {deleteTarget&&(
-          <DeleteModal
-            empresa={deleteTarget}
-            onConfirm={confirmDelete}
-            onCancel={()=>{ if(!deleting) setDeleteTarget(null); }}
-            deleting={deleting}
-          />
+          <DeleteModal empresa={deleteTarget} onConfirm={confirmDelete}
+            onCancel={()=>{if(!deleting)setDeleteTarget(null);}} deleting={deleting}/>
         )}
       </AnimatePresence>
 
@@ -300,11 +259,11 @@ export default function TodosClientes() {
         <nav style={{flex:1,display:"flex",flexDirection:"column",gap:2}}>
           {navItems.map(item=>(
             <div key={item.label} className={`nav-item${item.active?" active":""}`} onClick={()=>{
-              if(item.label==="Dashboards") navigate("/dashboard");
-              if(item.label==="Cadastrar Empresas") navigate("/empresas/nova");
-              if(item.label==="Todos os clientes") navigate("/clientes");
-              if(item.label==="Gerenciamento de clientes") navigate("/gerenciamento");
-              if(item.label==="Calendário") navigate("/calendario");
+              if(item.label==="Dashboards")navigate("/dashboard");
+              if(item.label==="Cadastrar Empresas")navigate("/empresas/nova");
+              if(item.label==="Todos os clientes")navigate("/clientes");
+              if(item.label==="Gerenciamento de clientes")navigate("/gerenciamento");
+              if(item.label==="Calendário")navigate("/calendario");
             }}>
               <item.icon style={{width:16,height:16,flexShrink:0}}/>{item.label}
             </div>
@@ -365,18 +324,62 @@ export default function TodosClientes() {
           <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
             <div style={{flex:1,minWidth:220,position:"relative"}}>
               <Search style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",width:14,height:14,color:"rgba(20,45,70,0.35)"}}/>
-              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar por nome, cidade, segmento..." style={{width:"100%",height:38,paddingLeft:34,paddingRight:14,borderRadius:10,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.78)",fontSize:13,color:"#1a2e40",outline:"none"}}/>
+              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar por nome, cidade, segmento..."
+                style={{width:"100%",height:38,paddingLeft:34,paddingRight:14,borderRadius:10,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.78)",fontSize:13,color:"#1a2e40",outline:"none"}}/>
             </div>
             <div style={{position:"relative"}}>
-              <select value={filterPorte} onChange={e=>setFilterPorte(e.target.value)} style={{height:38,padding:"0 32px 0 12px",borderRadius:10,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.78)",fontSize:13,color:"#1a2e40",outline:"none",cursor:"pointer",appearance:"none"}}>
+              <select value={filterPorte} onChange={e=>setFilterPorte(e.target.value)}
+                style={{height:38,padding:"0 32px 0 12px",borderRadius:10,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.78)",fontSize:13,color:"#1a2e40",outline:"none",cursor:"pointer",appearance:"none"}}>
                 {PORTE_OPTS.map(s=><option key={s}>{s}</option>)}
               </select>
               <ChevronDown style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",width:13,height:13,color:"rgba(20,45,70,0.4)",pointerEvents:"none"}}/>
             </div>
+
+            {/* ── FILTRO RASCUNHO ── */}
+            <button
+              onClick={()=>setFilterRascunho(!filterRascunho)}
+              className="filter-tab"
+              style={{
+                borderColor: filterRascunho ? "rgba(142,68,173,0.5)" : "rgba(200,225,240,0.9)",
+                background: filterRascunho ? "rgba(142,68,173,0.1)" : "rgba(255,255,255,0.78)",
+                color: filterRascunho ? "#8e44ad" : "rgba(20,45,70,0.6)",
+                display:"flex",alignItems:"center",gap:6,
+              }}
+            >
+              <FileText style={{width:13,height:13}}/>
+              Rascunhos
+              {totalRascunhos > 0 && (
+                <span style={{
+                  fontSize:10,fontWeight:800,padding:"1px 6px",borderRadius:10,
+                  background: filterRascunho ? "rgba(142,68,173,0.2)" : "rgba(142,68,173,0.12)",
+                  color:"#8e44ad",animation:"pulseDraft 2s ease infinite"
+                }}>
+                  {totalRascunhos}
+                </span>
+              )}
+              {filterRascunho && <X style={{width:11,height:11}}/>}
+            </button>
+
             <div style={{display:"flex",alignItems:"center",gap:5,padding:"0 12px",height:38,borderRadius:10,background:"rgba(255,255,255,0.6)",border:"1px solid rgba(200,225,240,0.7)",fontSize:12,color:"rgba(20,45,70,0.5)"}}>
               <Filter style={{width:13,height:13}}/> {filtered.length} resultado{filtered.length!==1?"s":""}
             </div>
           </div>
+
+          {/* Banner quando filtro rascunho ativo */}
+          <AnimatePresence>
+            {filterRascunho && (
+              <motion.div initial={{opacity:0,y:-6}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-6}}
+                style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderRadius:12,background:"rgba(142,68,173,0.07)",border:"1.5px solid rgba(142,68,173,0.2)"}}>
+                <FileText style={{width:16,height:16,color:"#8e44ad",flexShrink:0}}/>
+                <span style={{fontSize:12,fontWeight:600,color:"#8e44ad"}}>
+                  Exibindo apenas cadastros salvos como rascunho — complete as informações para transformar em lead
+                </span>
+                <button onClick={()=>setFilterRascunho(false)} style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center"}}>
+                  <X style={{width:14,height:14,color:"#8e44ad"}}/>
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Table */}
           <motion.div className="glass-card" style={{overflow:"hidden"}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.38}}>
@@ -389,7 +392,7 @@ export default function TodosClientes() {
               <span style={{fontSize:11,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase" as const,color:"rgba(20,45,70,0.5)"}}>Ações</span>
             </div>
 
-            {loading?(
+            {loading ? (
               Array.from({length:5}).map((_,i)=>(
                 <div key={i} className="client-row" style={{cursor:"default"}}>
                   {Array.from({length:6}).map((_,j)=>(
@@ -397,58 +400,73 @@ export default function TodosClientes() {
                   ))}
                 </div>
               ))
-            ):filtered.length===0?(
+            ) : filtered.length===0 ? (
               <div style={{padding:"48px 20px",textAlign:"center"}}>
                 <Building2 style={{width:36,height:36,color:"rgba(41,128,185,0.3)",margin:"0 auto 12px"}}/>
-                <p style={{fontSize:14,fontWeight:600,color:"rgba(20,45,70,0.5)"}}>Nenhuma empresa encontrada</p>
+                <p style={{fontSize:14,fontWeight:600,color:"rgba(20,45,70,0.5)"}}>
+                  {filterRascunho ? "Nenhum rascunho encontrado" : "Nenhuma empresa encontrada"}
+                </p>
               </div>
-            ):(
+            ) : (
               <AnimatePresence>
                 {filtered.map((emp,idx)=>{
                   const pc = porteColor(emp.porte);
                   const sc = scoreColor(emp.score);
-                  return(
-                    <motion.div
-                      key={emp.empresa_id}
-                      className="client-row"
+                  const isDraft = emp.status === "Rascunho";
+                  return (
+                    <motion.div key={emp.empresa_id}
+                      className={`client-row${isDraft?" draft-row":""}`}
                       initial={{opacity:0,x:-8}} animate={{opacity:1,x:0}} exit={{opacity:0,height:0}}
                       transition={{duration:0.2,delay:idx*0.03}}
-                      onClick={()=>navigate(`/clientes/${emp.empresa_id}`)}
-                    >
+                      onClick={()=>navigate(isDraft?`/clientes/${emp.empresa_id}/editar`:`/clientes/${emp.empresa_id}`)}>
+
                       {/* Nome */}
                       <div style={{display:"flex",alignItems:"center",gap:10}}>
-                        <div style={{width:34,height:34,borderRadius:10,background:avatarColor(emp.nome),display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"#fff",flexShrink:0}}>{initials(emp.nome)}</div>
+                        <div style={{width:34,height:34,borderRadius:10,background:isDraft?"rgba(142,68,173,0.15)":avatarColor(emp.nome),display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:isDraft?"#8e44ad":"#fff",flexShrink:0,border:isDraft?"1.5px dashed rgba(142,68,173,0.4)":"none"}}>
+                          {isDraft ? <FileText style={{width:14,height:14}}/> : initials(emp.nome)}
+                        </div>
                         <div>
-                          <div style={{fontSize:13,fontWeight:700,color:"#0f2133"}}>{emp.nome}</div>
+                          <div style={{display:"flex",alignItems:"center",gap:6}}>
+                            <div style={{fontSize:13,fontWeight:700,color:"#0f2133"}}>{emp.nome}</div>
+                            {isDraft && (
+                              <span style={{fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:4,background:"rgba(142,68,173,0.12)",color:"#8e44ad",border:"1px solid rgba(142,68,173,0.2)",animation:"pulseDraft 2s ease infinite"}}>RASCUNHO</span>
+                            )}
+                          </div>
                           {emp.responsavel_principal&&<div style={{fontSize:10,color:"rgba(20,45,70,0.4)"}}>{emp.responsavel_principal}</div>}
                         </div>
                       </div>
+
                       {/* Porte */}
                       <span className="chip" style={{background:`${pc}15`,color:pc,border:`1px solid ${pc}30`}}>{emp.porte||"—"}</span>
                       {/* Segmento */}
                       <span style={{fontSize:12,color:"rgba(20,45,70,0.6)",fontWeight:500}}>{emp.segmento||"—"}</span>
                       {/* Cidade */}
                       <span style={{fontSize:12,color:"rgba(20,45,70,0.6)",fontWeight:500}}>{emp.cidade||"—"}</span>
-                      {/* Score */}
-                      <div style={{display:"flex",flexDirection:"column",gap:3}}>
-                        <ScoreBar score={emp.score}/>
-                        <span style={{fontSize:9,fontWeight:700,color:sc.color,textTransform:"uppercase" as const,letterSpacing:"0.05em"}}>{sc.label}</span>
-                      </div>
+
+                      {/* Score ou badge rascunho */}
+                      {isDraft ? (
+                        <div style={{display:"flex",alignItems:"center",gap:6}}>
+                          <span style={{fontSize:11,color:"rgba(20,45,70,0.4)",fontStyle:"italic"}}>Incompleto</span>
+                        </div>
+                      ) : (
+                        <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                          <ScoreBar score={emp.score}/>
+                          <span style={{fontSize:9,fontWeight:700,color:sc.color,textTransform:"uppercase" as const,letterSpacing:"0.05em"}}>{sc.label}</span>
+                        </div>
+                      )}
+
                       {/* Ações */}
                       <div style={{display:"flex",alignItems:"center",gap:5}} onClick={e=>e.stopPropagation()}>
-                        <button className="action-btn" style={{background:"rgba(41,128,185,0.08)",color:"#2980b9"}} onClick={e=>{e.stopPropagation();navigate(`/clientes/${emp.empresa_id}`);}} title="Ver perfil">
+                        <button className="action-btn" style={{background:"rgba(41,128,185,0.08)",color:"#2980b9"}}
+                          onClick={e=>{e.stopPropagation();navigate(isDraft?`/clientes/${emp.empresa_id}/editar`:`/clientes/${emp.empresa_id}`);}} title="Ver perfil">
                           <Eye style={{width:13,height:13}}/>
                         </button>
-                        <button className="action-btn" style={{background:"rgba(142,68,173,0.08)",color:"#8e44ad"}} onClick={e=>{e.stopPropagation();navigate(`/clientes/${emp.empresa_id}/editar`);}} title="Editar">
+                        <button className="action-btn" style={{background:"rgba(142,68,173,0.08)",color:"#8e44ad"}}
+                          onClick={e=>{e.stopPropagation();navigate(`/clientes/${emp.empresa_id}/editar`);}} title="Editar">
                           <Edit3 style={{width:13,height:13}}/>
                         </button>
-                        {/* ── Botão excluir abre modal ── */}
-                        <button
-                          className="action-btn"
-                          style={{background:"rgba(231,76,60,0.08)",color:"#e74c3c"}}
-                          onClick={e=>{e.stopPropagation(); setDeleteTarget(emp);}}
-                          title="Excluir empresa"
-                        >
+                        <button className="action-btn" style={{background:"rgba(231,76,60,0.08)",color:"#e74c3c"}}
+                          onClick={e=>{e.stopPropagation();setDeleteTarget(emp);}} title="Excluir empresa">
                           <Trash2 style={{width:13,height:13}}/>
                         </button>
                       </div>
