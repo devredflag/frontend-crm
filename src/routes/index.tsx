@@ -8,6 +8,8 @@ import TodosClientes from "../pages/clientes";
 import EmpresaView from "../pages/clientes/detalhe";
 import EmpresaEdit from "../pages/clientes/detalhe/editar";
 import NovaEmpresa from "../pages/empresas/nova";
+import GoogleCallback from "../pages/auth/GoogleCallback";
+import OutlookCallback from "../pages/auth/OutlookCallback";
 
 export default function AppRoutes() {
   return (
@@ -22,6 +24,8 @@ export default function AppRoutes() {
         <Route path="/clientes/:id" element={<EmpresaView />} />
         <Route path="/clientes/:id/editar" element={<EmpresaEdit />} />
         <Route path="/empresas/nova" element={<NovaEmpresa />} />
+        <Route path="/auth/google/callback" element={<GoogleCallback />} />
+        <Route path="/auth/outlook/callback" element={<OutlookCallback />} />
       </Routes>
     </BrowserRouter>
   );
