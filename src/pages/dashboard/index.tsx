@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -8,6 +8,7 @@ import {
   ClipboardList, BarChart3, RefreshCw,
   MapPin, Phone, Mail, User, ArrowRight,
   Eye, X, CalendarCheck, Repeat, FileText, Edit3,
+  Trash2, CheckCheck, AlertTriangle, Info,
 } from "lucide-react";
 
 const css = `
@@ -21,6 +22,7 @@ const css = `
   @keyframes gradientShift { 0%,100%{background-position:0% 50%}50%{background-position:100% 50%} }
   @keyframes shimmer { 0%{background-position:-200% 0}100%{background-position:200% 0} }
   @keyframes pulseDraft { 0%,100%{opacity:1} 50%{opacity:0.55} }
+  @keyframes bellShake { 0%,100%{transform:rotate(0)}20%{transform:rotate(-12deg)}40%{transform:rotate(12deg)}60%{transform:rotate(-8deg)}80%{transform:rotate(8deg)} }
   .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:10px; cursor:pointer; font-size:13.5px; font-weight:500; color:rgba(255,255,255,0.65); transition:all 0.18s; user-select:none; }
   .nav-item:hover { background:rgba(255,255,255,0.08); color:#fff; }
   .nav-item.active { background:rgba(255,255,255,0.14); color:#fff; font-weight:600; }
@@ -36,11 +38,16 @@ const css = `
   .chip { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:20px; font-size:10px; font-weight:700; white-space:nowrap; }
   .action-item { padding:12px 14px; border-radius:12px; background:rgba(255,255,255,0.55); border:1px solid rgba(200,225,240,0.6); cursor:pointer; transition:all 0.18s; }
   .action-item:hover { background:rgba(255,255,255,0.85); border-color:rgba(41,128,185,0.3); transform:translateY(-1px); }
+  .notif-item { padding:12px 14px; border-bottom:1px solid rgba(200,225,240,0.3); transition:background 0.13s; display:flex; gap:10px; align-items:flex-start; }
+  .notif-item:hover { background:rgba(41,128,185,0.03); }
+  .notif-item:last-child { border-bottom:none; }
   .skeleton { background:linear-gradient(90deg,rgba(200,225,240,0.4) 25%,rgba(220,240,252,0.7) 50%,rgba(200,225,240,0.4) 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:6px; }
   ::-webkit-scrollbar { width:4px; height:4px; }
   ::-webkit-scrollbar-track { background:transparent; }
   ::-webkit-scrollbar-thumb { background:rgba(41,128,185,0.25); border-radius:4px; }
 `;
+
+const API = "https://backend-crm-production-157b.up.railway.app";
 
 interface Empresa {
   empresa_id: string; nome: string; segmento: string; porte: string;
@@ -53,6 +60,11 @@ interface Contato {
   email: string; celular: string; whatsapp: string; decisor: boolean;
 }
 interface Usuario { nome: string; email: string; cargo: string; empresa_nome: string; }
+interface Notificacao {
+  notificacao_id: string; tipo: string; titulo: string; mensagem: string;
+  empresa_id: string | null; empresa_nome: string | null;
+  lida: boolean; criado_em: string;
+}
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboards",                active: true  },
@@ -89,6 +101,24 @@ function Sparkline({ color }: { color: string }) {
   );
 }
 
+function notifIcon(tipo: string) {
+  if(tipo==="rascunho_aviso") return <AlertTriangle style={{width:14,height:14,color:"#e67e22"}}/>;
+  if(tipo==="rascunho_excluido") return <Trash2 style={{width:14,height:14,color:"#e74c3c"}}/>;
+  return <Info style={{width:14,height:14,color:"#2980b9"}}/>;
+}
+function notifColor(tipo: string) {
+  if(tipo==="rascunho_aviso") return { bg:"rgba(230,126,34,0.08)", border:"rgba(230,126,34,0.2)", dot:"#e67e22" };
+  if(tipo==="rascunho_excluido") return { bg:"rgba(231,76,60,0.08)", border:"rgba(231,76,60,0.2)", dot:"#e74c3c" };
+  return { bg:"rgba(41,128,185,0.08)", border:"rgba(41,128,185,0.2)", dot:"#2980b9" };
+}
+function timeAgo(dateStr: string) {
+  const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
+  if(diff < 60) return "agora";
+  if(diff < 3600) return `${Math.floor(diff/60)}min atrás`;
+  if(diff < 86400) return `${Math.floor(diff/3600)}h atrás`;
+  return `${Math.floor(diff/86400)}d atrás`;
+}
+
 type FilterKey = "total"|"rascunho"|"lead"|"em_contato"|"visita"|"proposta"|"negociacao"|"fechado"|"quente";
 
 export default function Dashboard() {
@@ -102,15 +132,32 @@ export default function Dashboard() {
   const [searchValue, setSearchValue] = useState("");
   const [usuario, setUsuario] = useState<Usuario|null>(null);
 
-  useEffect(() => { fetchData(); }, []);
+  // Notificações
+  const [notificacoes, setNotificacoes] = useState<Notificacao[]>([]);
+  const [naoLidas, setNaoLidas] = useState(0);
+  const [showNotif, setShowNotif] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { fetchData(); fetchNotificacoes(); }, []);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if(notifRef.current && !notifRef.current.contains(e.target as Node)) setShowNotif(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const token = () => localStorage.getItem("token") || "";
+  const headers = () => ({ Authorization: `Bearer ${token()}` });
+  const jsonHeaders = () => ({ "Content-Type": "application/json", Authorization: `Bearer ${token()}` });
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
       const [empRes, meRes] = await Promise.all([
-        fetch("https://backend-crm-production-157b.up.railway.app/empresas", { headers:{ Authorization:`Bearer ${token}` } }),
-        fetch("https://backend-crm-production-157b.up.railway.app/me",       { headers:{ Authorization:`Bearer ${token}` } }),
+        fetch(`${API}/empresas`, { headers: headers() }),
+        fetch(`${API}/me`, { headers: headers() }),
       ]);
       if(empRes.ok) setEmpresas(await empRes.json());
       if(meRes.ok)  setUsuario(await meRes.json());
@@ -118,11 +165,39 @@ export default function Dashboard() {
     setLoading(false);
   };
 
+  const fetchNotificacoes = async () => {
+    try {
+      const [notifRes, countRes] = await Promise.all([
+        fetch(`${API}/notificacoes`, { headers: headers() }),
+        fetch(`${API}/notificacoes/nao-lidas`, { headers: headers() }),
+      ]);
+      if(notifRes.ok) setNotificacoes(await notifRes.json());
+      if(countRes.ok) { const d = await countRes.json(); setNaoLidas(d.total); }
+    } catch {}
+  };
+
+  const marcarLida = async (id: string) => {
+    await fetch(`${API}/notificacoes/${id}/ler`, { method: "PUT", headers: jsonHeaders() });
+    setNotificacoes(prev => prev.map(n => n.notificacao_id===id ? {...n, lida:true} : n));
+    setNaoLidas(prev => Math.max(0, prev-1));
+  };
+
+  const marcarTodasLidas = async () => {
+    await fetch(`${API}/notificacoes/ler-todas`, { method: "PUT", headers: jsonHeaders() });
+    setNotificacoes(prev => prev.map(n => ({...n, lida:true})));
+    setNaoLidas(0);
+  };
+
+  const deletarNotificacao = async (id: string, lida: boolean) => {
+    await fetch(`${API}/notificacoes/${id}`, { method: "DELETE", headers: headers() });
+    setNotificacoes(prev => prev.filter(n => n.notificacao_id !== id));
+    if(!lida) setNaoLidas(prev => Math.max(0, prev-1));
+  };
+
   const fetchContatos = async (id: string) => {
     setLoadingContatos(true); setContatos([]);
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`https://backend-crm-production-157b.up.railway.app/contatos/${id}`, { headers:{ Authorization:`Bearer ${token}` } });
+      const res = await fetch(`${API}/contatos/${id}`, { headers: headers() });
       if(res.ok) setContatos(await res.json());
     } catch {}
     setLoadingContatos(false);
@@ -248,13 +323,98 @@ export default function Dashboard() {
             <Search style={{width:14,height:14,color:"rgba(20,45,70,0.35)",flexShrink:0}}/>
             <input value={searchValue} onChange={e=>setSearchValue(e.target.value)} placeholder="Buscar leads, empresas..." style={{flex:1,border:"none",background:"transparent",fontSize:13,color:"#1a2e40",outline:"none"}}/>
           </div>
-          <div style={{display:"flex",gap:8}}>
-            <button onClick={fetchData} style={{width:38,height:38,borderRadius:10,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.75)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            <button onClick={()=>{fetchData();fetchNotificacoes();}} style={{width:38,height:38,borderRadius:10,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.75)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
               <RefreshCw style={{width:15,height:15,color:"#2980b9"}}/>
             </button>
-            <button style={{width:38,height:38,borderRadius:10,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.75)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-              <Bell style={{width:16,height:16,color:"#2980b9"}}/>
-            </button>
+
+            {/* ── SINO DE NOTIFICAÇÕES ── */}
+            <div ref={notifRef} style={{position:"relative"}}>
+              <button
+                onClick={()=>setShowNotif(!showNotif)}
+                style={{width:38,height:38,borderRadius:10,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.75)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}
+              >
+                <Bell style={{width:16,height:16,color:"#2980b9",animation:naoLidas>0?"bellShake 1.5s ease infinite":"none"}}/>
+                {naoLidas > 0 && (
+                  <span style={{position:"absolute",top:-4,right:-4,width:18,height:18,borderRadius:"50%",background:"#e74c3c",color:"#fff",fontSize:10,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",border:"2px solid rgba(210,238,248,0.9)"}}>
+                    {naoLidas > 9 ? "9+" : naoLidas}
+                  </span>
+                )}
+              </button>
+
+              {/* Painel de notificações */}
+              <AnimatePresence>
+                {showNotif && (
+                  <motion.div
+                    initial={{opacity:0,y:-8,scale:0.96}} animate={{opacity:1,y:0,scale:1}} exit={{opacity:0,y:-8,scale:0.96}}
+                    transition={{duration:0.18}}
+                    style={{position:"absolute",top:"calc(100% + 10px)",right:0,width:360,background:"rgba(240,250,255,0.98)",backdropFilter:"blur(20px)",border:"1px solid rgba(200,225,240,0.9)",borderRadius:16,boxShadow:"0 12px 48px rgba(41,128,185,0.18)",overflow:"hidden",zIndex:200}}
+                  >
+                    {/* Header */}
+                    <div style={{padding:"14px 16px",borderBottom:"1px solid rgba(200,225,240,0.5)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        <Bell style={{width:14,height:14,color:"#2980b9"}}/>
+                        <span style={{fontSize:13,fontWeight:700,color:"#0f2133"}}>Notificações</span>
+                        {naoLidas > 0 && (
+                          <span style={{fontSize:10,fontWeight:800,padding:"2px 7px",borderRadius:10,background:"rgba(231,76,60,0.12)",color:"#e74c3c"}}>
+                            {naoLidas} nova{naoLidas!==1?"s":""}
+                          </span>
+                        )}
+                      </div>
+                      {naoLidas > 0 && (
+                        <button onClick={marcarTodasLidas} style={{display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:600,color:"#2980b9",background:"none",border:"none",cursor:"pointer"}}>
+                          <CheckCheck style={{width:12,height:12}}/> Marcar todas como lidas
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Lista */}
+                    <div style={{maxHeight:380,overflowY:"auto"}}>
+                      {notificacoes.length === 0 ? (
+                        <div style={{padding:"32px 20px",textAlign:"center"}}>
+                          <Bell style={{width:28,height:28,color:"rgba(41,128,185,0.25)",margin:"0 auto 10px"}}/>
+                          <p style={{fontSize:12,color:"rgba(20,45,70,0.45)",fontWeight:500}}>Nenhuma notificação</p>
+                        </div>
+                      ) : (
+                        notificacoes.map(n => {
+                          const nc = notifColor(n.tipo);
+                          return (
+                            <div key={n.notificacao_id} className="notif-item"
+                              style={{background:n.lida?"transparent":nc.bg, cursor:"pointer"}}
+                              onClick={()=>{if(!n.lida)marcarLida(n.notificacao_id); if(n.empresa_id)navigate(`/clientes/${n.empresa_id}`); setShowNotif(false);}}>
+                              {/* Ícone */}
+                              <div style={{width:32,height:32,borderRadius:9,background:n.lida?"rgba(200,225,240,0.3)":nc.bg,border:`1px solid ${nc.border}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>
+                                {notifIcon(n.tipo)}
+                              </div>
+                              <div style={{flex:1,minWidth:0}}>
+                                <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:6}}>
+                                  <div style={{fontSize:12,fontWeight:n.lida?500:700,color:"#0f2133",lineHeight:1.4}}>{n.titulo}</div>
+                                  <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
+                                    {!n.lida && <div style={{width:6,height:6,borderRadius:"50%",background:nc.dot,flexShrink:0}}/>}
+                                    <span style={{fontSize:10,color:"rgba(20,45,70,0.4)",whiteSpace:"nowrap"}}>{timeAgo(n.criado_em)}</span>
+                                  </div>
+                                </div>
+                                <div style={{fontSize:11,color:"rgba(20,45,70,0.55)",marginTop:3,lineHeight:1.5}}>{n.mensagem}</div>
+                                {n.empresa_nome && (
+                                  <div style={{marginTop:4,fontSize:10,fontWeight:600,color:"#2980b9"}}>{n.empresa_nome}</div>
+                                )}
+                              </div>
+                              <button
+                                onClick={e=>{e.stopPropagation();deletarNotificacao(n.notificacao_id,n.lida);}}
+                                style={{background:"none",border:"none",cursor:"pointer",padding:2,color:"rgba(20,45,70,0.3)",flexShrink:0,marginTop:2}}
+                              >
+                                <X style={{width:13,height:13}}/>
+                              </button>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
             <button onClick={()=>navigate("/empresas/nova")} style={{height:38,padding:"0 14px",borderRadius:10,border:"none",cursor:"pointer",background:"linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)",backgroundSize:"200% 200%",animation:"gradientShift 4s ease infinite",color:"#fff",fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:6,boxShadow:"0 4px 14px rgba(41,128,185,0.35)"}}>
               <Plus style={{width:15,height:15}}/> Novo
             </button>
@@ -285,15 +445,11 @@ export default function Dashboard() {
             )}
           </AnimatePresence>
 
-          {/* Metric cards — clique filtra o preview, rascunho continua igual */}
+          {/* Metric cards */}
           <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}>
             {metricCards.map((m,i)=>(
               <motion.div key={m.key} className="metric-card"
-                style={{
-                  borderColor:activeFilter===m.key?m.color:undefined,
-                  boxShadow:activeFilter===m.key?`0 0 0 3px ${m.color}22`:undefined,
-                  outline:m.key==="rascunho"&&m.value>0&&activeFilter!=="rascunho"?`1.5px dashed rgba(142,68,173,0.35)`:undefined,
-                }}
+                style={{borderColor:activeFilter===m.key?m.color:undefined,boxShadow:activeFilter===m.key?`0 0 0 3px ${m.color}22`:undefined,outline:m.key==="rascunho"&&m.value>0&&activeFilter!=="rascunho"?`1.5px dashed rgba(142,68,173,0.35)`:undefined}}
                 initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.35,delay:i*0.04}}
                 onClick={()=>setActiveFilter(m.key)}
               >
@@ -317,7 +473,7 @@ export default function Dashboard() {
             ))}
           </div>
 
-          {/* Painel preview central */}
+          {/* Painel preview */}
           <motion.div className="glass-card" style={{overflow:"hidden"}} initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.4,delay:0.3}}>
             <div style={{padding:"16px 20px",borderBottom:"1px solid rgba(200,225,240,0.5)",display:"flex",alignItems:"center",justifyContent:"space-between",background:`linear-gradient(90deg,${activeCard.bg},transparent)`}}>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -329,9 +485,7 @@ export default function Dashboard() {
                   <div style={{fontSize:11,color:"rgba(20,45,70,0.45)"}}>{previewList.length} empresa{previewList.length!==1?"s":""}</div>
                 </div>
               </div>
-              {/* ← BOTÃO ATUALIZADO: rascunho vai para /clientes, todos os outros para /gerenciamento */}
-              <button
-                onClick={()=>navigate(activeFilter==="rascunho" ? "/clientes" : "/gerenciamento")}
+              <button onClick={()=>navigate(activeFilter==="rascunho" ? "/clientes" : "/gerenciamento")}
                 style={{display:"flex",alignItems:"center",gap:5,padding:"6px 12px",borderRadius:8,border:`1px solid ${activeCard.color}40`,background:activeCard.bg,fontSize:11,fontWeight:600,color:activeCard.color,cursor:"pointer"}}>
                 Ver no CRM <ArrowRight style={{width:11,height:11}}/>
               </button>
@@ -355,12 +509,8 @@ export default function Dashboard() {
               <>
                 <div className="preview-th">
                   {activeFilter==="rascunho"
-                    ? ["Empresa","Segmento","Cidade","Status","Completar"].map(h=>(
-                        <span key={h} style={{fontSize:10,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:"rgba(20,45,70,0.45)"}}>{h}</span>
-                      ))
-                    : ["Empresa","Status","Temperatura","Cidade","Ticket"].map(h=>(
-                        <span key={h} style={{fontSize:10,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:"rgba(20,45,70,0.45)"}}>{h}</span>
-                      ))
+                    ? ["Empresa","Segmento","Cidade","Status","Completar"].map(h=><span key={h} style={{fontSize:10,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:"rgba(20,45,70,0.45)"}}>{h}</span>)
+                    : ["Empresa","Status","Temperatura","Cidade","Ticket"].map(h=><span key={h} style={{fontSize:10,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:"rgba(20,45,70,0.45)"}}>{h}</span>)
                   }
                 </div>
                 <div style={{maxHeight:220,overflowY:"auto"}}>
@@ -388,7 +538,7 @@ export default function Dashboard() {
                               <span style={{fontSize:11,color:"rgba(20,45,70,0.5)"}}>{emp.cidade||"—"}</span>
                               <span className="chip" style={{background:sc.bg,color:sc.text,border:`1px solid ${sc.border}`,animation:"pulseDraft 2s ease infinite"}}>{emp.status}</span>
                               <button onClick={e=>{e.stopPropagation();navigate(`/clientes/${emp.empresa_id}/editar`);}}
-                                style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:7,border:"1.5px solid rgba(142,68,173,0.3)",background:"rgba(142,68,173,0.08)",color:"#8e44ad",fontSize:11,fontWeight:700,cursor:"pointer",transition:"all 0.15s"}}
+                                style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:7,border:"1.5px solid rgba(142,68,173,0.3)",background:"rgba(142,68,173,0.08)",color:"#8e44ad",fontSize:11,fontWeight:700,cursor:"pointer"}}
                                 onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(142,68,173,0.16)";}}
                                 onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(142,68,173,0.08)";}}>
                                 <Edit3 style={{width:10,height:10}}/> Completar
@@ -423,9 +573,7 @@ export default function Dashboard() {
                 </button>
               </div>
               {loading?(
-                <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                  {[1,2,3].map(i=><div key={i} className="skeleton" style={{height:52}}/>)}
-                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>{[1,2,3].map(i=><div key={i} className="skeleton" style={{height:52}}/>)}</div>
               ):proximasAcoes.length===0?(
                 <div style={{textAlign:"center",padding:"16px 0",color:"rgba(20,45,70,0.4)",fontSize:12}}>Nenhuma ação pendente</div>
               ):(
