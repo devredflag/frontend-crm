@@ -13,7 +13,7 @@ import SelectRecipientsModal, {
   SendChannel,
   Recipient,
 } from "../../../components/SelectRecipientsModal";
-// Ajuste o caminho conforme onde você colocou o componente
+import EmpresaNotificationBell from "../../../components/EmpresaNotificationBell";
 
 const API = "https://backend-crm-production-157b.up.railway.app";
 
@@ -274,6 +274,15 @@ export default function EmpresaView() {
               <SendButton channel="whatsapp" color="#27ae60" bg="rgba(39,174,96,0.08)"   border="rgba(39,174,96,0.3)"   icon={MessageCircle}  label="WhatsApp"  onClick={() => setSendChannel("whatsapp")} />
               <SendButton channel="telefone" color="#e67e22" bg="rgba(230,126,34,0.08)"  border="rgba(230,126,34,0.3)"  icon={Phone}          label="Ligar"     onClick={() => setSendChannel("telefone")} />
             </div>
+          )}
+
+          {/* ── Sino de notificações de e-mail ── */}
+          {!loading && empresa && (
+            <EmpresaNotificationBell
+              empresaId={empresa.empresa_id}
+              empresaNome={empresa.nome}
+              onVerComunicacoes={() => navigate(`/clientes/${id}?tab=comunicacoes`)}
+            />
           )}
 
           <button onClick={() => navigate(`/clientes/${id}/editar`)} style={{ height:38, padding:"0 16px", borderRadius:10, border:"none", cursor:"pointer", background:"linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)", backgroundSize:"200% 200%", animation:"gradientShift 4s ease infinite", color:"#fff", fontSize:13, fontWeight:700, display:"flex", alignItems:"center", gap:6, boxShadow:"0 4px 14px rgba(41,128,185,0.35)" }}>
