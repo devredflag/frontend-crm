@@ -324,72 +324,349 @@ export default function Calendario() {
   );
 
   const EmailConvidadoField = () => {
-    const contatosComEmail = contatos.filter(c => c.email);
-    const filtrados = emailConvidado
-      ? contatosComEmail.filter(c => c.email!.toLowerCase().includes(emailConvidado.toLowerCase()) || c.nome.toLowerCase().includes(emailConvidado.toLowerCase()))
-      : contatosComEmail;
-    return (
-      <motion.div initial={{opacity:0,height:0}} animate={{opacity:1,height:"auto"}} exit={{opacity:0,height:0}} style={{overflow:"visible",marginTop:10}}>
-        <label style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(20,45,70,0.5)",display:"block",marginBottom:6}}>
-          E-mail do cliente para convite (opcional)
-        </label>
-        <div ref={emailDropdownRef} style={{position:"relative"}}>
-          <div style={{display:"flex",gap:8}}>
-            <input
-              key="email-convidado-fixo"
-              autoFocus
-              className="input-field"
-              type="email"
-              value={emailConvidado}
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={(e) => e.stopPropagation()}
-              onChange={(e) => {
-                const valor = e.target.value;
-                setEmailConvidado(valor);
-                setShowEmailDropdown(true);
+  const contatosComEmail = contatos.filter(c => c.email);
+
+  const filtrados = emailConvidado
+    ? contatosComEmail.filter(
+        c =>
+          c.email!
+            .toLowerCase()
+            .includes(emailConvidado.toLowerCase()) ||
+          c.nome
+            .toLowerCase()
+            .includes(emailConvidado.toLowerCase())
+      )
+    : contatosComEmail;
+
+  return (
+    <div
+      style={{
+        overflow: "visible",
+        marginTop: 10,
+        minHeight: 110,
+      }}
+    >
+      <label
+        style={{
+          fontSize: 10,
+          fontWeight: 700,
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          color: "rgba(20,45,70,0.5)",
+          display: "block",
+          marginBottom: 6,
+        }}
+      >
+        E-mail do cliente para convite (opcional)
+      </label>
+
+      <div
+        ref={emailDropdownRef}
+        style={{ position: "relative" }}
+      >
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+          }}
+        >
+          <input
+            key="email-convidado-fixo"
+            autoFocus
+            className="input-field"
+            type="email"
+            value={emailConvidado}
+            onMouseDown={(e) =>
+              e.stopPropagation()
+            }
+            onClick={(e) =>
+              e.stopPropagation()
+            }
+            onChange={(e) => {
+              const valor =
+                e.target.value;
+
+              setEmailConvidado(valor);
+
+              // mantém dropdown aberto
+              setShowEmailDropdown(
+                true
+              );
+            }}
+            onFocus={() => {
+              setShowEmailDropdown(
+                true
+              );
+            }}
+            placeholder="Digite ou selecione o e-mail..."
+            style={{ flex: 1 }}
+          />
+
+          {contatosComEmail.length >
+            0 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowEmailDropdown(
+                  !showEmailDropdown
+                );
               }}
-              onFocus={() => {
-                setShowEmailDropdown(true);
+              style={{
+                height: 44,
+                padding:
+                  "0 12px",
+                borderRadius: 10,
+                border:
+                  "1px solid rgba(200,225,240,0.9)",
+                background:
+                  "rgba(255,255,255,0.85)",
+                cursor:
+                  "pointer",
+                display:
+                  "flex",
+                alignItems:
+                  "center",
+                gap: 6,
+                fontSize: 12,
+                fontWeight: 600,
+                color:
+                  "#2980b9",
+                flexShrink: 0,
               }}
-              placeholder="Digite ou selecione o e-mail..."
-              style={{ flex: 1 }}
-            />
-            {contatosComEmail.length>0&&(
-              <button type="button" onClick={e=>{e.stopPropagation();setShowEmailDropdown(!showEmailDropdown);}}
-                style={{height:44,padding:"0 12px",borderRadius:10,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.85)",cursor:"pointer",display:"flex",alignItems:"center",gap:6,fontSize:12,fontWeight:600,color:"#2980b9",flexShrink:0}}>
-                <Users2 style={{width:13,height:13}}/>Contatos<ChevronDown style={{width:12,height:12}}/>
-              </button>
-            )}
-          </div>
-          <AnimatePresence>
-            {showEmailDropdown&&filtrados.length>0&&(
-              <motion.div initial={{opacity:0,y:-4}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-4}} transition={{duration:0.15}}
-                style={{position:"absolute",top:"calc(100% + 6px)",left:0,right:0,zIndex:200,background:"rgba(240,250,255,0.98)",backdropFilter:"blur(16px)",border:"1px solid rgba(200,225,240,0.9)",borderRadius:12,boxShadow:"0 8px 32px rgba(41,128,185,0.15)",overflow:"hidden",maxHeight:200,overflowY:"auto"}}
-                onClick={e=>e.stopPropagation()}>
-                {form.empresa_nome&&<div style={{padding:"8px 14px 4px",fontSize:10,fontWeight:700,color:"rgba(20,45,70,0.4)",letterSpacing:"0.06em",textTransform:"uppercase"}}>{form.empresa_nome}</div>}
-                {filtrados.map(c=>(
-                  <div key={c.contato_id} className="email-option" onClick={()=>{setEmailConvidado(c.email!);setShowEmailDropdown(false);}}>
-                    <span style={{fontWeight:600,color:"#0f2133"}}>{c.nome}</span>
-                    <span style={{fontSize:12,color:"#2980b9"}}>{c.email}</span>
+            >
+              <Users2
+                style={{
+                  width: 13,
+                  height: 13,
+                }}
+              />
+              Contatos
+              <ChevronDown
+                style={{
+                  width: 12,
+                  height: 12,
+                }}
+              />
+            </button>
+          )}
+        </div>
+
+        <AnimatePresence>
+          {showEmailDropdown &&
+            filtrados.length >
+              0 && (
+              <motion.div
+                initial={{
+                  opacity: 0,
+                  y: -4,
+                }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                }}
+                exit={{
+                  opacity: 0,
+                  y: -4,
+                }}
+                transition={{
+                  duration: 0.15,
+                }}
+                style={{
+                  position:
+                    "absolute",
+                  top:
+                    "calc(100% + 6px)",
+                  left: 0,
+                  right: 0,
+                  zIndex: 200,
+                  background:
+                    "rgba(240,250,255,0.98)",
+                  backdropFilter:
+                    "blur(16px)",
+                  border:
+                    "1px solid rgba(200,225,240,0.9)",
+                  borderRadius: 12,
+                  boxShadow:
+                    "0 8px 32px rgba(41,128,185,0.15)",
+                  overflow:
+                    "hidden",
+                  maxHeight: 200,
+                  overflowY:
+                    "auto",
+                }}
+                onClick={(e) =>
+                  e.stopPropagation()
+                }
+              >
+                {form.empresa_nome && (
+                  <div
+                    style={{
+                      padding:
+                        "8px 14px 4px",
+                      fontSize:
+                        10,
+                      fontWeight:
+                        700,
+                      color:
+                        "rgba(20,45,70,0.4)",
+                      letterSpacing:
+                        "0.06em",
+                      textTransform:
+                        "uppercase",
+                    }}
+                  >
+                    {
+                      form.empresa_nome
+                    }
                   </div>
-                ))}
-                <div className="email-option" style={{borderTop:"1px solid rgba(200,225,240,0.5)",color:"rgba(20,45,70,0.5)"}} onClick={()=>setShowEmailDropdown(false)}>
-                  <span style={{fontSize:12}}>✏️ Digitar outro e-mail</span>
+                )}
+
+                {filtrados.map(
+                  c => (
+                    <div
+                      key={
+                        c.contato_id
+                      }
+                      className="email-option"
+                      onClick={() => {
+                        setEmailConvidado(
+                          c.email!
+                        );
+                        setShowEmailDropdown(
+                          false
+                        );
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontWeight:
+                            600,
+                          color:
+                            "#0f2133",
+                        }}
+                      >
+                        {c.nome}
+                      </span>
+
+                      <span
+                        style={{
+                          fontSize:
+                            12,
+                          color:
+                            "#2980b9",
+                        }}
+                      >
+                        {c.email}
+                      </span>
+                    </div>
+                  )
+                )}
+
+                <div
+                  className="email-option"
+                  style={{
+                    borderTop:
+                      "1px solid rgba(200,225,240,0.5)",
+                    color:
+                      "rgba(20,45,70,0.5)",
+                  }}
+                  onClick={() =>
+                    setShowEmailDropdown(
+                      false
+                    )
+                  }
+                >
+                  <span
+                    style={{
+                      fontSize:
+                        12,
+                    }}
+                  >
+                    ✏️ Digitar outro
+                    e-mail
+                  </span>
                 </div>
               </motion.div>
             )}
-          </AnimatePresence>
-          {emailConvidado&&!showEmailDropdown&&(
-            <div style={{marginTop:8,display:"flex",alignItems:"center",gap:8,padding:"6px 10px",borderRadius:8,background:"rgba(41,128,185,0.08)",border:"1px solid rgba(41,128,185,0.2)",width:"fit-content"}}>
-              <Mail style={{width:12,height:12,color:"#2980b9"}}/>
-              <span style={{fontSize:12,fontWeight:600,color:"#2980b9"}}>{emailConvidado}</span>
-              <button onClick={()=>setEmailConvidado("")} style={{background:"none",border:"none",cursor:"pointer",padding:0,display:"flex"}}><X style={{width:12,height:12,color:"#2980b9"}}/></button>
+        </AnimatePresence>
+
+        {emailConvidado &&
+          !showEmailDropdown && (
+            <div
+              style={{
+                marginTop: 8,
+                display:
+                  "flex",
+                alignItems:
+                  "center",
+                gap: 8,
+                padding:
+                  "6px 10px",
+                borderRadius: 8,
+                background:
+                  "rgba(41,128,185,0.08)",
+                border:
+                  "1px solid rgba(41,128,185,0.2)",
+                width:
+                  "fit-content",
+              }}
+            >
+              <Mail
+                style={{
+                  width: 12,
+                  height: 12,
+                  color:
+                    "#2980b9",
+                }}
+              />
+
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color:
+                    "#2980b9",
+                }}
+              >
+                {
+                  emailConvidado
+                }
+              </span>
+
+              <button
+                onClick={() =>
+                  setEmailConvidado(
+                    ""
+                  )
+                }
+                style={{
+                  background:
+                    "none",
+                  border:
+                    "none",
+                  cursor:
+                    "pointer",
+                  padding: 0,
+                  display:
+                    "flex",
+                }}
+              >
+                <X
+                  style={{
+                    width: 12,
+                    height: 12,
+                    color:
+                      "#2980b9",
+                  }}
+                />
+              </button>
             </div>
           )}
-        </div>
-      </motion.div>
-    );
-  };
+      </div>
+    </div>
+  );
+};
 
   const salvarLabel = () => {
     if (saving) return "Salvando...";
