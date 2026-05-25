@@ -335,28 +335,25 @@ export default function Calendario() {
         </label>
         <div ref={emailDropdownRef} style={{position:"relative"}}>
           <div style={{display:"flex",gap:8}}>
-            <input className="input-field" type="email" value={emailConvidado}
+            <input
+              key="email-convidado-fixo"
+              autoFocus
+              className="input-field"
+              type="email"
+              value={emailConvidado}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
               onChange={(e) => {
-              e.stopPropagation();
-              setEmailConvidado(e.target.value);
-
-              // só abre se existir contato filtrado
-              const valor = e.target.value.toLowerCase();
-              const temResultado = contatosComEmail.some(
-                c =>
-                  c.email?.toLowerCase().includes(valor) ||
-                  c.nome.toLowerCase().includes(valor)
-              );
-
-              setShowEmailDropdown(temResultado);
-            }}
-                          onFocus={(e) => {
-              e.stopPropagation();
-              if (filtrados.length > 0) {
+                const valor = e.target.value;
+                setEmailConvidado(valor);
                 setShowEmailDropdown(true);
-              }
-            }}
-              placeholder="Digite ou selecione o e-mail..." onClick={e=>e.stopPropagation()} style={{flex:1}}/>
+              }}
+              onFocus={() => {
+                setShowEmailDropdown(true);
+              }}
+              placeholder="Digite ou selecione o e-mail..."
+              style={{ flex: 1 }}
+            />
             {contatosComEmail.length>0&&(
               <button type="button" onClick={e=>{e.stopPropagation();setShowEmailDropdown(!showEmailDropdown);}}
                 style={{height:44,padding:"0 12px",borderRadius:10,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.85)",cursor:"pointer",display:"flex",alignItems:"center",gap:6,fontSize:12,fontWeight:600,color:"#2980b9",flexShrink:0}}>
@@ -669,9 +666,16 @@ export default function Calendario() {
                   </div>
                 </div>
 
-                <AnimatePresence>
-                  {(agendarOutlook||agendarGoogle)&&<EmailConvidadoField/>}
-                </AnimatePresence>
+                <div
+                  style={{
+                    display:
+                      agendarOutlook || agendarGoogle
+                        ? "block"
+                        : "none",
+                  }}
+                >
+                  <EmailConvidadoField />
+                </div>
               </div>
 
               <button onClick={handleSave} disabled={saving||!form.titulo||!form.data}
