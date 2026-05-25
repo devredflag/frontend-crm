@@ -153,6 +153,8 @@ export default function Calendario() {
 
   const fetchAll = async () => {
     try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
       const [evRes, empRes, meRes] = await Promise.all([
         fetch(`${API}/eventos`, { headers: headers() }),
         fetch(`${API}/empresas`, { headers: headers() }),
@@ -175,6 +177,8 @@ export default function Calendario() {
   };
 
   const checkIntegrations = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
     try {
       const [outlookRes, googleRes] = await Promise.all([
         fetch(`${API}/auth/outlook/status`, { headers: headers() }),
