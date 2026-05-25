@@ -336,8 +336,26 @@ export default function Calendario() {
         <div ref={emailDropdownRef} style={{position:"relative"}}>
           <div style={{display:"flex",gap:8}}>
             <input className="input-field" type="email" value={emailConvidado}
-              onChange={e=>{setEmailConvidado(e.target.value);setShowEmailDropdown(true);}}
-              onFocus={()=>{if(filtrados.length>0)setShowEmailDropdown(true);}}
+              onChange={(e) => {
+              e.stopPropagation();
+              setEmailConvidado(e.target.value);
+
+              // só abre se existir contato filtrado
+              const valor = e.target.value.toLowerCase();
+              const temResultado = contatosComEmail.some(
+                c =>
+                  c.email?.toLowerCase().includes(valor) ||
+                  c.nome.toLowerCase().includes(valor)
+              );
+
+              setShowEmailDropdown(temResultado);
+            }}
+                          onFocus={(e) => {
+              e.stopPropagation();
+              if (filtrados.length > 0) {
+                setShowEmailDropdown(true);
+              }
+            }}
               placeholder="Digite ou selecione o e-mail..." onClick={e=>e.stopPropagation()} style={{flex:1}}/>
             {contatosComEmail.length>0&&(
               <button type="button" onClick={e=>{e.stopPropagation();setShowEmailDropdown(!showEmailDropdown);}}
