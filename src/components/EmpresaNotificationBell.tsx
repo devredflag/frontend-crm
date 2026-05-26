@@ -181,7 +181,20 @@ export default function EmpresaNotificationBell({ empresaId, empresaNome, onVerC
               return (
                 <div
                   key={n.notificacao_id}
-                  onClick={() => { markRead(n.notificacao_id); setOpen(false); onVerComunicacoes?.(); }}
+                  onClick={() => {
+                    markRead(n.notificacao_id);
+                    setOpen(false);
+
+                    if (n.tipo === "email_interaction") {
+                        window.open(
+                        "https://outlook.office.com/mail/",
+                        "_blank"
+                        );
+                        return;
+                    }
+
+                    onVerComunicacoes?.();
+                    }}
                   style={{
                     padding: "11px 16px", cursor: "pointer",
                     borderBottom: "1px solid rgba(200,225,240,0.3)",
