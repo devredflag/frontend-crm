@@ -394,7 +394,6 @@ import { useState, useEffect, useRef } from "react";
                               <div key={n.notificacao_id} className="notif-item"
                                 style={{background:n.lida?"transparent":nc.bg, cursor:"pointer"}}
                                 onClick={()=>{
-                                if(!n.lida) marcarLida(n.notificacao_id);
                                 setShowNotif(false);
                                 if(n.empresa_id) {
                                   const comTab = ["email_interaction","calendar_accepted","calendar_declined","calendar_tentative"];
