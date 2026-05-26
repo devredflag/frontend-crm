@@ -55,7 +55,8 @@ export default function EmpresaNotificationBell({ empresaId, empresaNome, onVerC
       );
       if (res.ok) {
         const data: Notif[] = await res.json();
-        setNotifs(data.filter(n => n.tipo === "email_interaction"));
+        const tipos = ["email_interaction","calendar_accepted","calendar_declined","calendar_tentative"];
+        setNotifs(data.filter(n => tipos.includes(n.tipo)));
       }
     } finally {
       setLoading(false);
