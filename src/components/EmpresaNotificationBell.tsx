@@ -12,7 +12,7 @@ interface Notif {
   empresa_id?: string;
   lida: boolean;
   criado_em: string;
-  meta?: { sender_email?: string; sender_name?: string; subject?: string };
+  meta?: { sender_email?: string; sender_name?: string; subject?: string, conversation_id?: string,};
 }
 
 interface Props {
@@ -186,15 +186,33 @@ export default function EmpresaNotificationBell({ empresaId, empresaNome, onVerC
                     setOpen(false);
 
                     if (n.tipo === "email_interaction") {
-                        window.open(
-                        "https://outlook.office.com/mail/",
-                        "_blank"
-                        );
+                        const conversationId =
+                        n.meta?.conversation_id;
+
+                        const senderEmail =
+                        n.meta?.sender_email || "";
+
+                        const subject =
+                        n.meta?.subject || "";
+
+                        if (conversationId) {
+                        window.location.href =
+                            `https://outlook.office.com/mail/inbox/id/${conversationId}`;
+                        } else {
+                        const busca =
+                            `${senderEmail} ${subject}`;
+
+                        window.location.href =
+                            `https://outlook.office.com/mail/search?q=${encodeURIComponent(
+                            busca
+                            )}`;
+                        }
+
                         return;
                     }
 
                     onVerComunicacoes?.();
-                    }}
+                }}
                   style={{
                     padding: "11px 16px", cursor: "pointer",
                     borderBottom: "1px solid rgba(200,225,240,0.3)",
