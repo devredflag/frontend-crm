@@ -701,7 +701,7 @@ export default function NovaEmpresa() {
       </div>
 
       {/* Sidebar */}
-      <div style={{width:220,flexShrink:0,height:"100vh",overflowY:"auto",position:"relative",zIndex:10,background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)",boxShadow:"4px 0 24px rgba(0,0,0,0.18)",display:"flex",flexDirection:"column",padding:"0 12px 20px"}}>
+      <div style={{width:220,flexShrink:0,minHeight:"100vh",overflowY:"auto",position:"sticky",top:0,zIndex:10,background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)",boxShadow:"4px 0 24px rgba(0,0,0,0.18)",display:"flex",flexDirection:"column",padding:"0 12px 20px"}}>
         <div style={{padding:"22px 4px 24px",borderBottom:"1px solid rgba(255,255,255,0.08)",marginBottom:16}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#2980b9,#1abc9c)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 12px rgba(41,128,185,0.4)"}}>
@@ -724,7 +724,7 @@ export default function NovaEmpresa() {
       </div>
 
       {/* Área principal */}
-      <div style={{flex:1,height:"100vh",overflowY:"auto",position:"relative",zIndex:5}}>
+      <div style={{flex:1,minHeight: "100vh",overflowY:"auto",position:"relative",zIndex:1}}>
 
         {/* Top bar */}
         <div style={{position:"sticky",top:0,zIndex:20,padding:"14px 28px",background:"rgba(210,238,248,0.75)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,0.6)",display:"flex",alignItems:"center",gap:16}}>
