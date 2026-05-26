@@ -1,4 +1,4 @@
-  import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
   import { useNavigate } from "react-router-dom";
   import { motion, AnimatePresence } from "framer-motion";
   import {
@@ -147,7 +147,10 @@
     const [showNotif, setShowNotif] = useState(false);
     const notifRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => { fetchData(); fetchNotificacoes(); }, []);
+    useEffect(() => { fetchData(); fetchNotificacoes(); 
+    const interval = setInterval(() => {fetchNotificacoes();}, 15000);
+    return () => clearInterval(interval);    
+    }, []);
 
     useEffect(() => {
       const handler = (e: MouseEvent) => {
@@ -391,13 +394,13 @@
                               <div key={n.notificacao_id} className="notif-item"
                                 style={{background:n.lida?"transparent":nc.bg, cursor:"pointer"}}
                                 onClick={()=>{
-                  if(!n.lida) marcarLida(n.notificacao_id);
-                  setShowNotif(false);
-                  if(n.empresa_id) {
-                    const comTab = ["email_interaction","calendar_accepted","calendar_declined","calendar_tentative"];
-                    navigate(comTab.includes(n.tipo) ? `/clientes/${n.empresa_id}?tab=comunicacoes` : `/clientes/${n.empresa_id}`);
-                  }
-                }}>
+                                if(!n.lida) marcarLida(n.notificacao_id);
+                                setShowNotif(false);
+                                if(n.empresa_id) {
+                                  const comTab = ["email_interaction","calendar_accepted","calendar_declined","calendar_tentative"];
+                                  navigate(comTab.includes(n.tipo) ? `/clientes/${n.empresa_id}?tab=comunicacoes` : `/clientes/${n.empresa_id}`);
+                                }
+                              }}>
                                 {/* Ícone */}
                                 <div style={{width:32,height:32,borderRadius:9,background:n.lida?"rgba(200,225,240,0.3)":nc.bg,border:`1px solid ${nc.border}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>
                                   {notifIcon(n.tipo)}
@@ -747,3 +750,4 @@
       </div>
     );
   }
+  
