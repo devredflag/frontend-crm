@@ -186,30 +186,33 @@ export default function EmpresaNotificationBell({ empresaId, empresaNome, onVerC
                     setOpen(false);
 
                     if (n.tipo === "email_interaction") {
-                        const conversationId =
-                        n.meta?.conversation_id;
+                    const id =
+                    n.meta?.conversation_id || "";
 
-                        const senderEmail =
-                        n.meta?.sender_email || "";
+                    const senderEmail =
+                    n.meta?.sender_email || "";
 
-                        const subject =
-                        n.meta?.subject || "";
+                    const subject =
+                    n.meta?.subject || "";
 
-                        if (conversationId) {
-                        window.location.href =
-                            `https://outlook.office.com/mail/inbox/id/${conversationId}`;
-                        } else {
-                        const busca =
-                            `${senderEmail} ${subject}`;
+                    const isGmail =
+                    n.platform === "gmail";
 
-                        window.location.href =
-                            `https://outlook.office.com/mail/search?q=${encodeURIComponent(
-                            busca
-                            )}`;
-                        }
+                    if (id) {
+                    window.location.href = isGmail
+                        ? `https://mail.google.com/mail/u/0/#inbox/${id}`
+                        : `https://outlook.office.com/mail/inbox/id/${id}`;
+                    } else {
+                    const busca =
+                        `${senderEmail} ${subject}`;
 
-                        return;
+                    window.location.href = isGmail
+                        ? `https://mail.google.com/mail/u/0/#search/${encodeURIComponent(busca)}`
+                        : `https://outlook.office.com/mail/search?q=${encodeURIComponent(busca)}`;
                     }
+
+                    return;
+                }
 
                     onVerComunicacoes?.();
                 }}
