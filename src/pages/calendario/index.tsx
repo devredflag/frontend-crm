@@ -107,6 +107,126 @@ const GoogleIcon = ({ size = 18 }: { size?: number }) => (
   </svg>
 );
 
+// ─────────────────────────────────────────────────────────────
+// EmailConvidadoField — FORA do Calendario para evitar
+// que o React destrua/recrie o componente a cada re-render
+// ─────────────────────────────────────────────────────────────
+interface EmailFieldProps {
+  emailConvidado: string;
+  setEmailConvidado: (v: string) => void;
+  showEmailDropdown: boolean;
+  setShowEmailDropdown: (v: boolean) => void;
+  contatos: Contato[];
+  empresaNome: string;
+  dropdownRef: React.RefObject<HTMLDivElement | null>;
+}
+
+function EmailConvidadoField({
+  emailConvidado, setEmailConvidado,
+  showEmailDropdown, setShowEmailDropdown,
+  contatos, empresaNome, dropdownRef,
+}: EmailFieldProps) {
+  const contatosComEmail = contatos.filter(c => c.email);
+  const filtrados = emailConvidado
+    ? contatosComEmail.filter(c =>
+        c.email!.toLowerCase().includes(emailConvidado.toLowerCase()) ||
+        c.nome.toLowerCase().includes(emailConvidado.toLowerCase())
+      )
+    : contatosComEmail;
+
+  return (
+    <div style={{ marginTop: 10 }}>
+      <label style={{ fontSize:10, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"rgba(20,45,70,0.5)", display:"block", marginBottom:6 }}>
+        E-mail do cliente para convite (opcional)
+      </label>
+
+      <div ref={dropdownRef} style={{ position:"relative" }}>
+        <div style={{ display:"flex", gap:8 }}>
+          <input
+            className="input-field"
+            type="email"
+            value={emailConvidado}
+            onMouseDown={e => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
+            onChange={e => { setEmailConvidado(e.target.value); setShowEmailDropdown(true); }}
+            onFocus={() => setShowEmailDropdown(true)}
+            placeholder="Digite ou selecione o e-mail..."
+            style={{ flex:1 }}
+          />
+          {contatosComEmail.length > 0 && (
+            <button
+              type="button"
+              onClick={e => { e.stopPropagation(); setShowEmailDropdown(!showEmailDropdown); }}
+              style={{ height:44, padding:"0 12px", borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.85)", cursor:"pointer", display:"flex", alignItems:"center", gap:6, fontSize:12, fontWeight:600, color:"#2980b9", flexShrink:0 }}
+            >
+              <Users2 style={{ width:13, height:13 }} />
+              Contatos
+              <ChevronDown style={{ width:12, height:12 }} />
+            </button>
+          )}
+        </div>
+
+        <AnimatePresence>
+          {showEmailDropdown && filtrados.length > 0 && (
+            <motion.div
+              initial={{ opacity:0, y:-4 }}
+              animate={{ opacity:1, y:0 }}
+              exit={{ opacity:0, y:-4 }}
+              transition={{ duration:0.15 }}
+              onClick={e => e.stopPropagation()}
+              style={{ position:"absolute", top:"calc(100% + 6px)", left:0, right:0, zIndex:300, background:"rgba(240,250,255,0.98)", backdropFilter:"blur(16px)", border:"1px solid rgba(200,225,240,0.9)", borderRadius:12, boxShadow:"0 8px 32px rgba(41,128,185,0.15)", overflow:"hidden", maxHeight:200, overflowY:"auto" }}
+            >
+              {empresaNome && (
+                <div style={{ padding:"8px 14px 4px", fontSize:10, fontWeight:700, color:"rgba(20,45,70,0.4)", letterSpacing:"0.06em", textTransform:"uppercase" }}>
+                  {empresaNome}
+                </div>
+              )}
+              {filtrados.map(c => (
+                <div
+                  key={c.contato_id}
+                  className="email-option"
+                  onMouseDown={e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setEmailConvidado(c.email!);
+                    setShowEmailDropdown(false);
+                  }}
+                >
+                  <span style={{ fontWeight:600, color:"#0f2133" }}>{c.nome}</span>
+                  <span style={{ fontSize:12, color:"#2980b9" }}>{c.email}</span>
+                </div>
+              ))}
+              <div
+                className="email-option"
+                style={{ borderTop:"1px solid rgba(200,225,240,0.5)", color:"rgba(20,45,70,0.5)" }}
+                onMouseDown={e => { e.preventDefault(); setShowEmailDropdown(false); }}
+              >
+                <span style={{ fontSize:12 }}>✏️ Digitar outro e-mail</span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {emailConvidado && !showEmailDropdown && (
+          <div style={{ marginTop:8, display:"flex", alignItems:"center", gap:8, padding:"6px 10px", borderRadius:8, background:"rgba(41,128,185,0.08)", border:"1px solid rgba(41,128,185,0.2)", width:"fit-content" }}>
+            <Mail style={{ width:12, height:12, color:"#2980b9" }} />
+            <span style={{ fontSize:12, fontWeight:600, color:"#2980b9" }}>{emailConvidado}</span>
+            <button
+              type="button"
+              onClick={() => setEmailConvidado("")}
+              style={{ background:"none", border:"none", cursor:"pointer", padding:0, display:"flex" }}
+            >
+              <X style={{ width:12, height:12, color:"#2980b9" }} />
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+
 export default function Calendario() {
   const navigate = useNavigate();
   const today = new Date();
@@ -121,7 +241,6 @@ export default function Calendario() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ titulo:"", tipo:"call", data:"", hora_inicio:"09:00", hora_fim:"10:00", empresa_id:"", empresa_nome:"", descricao:"" });
 
-  // Integrações
   const [outlookConectado, setOutlookConectado] = useState(false);
   const [googleConectado, setGoogleConectado] = useState(false);
   const [agendarOutlook, setAgendarOutlook] = useState(false);
@@ -148,17 +267,17 @@ export default function Calendario() {
     else setContatos([]);
   }, [form.empresa_id]);
 
-  const token = () => localStorage.getItem("token") || "";
-  const headers = () => ({ "Content-Type":"application/json", Authorization:`Bearer ${token()}` });
+  const authHeaders = () => ({ "Content-Type":"application/json", Authorization:`Bearer ${localStorage.getItem("token")||""}` });
 
   const fetchAll = async () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) return;
+      const h = authHeaders();
       const [evRes, empRes, meRes] = await Promise.all([
-        fetch(`${API}/eventos`, { headers: headers() }),
-        fetch(`${API}/empresas`, { headers: headers() }),
-        fetch(`${API}/me`, { headers: headers() }),
+        fetch(`${API}/eventos`, { headers: h }),
+        fetch(`${API}/empresas`, { headers: h }),
+        fetch(`${API}/me`, { headers: h }),
       ]);
       if (evRes.ok) setEventos(await evRes.json());
       if (empRes.ok) setEmpresas(await empRes.json());
@@ -168,7 +287,7 @@ export default function Calendario() {
 
   const fetchContatosEmpresa = async (empresaId: string) => {
     try {
-      const res = await fetch(`${API}/empresas/${empresaId}/contatos`, { headers: headers() });
+      const res = await fetch(`${API}/empresas/${empresaId}/contatos`, { headers: authHeaders() });
       if (res.ok) {
         const data = await res.json();
         setContatos(data.filter((c: Contato) => c.email));
@@ -177,12 +296,12 @@ export default function Calendario() {
   };
 
   const checkIntegrations = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
+    if (!localStorage.getItem("token")) return;
     try {
+      const h = authHeaders();
       const [outlookRes, googleRes] = await Promise.all([
-        fetch(`${API}/auth/outlook/status`, { headers: headers() }),
-        fetch(`${API}/auth/google/status`, { headers: headers() }),
+        fetch(`${API}/auth/outlook/status`, { headers: h }),
+        fetch(`${API}/auth/google/status`, { headers: h }),
       ]);
       if (outlookRes.ok) { const d = await outlookRes.json(); setOutlookConectado(d.conectado); }
       if (googleRes.ok)  { const d = await googleRes.json(); setGoogleConectado(d.conectado); }
@@ -192,28 +311,28 @@ export default function Calendario() {
   const conectarOutlook = async () => {
     setConectandoOutlook(true);
     try {
-      const res = await fetch(`${API}/auth/outlook/login`, { headers: headers() });
+      const res = await fetch(`${API}/auth/outlook/login`, { headers: authHeaders() });
       const data = await res.json();
       if (data.auth_url) window.location.href = data.auth_url;
     } catch { setConectandoOutlook(false); }
   };
 
   const desconectarOutlook = async () => {
-    await fetch(`${API}/auth/outlook/disconnect`, { method:"DELETE", headers: headers() });
+    await fetch(`${API}/auth/outlook/disconnect`, { method:"DELETE", headers: authHeaders() });
     setOutlookConectado(false); setAgendarOutlook(false);
   };
 
   const conectarGoogle = async () => {
     setConectandoGoogle(true);
     try {
-      const res = await fetch(`${API}/auth/google/login`, { headers: headers() });
+      const res = await fetch(`${API}/auth/google/login`, { headers: authHeaders() });
       const data = await res.json();
       if (data.auth_url) window.location.href = data.auth_url;
     } catch { setConectandoGoogle(false); }
   };
 
   const desconectarGoogle = async () => {
-    await fetch(`${API}/auth/google/disconnect`, { method:"DELETE", headers: headers() });
+    await fetch(`${API}/auth/google/disconnect`, { method:"DELETE", headers: authHeaders() });
     setGoogleConectado(false); setAgendarGoogle(false);
   };
 
@@ -238,17 +357,24 @@ export default function Calendario() {
     try {
       const body = { ...form, empresa_id:form.empresa_id||null, empresa_nome:form.empresa_nome||null };
       const url = editEvento ? `${API}/eventos/${editEvento.evento_id}` : `${API}/eventos`;
-      const res = await fetch(url, { method:editEvento?"PUT":"POST", headers:headers(), body:JSON.stringify(body) });
+      const res = await fetch(url, { method:editEvento?"PUT":"POST", headers:authHeaders(), body:JSON.stringify(body) });
       if (res.ok) {
         const data = await res.json();
         const eventoId = editEvento ? editEvento.evento_id : data.id;
-        const reuniaoPayload = { titulo:form.titulo, descricao:form.descricao||"", data:form.data, hora_inicio:form.hora_inicio, hora_fim:form.hora_fim, email_convidado:emailConvidado||null };
+        const reuniaoPayload = {
+          titulo: form.titulo,
+          descricao: form.descricao || "",
+          data: form.data,
+          hora_inicio: form.hora_inicio,
+          hora_fim: form.hora_fim,
+          email_convidado: emailConvidado || null,
+        };
 
         if (agendarOutlook && outlookConectado && eventoId) {
-          await fetch(`${API}/eventos/${eventoId}/agendar-outlook`, { method:"POST", headers:headers(), body:JSON.stringify(reuniaoPayload) });
+          await fetch(`${API}/eventos/${eventoId}/agendar-outlook`, { method:"POST", headers:authHeaders(), body:JSON.stringify(reuniaoPayload) });
         }
         if (agendarGoogle && googleConectado && eventoId) {
-          await fetch(`${API}/eventos/${eventoId}/agendar-google`, { method:"POST", headers:headers(), body:JSON.stringify(reuniaoPayload) });
+          await fetch(`${API}/eventos/${eventoId}/agendar-google`, { method:"POST", headers:authHeaders(), body:JSON.stringify(reuniaoPayload) });
         }
         setShowModal(false); fetchAll();
       }
@@ -258,7 +384,7 @@ export default function Calendario() {
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("Excluir este evento?")) return;
-    await fetch(`${API}/eventos/${id}`, { method:"DELETE", headers:headers() });
+    await fetch(`${API}/eventos/${id}`, { method:"DELETE", headers:authHeaders() });
     setShowModal(false); fetchAll();
   };
 
@@ -300,377 +426,6 @@ export default function Calendario() {
       </div>
     );
   };
-
-  const IntegrationBar = () => (
-    <div style={{padding:"10px 28px",background:"rgba(210,238,248,0.6)",borderBottom:"1px solid rgba(200,225,240,0.5)",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
-      <span style={{fontSize:11,fontWeight:700,color:"rgba(20,45,70,0.45)",letterSpacing:"0.05em",textTransform:"uppercase",marginRight:4}}>Calendários</span>
-
-      {/* Outlook */}
-      <div className="connect-card" onClick={outlookConectado?desconectarOutlook:conectarOutlook}
-        style={{borderColor:outlookConectado?"rgba(0,120,212,0.4)":"rgba(200,225,240,0.9)",background:outlookConectado?"rgba(0,120,212,0.07)":"rgba(255,255,255,0.7)"}}>
-        <OutlookIcon size={16}/>
-        <span style={{fontSize:12,fontWeight:600,color:outlookConectado?"#0078D4":"rgba(20,45,70,0.6)"}}>
-          {conectandoOutlook?"Conectando...":outlookConectado?"Outlook conectado":"Conectar Outlook"}
-        </span>
-        {outlookConectado?<CheckCircle2 style={{width:13,height:13,color:"#0078D4"}}/>:<Link2 style={{width:13,height:13,color:"rgba(20,45,70,0.35)"}}/>}
-      </div>
-
-      {/* Google */}
-      <div className="connect-card" onClick={googleConectado?desconectarGoogle:conectarGoogle}
-        style={{borderColor:googleConectado?"rgba(66,133,244,0.4)":"rgba(200,225,240,0.9)",background:googleConectado?"rgba(66,133,244,0.07)":"rgba(255,255,255,0.7)"}}>
-        <GoogleIcon size={16}/>
-        <span style={{fontSize:12,fontWeight:600,color:googleConectado?"#4285F4":"rgba(20,45,70,0.6)"}}>
-          {conectandoGoogle?"Conectando...":googleConectado?"Google conectado":"Conectar Google"}
-        </span>
-        {googleConectado?<CheckCircle2 style={{width:13,height:13,color:"#4285F4"}}/>:<Link2 style={{width:13,height:13,color:"rgba(20,45,70,0.35)"}}/>}
-      </div>
-    </div>
-  );
-
-  const EmailConvidadoField = () => {
-  const contatosComEmail = contatos.filter(c => c.email);
-
-  const filtrados = emailConvidado
-    ? contatosComEmail.filter(
-        c =>
-          c.email!
-            .toLowerCase()
-            .includes(emailConvidado.toLowerCase()) ||
-          c.nome
-            .toLowerCase()
-            .includes(emailConvidado.toLowerCase())
-      )
-    : contatosComEmail;
-
-  return (
-    <div
-      style={{
-        overflow: "visible",
-        marginTop: 10,
-        minHeight: 110,
-      }}
-    >
-      <label
-        style={{
-          fontSize: 10,
-          fontWeight: 700,
-          letterSpacing: "0.1em",
-          textTransform: "uppercase",
-          color: "rgba(20,45,70,0.5)",
-          display: "block",
-          marginBottom: 6,
-        }}
-      >
-        E-mail do cliente para convite (opcional)
-      </label>
-
-      <div
-        ref={emailDropdownRef}
-        style={{ position: "relative" }}
-      >
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-          }}
-        >
-          <input
-            key="email-convidado-fixo"
-            autoFocus
-            className="input-field"
-            type="email"
-            value={emailConvidado}
-            onMouseDown={(e) =>
-              e.stopPropagation()
-            }
-            onClick={(e) =>
-              e.stopPropagation()
-            }
-            onChange={(e) => {
-              const valor =
-                e.target.value;
-
-              setEmailConvidado(valor);
-
-              // mantém dropdown aberto
-              setShowEmailDropdown(
-                true
-              );
-            }}
-            onFocus={() => {
-              setShowEmailDropdown(
-                true
-              );
-            }}
-            placeholder="Digite ou selecione o e-mail..."
-            style={{ flex: 1 }}
-          />
-
-          {contatosComEmail.length >
-            0 && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowEmailDropdown(
-                  !showEmailDropdown
-                );
-              }}
-              style={{
-                height: 44,
-                padding:
-                  "0 12px",
-                borderRadius: 10,
-                border:
-                  "1px solid rgba(200,225,240,0.9)",
-                background:
-                  "rgba(255,255,255,0.85)",
-                cursor:
-                  "pointer",
-                display:
-                  "flex",
-                alignItems:
-                  "center",
-                gap: 6,
-                fontSize: 12,
-                fontWeight: 600,
-                color:
-                  "#2980b9",
-                flexShrink: 0,
-              }}
-            >
-              <Users2
-                style={{
-                  width: 13,
-                  height: 13,
-                }}
-              />
-              Contatos
-              <ChevronDown
-                style={{
-                  width: 12,
-                  height: 12,
-                }}
-              />
-            </button>
-          )}
-        </div>
-
-        <AnimatePresence>
-          {showEmailDropdown &&
-            filtrados.length >
-              0 && (
-              <motion.div
-                initial={{
-                  opacity: 0,
-                  y: -4,
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                }}
-                exit={{
-                  opacity: 0,
-                  y: -4,
-                }}
-                transition={{
-                  duration: 0.15,
-                }}
-                style={{
-                  position:
-                    "absolute",
-                  top:
-                    "calc(100% + 6px)",
-                  left: 0,
-                  right: 0,
-                  zIndex: 200,
-                  background:
-                    "rgba(240,250,255,0.98)",
-                  backdropFilter:
-                    "blur(16px)",
-                  border:
-                    "1px solid rgba(200,225,240,0.9)",
-                  borderRadius: 12,
-                  boxShadow:
-                    "0 8px 32px rgba(41,128,185,0.15)",
-                  overflow:
-                    "hidden",
-                  maxHeight: 200,
-                  overflowY:
-                    "auto",
-                }}
-                onClick={(e) =>
-                  e.stopPropagation()
-                }
-              >
-                {form.empresa_nome && (
-                  <div
-                    style={{
-                      padding:
-                        "8px 14px 4px",
-                      fontSize:
-                        10,
-                      fontWeight:
-                        700,
-                      color:
-                        "rgba(20,45,70,0.4)",
-                      letterSpacing:
-                        "0.06em",
-                      textTransform:
-                        "uppercase",
-                    }}
-                  >
-                    {
-                      form.empresa_nome
-                    }
-                  </div>
-                )}
-
-                {filtrados.map(
-                  c => (
-                    <div
-                      key={
-                        c.contato_id
-                      }
-                      className="email-option"
-                      onClick={() => {
-                        setEmailConvidado(
-                          c.email!
-                        );
-                        setShowEmailDropdown(
-                          false
-                        );
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontWeight:
-                            600,
-                          color:
-                            "#0f2133",
-                        }}
-                      >
-                        {c.nome}
-                      </span>
-
-                      <span
-                        style={{
-                          fontSize:
-                            12,
-                          color:
-                            "#2980b9",
-                        }}
-                      >
-                        {c.email}
-                      </span>
-                    </div>
-                  )
-                )}
-
-                <div
-                  className="email-option"
-                  style={{
-                    borderTop:
-                      "1px solid rgba(200,225,240,0.5)",
-                    color:
-                      "rgba(20,45,70,0.5)",
-                  }}
-                  onClick={() =>
-                    setShowEmailDropdown(
-                      false
-                    )
-                  }
-                >
-                  <span
-                    style={{
-                      fontSize:
-                        12,
-                    }}
-                  >
-                    ✏️ Digitar outro
-                    e-mail
-                  </span>
-                </div>
-              </motion.div>
-            )}
-        </AnimatePresence>
-
-        {emailConvidado &&
-          !showEmailDropdown && (
-            <div
-              style={{
-                marginTop: 8,
-                display:
-                  "flex",
-                alignItems:
-                  "center",
-                gap: 8,
-                padding:
-                  "6px 10px",
-                borderRadius: 8,
-                background:
-                  "rgba(41,128,185,0.08)",
-                border:
-                  "1px solid rgba(41,128,185,0.2)",
-                width:
-                  "fit-content",
-              }}
-            >
-              <Mail
-                style={{
-                  width: 12,
-                  height: 12,
-                  color:
-                    "#2980b9",
-                }}
-              />
-
-              <span
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color:
-                    "#2980b9",
-                }}
-              >
-                {
-                  emailConvidado
-                }
-              </span>
-
-              <button
-                onClick={() =>
-                  setEmailConvidado(
-                    ""
-                  )
-                }
-                style={{
-                  background:
-                    "none",
-                  border:
-                    "none",
-                  cursor:
-                    "pointer",
-                  padding: 0,
-                  display:
-                    "flex",
-                }}
-              >
-                <X
-                  style={{
-                    width: 12,
-                    height: 12,
-                    color:
-                      "#2980b9",
-                  }}
-                />
-              </button>
-            </div>
-          )}
-      </div>
-    </div>
-  );
-};
 
   const salvarLabel = () => {
     if (saving) return "Salvando...";
@@ -733,24 +488,43 @@ export default function Calendario() {
             <p style={{fontSize:12,color:"rgba(20,45,70,0.5)",marginTop:1}}>Agenda e planejamento de atividades</p>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <button onClick={prev} style={{width:32,height:32,borderRadius:8,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.75)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><ChevronLeft style={{width:15,height:15,color:"#2980b9"}}/></button>
+            <button type="button" onClick={prev} style={{width:32,height:32,borderRadius:8,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.75)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><ChevronLeft style={{width:15,height:15,color:"#2980b9"}}/></button>
             <span style={{fontSize:14,fontWeight:700,color:"#0f2133",minWidth:200,textAlign:"center"}}>{headerLabel()}</span>
-            <button onClick={next} style={{width:32,height:32,borderRadius:8,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.75)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><ChevronRight style={{width:15,height:15,color:"#2980b9"}}/></button>
-            <button onClick={()=>setCurrentDate(new Date())} style={{padding:"6px 12px",borderRadius:8,border:"1px solid rgba(41,128,185,0.3)",background:"rgba(41,128,185,0.08)",color:"#2980b9",fontSize:12,fontWeight:600,cursor:"pointer"}}>Hoje</button>
+            <button type="button" onClick={next} style={{width:32,height:32,borderRadius:8,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.75)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><ChevronRight style={{width:15,height:15,color:"#2980b9"}}/></button>
+            <button type="button" onClick={()=>setCurrentDate(new Date())} style={{padding:"6px 12px",borderRadius:8,border:"1px solid rgba(41,128,185,0.3)",background:"rgba(41,128,185,0.08)",color:"#2980b9",fontSize:12,fontWeight:600,cursor:"pointer"}}>Hoje</button>
           </div>
           <div style={{display:"flex",gap:4,background:"rgba(255,255,255,0.6)",borderRadius:10,padding:4}}>
             {(["mes","semana","dia"] as const).map(v=>(
-              <button key={v} className="view-btn" onClick={()=>setView(v)} style={{background:view===v?"#2980b9":"transparent",color:view===v?"#fff":"rgba(20,45,70,0.6)"}}>
+              <button type="button" key={v} className="view-btn" onClick={()=>setView(v)} style={{background:view===v?"#2980b9":"transparent",color:view===v?"#fff":"rgba(20,45,70,0.6)"}}>
                 {v==="mes"?"Mês":v==="semana"?"Semana":"Dia"}
               </button>
             ))}
           </div>
-          <button onClick={()=>openNew(toDateStr(today.getFullYear(),today.getMonth(),today.getDate()))} style={{height:38,padding:"0 16px",borderRadius:10,border:"none",cursor:"pointer",background:"linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)",backgroundSize:"200% 200%",animation:"gradientShift 4s ease infinite",color:"#fff",fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
+          <button type="button" onClick={()=>openNew(toDateStr(today.getFullYear(),today.getMonth(),today.getDate()))} style={{height:38,padding:"0 16px",borderRadius:10,border:"none",cursor:"pointer",background:"linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)",backgroundSize:"200% 200%",animation:"gradientShift 4s ease infinite",color:"#fff",fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
             <Plus style={{width:15,height:15}}/> Novo evento
           </button>
         </div>
 
-        <IntegrationBar/>
+        {/* Integration Bar */}
+        <div style={{padding:"10px 28px",background:"rgba(210,238,248,0.6)",borderBottom:"1px solid rgba(200,225,240,0.5)",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+          <span style={{fontSize:11,fontWeight:700,color:"rgba(20,45,70,0.45)",letterSpacing:"0.05em",textTransform:"uppercase",marginRight:4}}>Calendários</span>
+          <div className="connect-card" onClick={outlookConectado?desconectarOutlook:conectarOutlook}
+            style={{borderColor:outlookConectado?"rgba(0,120,212,0.4)":"rgba(200,225,240,0.9)",background:outlookConectado?"rgba(0,120,212,0.07)":"rgba(255,255,255,0.7)"}}>
+            <OutlookIcon size={16}/>
+            <span style={{fontSize:12,fontWeight:600,color:outlookConectado?"#0078D4":"rgba(20,45,70,0.6)"}}>
+              {conectandoOutlook?"Conectando...":outlookConectado?"Outlook conectado":"Conectar Outlook"}
+            </span>
+            {outlookConectado?<CheckCircle2 style={{width:13,height:13,color:"#0078D4"}}/>:<Link2 style={{width:13,height:13,color:"rgba(20,45,70,0.35)"}}/>}
+          </div>
+          <div className="connect-card" onClick={googleConectado?desconectarGoogle:conectarGoogle}
+            style={{borderColor:googleConectado?"rgba(66,133,244,0.4)":"rgba(200,225,240,0.9)",background:googleConectado?"rgba(66,133,244,0.07)":"rgba(255,255,255,0.7)"}}>
+            <GoogleIcon size={16}/>
+            <span style={{fontSize:12,fontWeight:600,color:googleConectado?"#4285F4":"rgba(20,45,70,0.6)"}}>
+              {conectandoGoogle?"Conectando...":googleConectado?"Google conectado":"Conectar Google"}
+            </span>
+            {googleConectado?<CheckCircle2 style={{width:13,height:13,color:"#4285F4"}}/>:<Link2 style={{width:13,height:13,color:"rgba(20,45,70,0.35)"}}/>}
+          </div>
+        </div>
 
         <div style={{flex:1,padding:"20px 28px",overflow:"hidden",display:"flex",flexDirection:"column"}}>
           <div className="glass" style={{flex:1,overflow:"hidden",display:"flex",flexDirection:"column"}}>
@@ -858,14 +632,27 @@ export default function Calendario() {
       {/* MODAL */}
       <AnimatePresence>
         {showModal&&(
-          <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} style={{position:"fixed",inset:0,zIndex:100,background:"rgba(10,30,50,0.45)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setShowModal(false)}>
-            <motion.div initial={{opacity:0,scale:0.94,y:20}} animate={{opacity:1,scale:1,y:0}} exit={{opacity:0,scale:0.94}} transition={{duration:0.22}} onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:540,borderRadius:20,background:"rgba(230,245,252,0.97)",backdropFilter:"blur(24px)",border:"1px solid rgba(255,255,255,0.9)",boxShadow:"0 24px 80px rgba(41,128,185,0.2)",padding:28,maxHeight:"90vh",overflowY:"auto"}}>
-
+          <motion.div
+            initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
+            style={{position:"fixed",inset:0,zIndex:100,background:"rgba(10,30,50,0.45)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}
+            onClick={()=>setShowModal(false)}
+          >
+            <motion.div
+              initial={{opacity:0,scale:0.94,y:20}} animate={{opacity:1,scale:1,y:0}} exit={{opacity:0,scale:0.94}} transition={{duration:0.22}}
+              onClick={e=>e.stopPropagation()}
+              style={{width:"100%",maxWidth:540,borderRadius:20,background:"rgba(230,245,252,0.97)",backdropFilter:"blur(24px)",border:"1px solid rgba(255,255,255,0.9)",boxShadow:"0 24px 80px rgba(41,128,185,0.2)",padding:28,maxHeight:"90vh",overflowY:"auto"}}
+            >
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
                 <div style={{fontSize:16,fontWeight:800,color:"#0f2133"}}>{editEvento?"Editar evento":"Novo evento"}</div>
                 <div style={{display:"flex",gap:8}}>
-                  {editEvento&&<button onClick={()=>handleDelete(editEvento.evento_id)} style={{width:34,height:34,borderRadius:8,border:"1px solid rgba(231,76,60,0.3)",background:"rgba(231,76,60,0.08)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Trash2 style={{width:14,height:14,color:"#e74c3c"}}/></button>}
-                  <button onClick={()=>setShowModal(false)} style={{width:34,height:34,borderRadius:8,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.7)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><X style={{width:14,height:14,color:"rgba(20,45,70,0.5)"}}/></button>
+                  {editEvento&&(
+                    <button type="button" onClick={()=>handleDelete(editEvento.evento_id)} style={{width:34,height:34,borderRadius:8,border:"1px solid rgba(231,76,60,0.3)",background:"rgba(231,76,60,0.08)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+                      <Trash2 style={{width:14,height:14,color:"#e74c3c"}}/>
+                    </button>
+                  )}
+                  <button type="button" onClick={()=>setShowModal(false)} style={{width:34,height:34,borderRadius:8,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.7)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+                    <X style={{width:14,height:14,color:"rgba(20,45,70,0.5)"}}/>
+                  </button>
                 </div>
               </div>
 
@@ -873,7 +660,7 @@ export default function Calendario() {
                 <label style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(20,45,70,0.5)",display:"block",marginBottom:8}}>Tipo</label>
                 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                   {TIPOS.map(t=>(
-                    <button key={t.key} className={`tipo-btn${form.tipo===t.key?" selected":""}`} style={{background:form.tipo===t.key?t.bg:"rgba(255,255,255,0.6)",color:t.color,borderColor:form.tipo===t.key?t.color:"transparent"}} onClick={()=>setForm({...form,tipo:t.key})}>
+                    <button type="button" key={t.key} className={`tipo-btn${form.tipo===t.key?" selected":""}`} style={{background:form.tipo===t.key?t.bg:"rgba(255,255,255,0.6)",color:t.color,borderColor:form.tipo===t.key?t.color:"transparent"}} onClick={()=>setForm({...form,tipo:t.key})}>
                       <t.icon style={{width:13,height:13}}/>{t.label}
                     </button>
                   ))}
@@ -882,7 +669,13 @@ export default function Calendario() {
 
               <div style={{marginBottom:14}}>
                 <label style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(20,45,70,0.5)",display:"block",marginBottom:6}}>Título *</label>
-                <input className="input-field" value={form.titulo} onChange={e=>setForm({...form,titulo:e.target.value})} placeholder="Ex: Call com João - TechSolutions"/>
+                <input
+                  className="input-field"
+                  value={form.titulo}
+                  onChange={e=>setForm({...form,titulo:e.target.value})}
+                  onKeyDown={e=>{ if(e.key==="Enter") e.preventDefault(); }}
+                  placeholder="Ex: Call com João - TechSolutions"
+                />
               </div>
 
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:14}}>
@@ -914,7 +707,12 @@ export default function Calendario() {
 
               <div style={{marginBottom:16}}>
                 <label style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(20,45,70,0.5)",display:"block",marginBottom:6}}>Descrição</label>
-                <textarea className="textarea-field" value={form.descricao} onChange={e=>setForm({...form,descricao:e.target.value})} placeholder="Detalhes do evento..."/>
+                <textarea
+                  className="textarea-field"
+                  value={form.descricao}
+                  onChange={e=>setForm({...form,descricao:e.target.value})}
+                  placeholder="Detalhes do evento..."
+                />
               </div>
 
               {/* Seção agendar em */}
@@ -923,7 +721,6 @@ export default function Calendario() {
                   <Mail style={{width:11,height:11,display:"inline",marginRight:4}}/>Também agendar em
                 </label>
 
-                {/* Outlook toggle */}
                 <div className={`toggle-box${agendarOutlook?" active":""}`} onClick={()=>{if(!outlookConectado){conectarOutlook();return;}setAgendarOutlook(!agendarOutlook);}}>
                   <OutlookIcon size={18}/>
                   <div style={{flex:1}}>
@@ -935,7 +732,6 @@ export default function Calendario() {
                   </div>
                 </div>
 
-                {/* Google toggle */}
                 <div className={`toggle-box${agendarGoogle?" active":""}`} onClick={()=>{if(!googleConectado){conectarGoogle();return;}setAgendarGoogle(!agendarGoogle);}}>
                   <GoogleIcon size={18}/>
                   <div style={{flex:1}}>
@@ -947,20 +743,25 @@ export default function Calendario() {
                   </div>
                 </div>
 
-                <div
-                  style={{
-                    display:
-                      agendarOutlook || agendarGoogle
-                        ? "block"
-                        : "none",
-                  }}
-                >
-                  <EmailConvidadoField />
-                </div>
+                {(agendarOutlook || agendarGoogle) && (
+                  <EmailConvidadoField
+                    emailConvidado={emailConvidado}
+                    setEmailConvidado={setEmailConvidado}
+                    showEmailDropdown={showEmailDropdown}
+                    setShowEmailDropdown={setShowEmailDropdown}
+                    contatos={contatos}
+                    empresaNome={form.empresa_nome}
+                    dropdownRef={emailDropdownRef}
+                  />
+                )}
               </div>
 
-              <button onClick={handleSave} disabled={saving||!form.titulo||!form.data}
-                style={{width:"100%",height:48,borderRadius:12,border:"none",cursor:saving||!form.titulo||!form.data?"not-allowed":"pointer",background:saving||!form.titulo||!form.data?"rgba(41,128,185,0.4)":"linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)",backgroundSize:"200% 200%",animation:"gradientShift 4s ease infinite",color:"#fff",fontSize:14,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving||!form.titulo||!form.data}
+                style={{width:"100%",height:48,borderRadius:12,border:"none",cursor:saving||!form.titulo||!form.data?"not-allowed":"pointer",background:saving||!form.titulo||!form.data?"rgba(41,128,185,0.4)":"linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)",backgroundSize:"200% 200%",animation:"gradientShift 4s ease infinite",color:"#fff",fontSize:14,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}
+              >
                 {salvarLabel()}
               </button>
             </motion.div>
