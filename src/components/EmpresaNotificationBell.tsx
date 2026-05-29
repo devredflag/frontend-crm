@@ -28,63 +28,63 @@
     if (diff < 86400) return `${Math.floor(diff / 3600)}h atrás`;
     return `${Math.floor(diff / 86400)}d atrás`;
   }
+  let crmMailTab: Window | null = null;
+    export default function EmpresaNotificationBell({ empresaId, empresaNome, onVerComunicacoes }: Props) {
+      const [notifs,  setNotifs]  = useState<Notif[]>([]);
+      const [open,    setOpen]    = useState(false);
+      const [loading, setLoading] = useState(false);
+      const ref = useRef<HTMLDivElement>(null);
+    
 
-  export default function EmpresaNotificationBell({ empresaId, empresaNome, onVerComunicacoes }: Props) {
-    const [notifs,  setNotifs]  = useState<Notif[]>([]);
-    const [open,    setOpen]    = useState(false);
-    const [loading, setLoading] = useState(false);
-    const ref = useRef<HTMLDivElement>(null);
-    const mailTabRef = useRef<Window | null>(null);
+      const unread = notifs.filter(n => !n.lida).length;
 
-    const unread = notifs.filter(n => !n.lida).length;
-
-    useEffect(() => {
-      function handler(e: MouseEvent) {
-        if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-      }
-      if (open) document.addEventListener("mousedown", handler);
-      return () => document.removeEventListener("mousedown", handler);
-    }, [open]);
-
-    const fetchNotifs = useCallback(async () => {
-      setLoading(true);
-      try {
-        const token = localStorage.getItem("token");
-        const res = await fetch(
-          `${API}/notificacoes?empresa_id=${empresaId}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        if (res.ok) {
-          const data: Notif[] = await res.json();
-          const tipos = ["email_interaction","calendar_accepted","calendar_declined","calendar_tentative"];
-          setNotifs(data.filter(n => tipos.includes(n.tipo)));
+      useEffect(() => {
+        function handler(e: MouseEvent) {
+          if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
         }
-      } finally {
-        setLoading(false);
+        if (open) document.addEventListener("mousedown", handler);
+        return () => document.removeEventListener("mousedown", handler);
+      }, [open]);
+
+      const fetchNotifs = useCallback(async () => {
+        setLoading(true);
+        try {
+          const token = localStorage.getItem("token");
+          const res = await fetch(
+            `${API}/notificacoes?empresa_id=${empresaId}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          if (res.ok) {
+            const data: Notif[] = await res.json();
+            const tipos = ["email_interaction","calendar_accepted","calendar_declined","calendar_tentative"];
+            setNotifs(data.filter(n => tipos.includes(n.tipo)));
+          }
+        } finally {
+          setLoading(false);
+        }
+      }, [empresaId]);
+
+      useEffect(() => {
+        fetchNotifs();
+        const iv = setInterval(fetchNotifs, 60_000);
+        return () => clearInterval(iv);
+      }, [fetchNotifs]);
+
+      async function markRead(id: string) {
+        const token = localStorage.getItem("token");
+        await fetch(`${API}/notificacoes/${id}/ler`, {
+          method: "PUT",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setNotifs(prev => prev.map(n => n.notificacao_id === id ? { ...n, lida: true } : n));
       }
-    }, [empresaId]);
 
-    useEffect(() => {
-      fetchNotifs();
-      const iv = setInterval(fetchNotifs, 60_000);
-      return () => clearInterval(iv);
-    }, [fetchNotifs]);
+      async function markAllRead() {
+        await Promise.all(notifs.filter(n => !n.lida).map(n => markRead(n.notificacao_id)));
+      }
 
-    async function markRead(id: string) {
-      const token = localStorage.getItem("token");
-      await fetch(`${API}/notificacoes/${id}/ler`, {
-        method: "PUT",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setNotifs(prev => prev.map(n => n.notificacao_id === id ? { ...n, lida: true } : n));
-    }
-
-    async function markAllRead() {
-      await Promise.all(notifs.filter(n => !n.lida).map(n => markRead(n.notificacao_id)));
-    }
-
-    const platformLabel = (p?: string) => p === "gmail" ? "Gmail" : "Outlook";
-    const platformColor = (p?: string) => p === "gmail"
+      const platformLabel = (p?: string) => p === "gmail" ? "Gmail" : "Outlook";
+      const platformColor = (p?: string) => p === "gmail"
       ? { bg: "rgba(231,76,60,0.08)", color: "#c0392b", border: "rgba(231,76,60,0.2)" }
       : { bg: "rgba(41,128,185,0.08)", color: "#2980b9", border: "rgba(41,128,185,0.2)" };
 
@@ -217,19 +217,21 @@
                       }
 
                       // reutiliza aba existente
-                      const existingTab = window.open(
-                        "",
-                        "crm_mail_tab"
-                      );
+                      if (
+                        crmMailTab &&
+                        !crmMailTab.closed
+                      ) {
+                        crmMailTab.location.href =
+                          targetUrl;
 
-                      if (existingTab) {
-                        existingTab.location.href = targetUrl;
-                        existingTab.focus();
+                        crmMailTab.focus();
                       } else {
-                        window.open(
+                        crmMailTab = window.open(
                           targetUrl,
                           "crm_mail_tab"
                         );
+
+                        crmMailTab?.focus();
                       }
 
 
