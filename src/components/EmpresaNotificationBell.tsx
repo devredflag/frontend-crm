@@ -28,7 +28,7 @@
     if (diff < 86400) return `${Math.floor(diff / 3600)}h atrás`;
     return `${Math.floor(diff / 86400)}d atrás`;
   }
-  let crmMailTab: Window | null = null;
+  
     export default function EmpresaNotificationBell({ empresaId, empresaNome, onVerComunicacoes }: Props) {
       const [notifs,  setNotifs]  = useState<Notif[]>([]);
       const [open,    setOpen]    = useState(false);
@@ -217,21 +217,17 @@
                       }
 
                       // reutiliza aba existente
-                      if (
-                        crmMailTab &&
-                        !crmMailTab.closed
-                      ) {
-                        crmMailTab.location.href =
-                          targetUrl;
+                      const mailWindow = window.open(
+                        "",
+                        "crm_mail_tab"
+                      );
 
-                        crmMailTab.focus();
-                      } else {
-                        crmMailTab = window.open(
-                          targetUrl,
-                          "crm_mail_tab"
+                      if (mailWindow) {
+                        mailWindow.location.replace(
+                          targetUrl
                         );
 
-                        crmMailTab?.focus();
+                        mailWindow.focus();
                       }
 
 
