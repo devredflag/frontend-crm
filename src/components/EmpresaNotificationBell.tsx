@@ -92,11 +92,24 @@ export default function EmpresaNotificationBell({ empresaId, empresaNome, onVerC
 
   // ✅ Função centralizada para abrir/reutilizar aba
   function openMailTab(targetUrl: string) {
-    if (mailTabRef.current && !mailTabRef.current.closed) {
-      mailTabRef.current.location.href = targetUrl;
+
+    if (
+      mailTabRef.current &&
+      !mailTabRef.current.closed
+    ) {
+      mailTabRef.current.location.href =
+        targetUrl;
+
       mailTabRef.current.focus();
+
     } else {
-      mailTabRef.current = window.open(targetUrl, "_blank");
+
+      mailTabRef.current = window.open(
+        targetUrl,
+        "crm_mail_tab"
+      );
+
+      mailTabRef.current?.focus();
     }
   }
 
