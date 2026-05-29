@@ -151,7 +151,7 @@ const navItems = [
   { icon: LayoutDashboard, label: "Dashboards",                path: "/dashboard",      active: false },
   { icon: Search,          label: "Buscar Empresas",           path: null,              active: false },
   { icon: Building2,       label: "Cadastrar Empresas",        path: "/empresas/nova",  active: true  },
-  { icon: Users,           label: "Todos os clientes",         path: null,              active: false },
+  { icon: Users,           label: "Todos os clientes",         path: "/clientes",       active: false },
   { icon: ClipboardList,   label: "Gerenciamento de clientes", path: "/gerenciamento",  active: false },
   { icon: Calendar,        label: "Calendário",                path: "/calendario",     active: false },
 ];

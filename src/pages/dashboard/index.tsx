@@ -71,7 +71,7 @@
       { icon: LayoutDashboard, label: "Dashboards",                active: true  },
       { icon: Search,          label: "Buscar Empresas",           active: false },
       { icon: Building2,       label: "Cadastrar Empresas",        active: false },
-      { icon: Users,           label: "Todos os clientes",         active: false },
+      { icon: Users,           label: "Todos os clientes",         active: true  },
       { icon: ClipboardList,   label: "Gerenciamento de clientes", active: false },
       { icon: Calendar,        label: "Calendário",                active: false },
     ];
@@ -131,6 +131,18 @@
     type FilterKey = "total"|"rascunho"|"lead"|"em_contato"|"visita"|"proposta"|"negociacao"|"fechado"|"quente";
 
     export default function Dashboard() {
+      useEffect(() => {
+        const prefs = JSON.parse(
+          localStorage.getItem(
+            "crm_comm_prefs"
+          ) || "{}"
+        );
+
+        console.log(
+          "PREFERENCIAS CRM:",
+          prefs
+        );
+      }, []);
       const navigate = useNavigate();
       const [empresas, setEmpresas] = useState<Empresa[]>([]);
       const [loading, setLoading] = useState(true);
@@ -749,4 +761,4 @@
         </div>
       );
     }
-    
+      
