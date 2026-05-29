@@ -217,28 +217,15 @@
                       }
 
                       // reutiliza aba existente
-                      if (
-                        mailTabRef.current &&
-                        !mailTabRef.current.closed
-                      ) {
-                        mailTabRef.current.location.replace(
-                          targetUrl
-                        );
+                      const mailWindow = window.open(
+                        targetUrl,
+                        "crm_mail_tab"
+                      );
 
-                        mailTabRef.current.focus();
-                      } else {
-                        mailTabRef.current = window.open(
-                          "",
-                          "crm_mail_tab"
-                        );
-
-                        if (mailTabRef.current) {
-                          mailTabRef.current.location.href =
-                            targetUrl;
-
-                          mailTabRef.current.focus();
-                        }
+                      if (mailWindow) {
+                        mailWindow.focus();
                       }
+
 
                       return;
                   }
