@@ -6,7 +6,8 @@ import {
   MessageCircle, Smartphone, Monitor, Check, ChevronRight,
   Globe, ExternalLink, Info, Save, BarChart3,
   LayoutDashboard, Building2, Users,
-  Search, ClipboardList, Calendar
+  Search, ClipboardList, Calendar,
+  AlertTriangle, CalendarCheck, Repeat, Trash2, FileText
 } from "lucide-react";
 
 const css = `
@@ -33,6 +34,10 @@ const css = `
   ::-webkit-scrollbar { width:4px; height:4px; }
   ::-webkit-scrollbar-track { background:transparent; }
   ::-webkit-scrollbar-thumb { background:rgba(41,128,185,0.25); border-radius:4px; }
+  .notif-row { display:flex; align-items:center; gap:14px; padding:14px 16px; border-radius:12px; background:rgba(255,255,255,0.55); border:1px solid rgba(200,225,240,0.6); transition:background 0.16s; }
+  .notif-row:hover { background:rgba(255,255,255,0.8); }
+  .toggle-track { width:42px; height:24px; border-radius:12px; position:relative; cursor:pointer; flex-shrink:0; transition:background 0.22s; }
+  .toggle-thumb { position:absolute; top:3px; width:18px; height:18px; border-radius:50%; background:#fff; transition:left 0.22s; box-shadow:0 1px 4px rgba(0,0,0,0.18); }
   .save-btn { height:40px; padding:0 20px; border-radius:10px; border:none; cursor:pointer; background:linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9); background-size:200% 200%; animation:gradientShift 4s ease infinite; color:#fff; font-size:13px; font-weight:700; display:flex; align-items:center; gap:7px; box-shadow:0 4px 14px rgba(41,128,185,0.3); transition:opacity 0.18s; }
   .save-btn:hover { opacity:0.9; }
 `;
@@ -44,6 +49,24 @@ interface Usuario { nome: string; email: string; cargo: string; empresa_nome: st
 type OutlookMode = "web" | "app" | null;
 type WhatsAppMode = "web" | "app" | null;
 type SettingsTab = "comunicacao" | "perfil" | "notificacoes" | "seguranca";
+
+interface NotifPrefs {
+  rascunho_aviso: boolean;
+  rascunho_excluido: boolean;
+  email_interaction: boolean;
+  calendar_accepted: boolean;
+  calendar_declined: boolean;
+  visita_lembrete: boolean;
+}
+
+const DEFAULT_NOTIF_PREFS: NotifPrefs = {
+  rascunho_aviso: true,
+  rascunho_excluido: true,
+  email_interaction: true,
+  calendar_accepted: true,
+  calendar_declined: true,
+  visita_lembrete: false,
+};
 
 function avatarColor(n: string) {
   const c = ["#2980b9","#1abc9c","#8e44ad","#e67e22","#27ae60","#e74c3c"];
@@ -73,6 +96,7 @@ export default function Perfil() {
   const [activeTab, setActiveTab] = useState<SettingsTab>("comunicacao");
   const [outlookMode, setOutlookMode] = useState<OutlookMode>(null);
   const [whatsappMode, setWhatsappMode] = useState<WhatsAppMode>(null);
+  const [notifPrefs, setNotifPrefs] = useState<NotifPrefs>(DEFAULT_NOTIF_PREFS);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -90,12 +114,13 @@ export default function Perfil() {
         const prefs = JSON.parse(savedPrefs);
         if (prefs.outlookMode)   setOutlookMode(prefs.outlookMode);
         if (prefs.whatsappMode)  setWhatsappMode(prefs.whatsappMode);
+        if (prefs.notifPrefs)    setNotifPrefs({ ...DEFAULT_NOTIF_PREFS, ...prefs.notifPrefs });
       } catch {}
     }
   }, []);
 
   const handleSave = () => {
-    localStorage.setItem("crm_comm_prefs", JSON.stringify({ outlookMode, whatsappMode }));
+    localStorage.setItem("crm_comm_prefs", JSON.stringify({ outlookMode, whatsappMode, notifPrefs }));
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   };
@@ -434,10 +459,170 @@ export default function Perfil() {
               {/* ── ABA NOTIFICAÇÕES ── */}
               {activeTab === "notificacoes" && (
                 <motion.div key="notificacoes" initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-6 }} transition={{ duration:0.25 }}>
-                  <motion.div className="glass-card" style={{ padding:"28px 24px", textAlign:"center" }}>
-                    <Bell style={{ width:36, height:36, color:"rgba(41,128,185,0.3)", margin:"0 auto 12px" }}/>
-                    <div style={{ fontSize:15, fontWeight:700, color:"#0f2133", marginBottom:6 }}>Preferências de notificação</div>
-                    <div style={{ fontSize:12, color:"rgba(20,45,70,0.4)" }}>Em breve você poderá configurar quais alertas deseja receber.</div>
+
+                  <div style={{ marginBottom:20 }}>
+                    <h2 style={{ fontSize:16, fontWeight:800, color:"#0f2133", letterSpacing:"-0.02em" }}>Preferências de Notificação</h2>
+                    <p style={{ fontSize:12, color:"rgba(20,45,70,0.5)", marginTop:3 }}>Escolha quais alertas deseja receber no sino de notificações</p>
+                  </div>
+
+                  {/* Rascunhos */}
+                  <motion.div className="glass-card" style={{ padding:"20px 22px", marginBottom:14 }} initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.05 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
+                      <div style={{ width:30, height:30, borderRadius:8, background:"rgba(230,126,34,0.1)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                        <FileText style={{ width:14, height:14, color:"#e67e22" }}/>
+                      </div>
+                      <div style={{ fontSize:13, fontWeight:700, color:"#0f2133" }}>Rascunhos</div>
+                    </div>
+                    <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+
+                      {/* rascunho_aviso */}
+                      <div className="notif-row">
+                        <div style={{ width:34, height:34, borderRadius:9, background:"rgba(230,126,34,0.1)", border:"1px solid rgba(230,126,34,0.2)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                          <AlertTriangle style={{ width:15, height:15, color:"#e67e22" }}/>
+                        </div>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontSize:13, fontWeight:700, color:"#0f2133" }}>Alerta de rascunho pendente</div>
+                          <div style={{ fontSize:11, color:"rgba(20,45,70,0.45)", marginTop:2 }}>Notifica quando um rascunho está pendente há mais de 48h</div>
+                        </div>
+                        <div
+                          className="toggle-track"
+                          style={{ background: notifPrefs.rascunho_aviso ? "#e67e22" : "rgba(150,180,200,0.35)" }}
+                          onClick={() => setNotifPrefs(p => ({ ...p, rascunho_aviso: !p.rascunho_aviso }))}
+                        >
+                          <div className="toggle-thumb" style={{ left: notifPrefs.rascunho_aviso ? "21px" : "3px" }}/>
+                        </div>
+                      </div>
+
+                      {/* rascunho_excluido */}
+                      <div className="notif-row">
+                        <div style={{ width:34, height:34, borderRadius:9, background:"rgba(231,76,60,0.1)", border:"1px solid rgba(231,76,60,0.2)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                          <Trash2 style={{ width:15, height:15, color:"#e74c3c" }}/>
+                        </div>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontSize:13, fontWeight:700, color:"#0f2133" }}>Rascunho excluído automaticamente</div>
+                          <div style={{ fontSize:11, color:"rgba(20,45,70,0.45)", marginTop:2 }}>Avisa quando um rascunho foi removido por expiração</div>
+                        </div>
+                        <div
+                          className="toggle-track"
+                          style={{ background: notifPrefs.rascunho_excluido ? "#e74c3c" : "rgba(150,180,200,0.35)" }}
+                          onClick={() => setNotifPrefs(p => ({ ...p, rascunho_excluido: !p.rascunho_excluido }))}
+                        >
+                          <div className="toggle-thumb" style={{ left: notifPrefs.rascunho_excluido ? "21px" : "3px" }}/>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  {/* E-mail */}
+                  <motion.div className="glass-card" style={{ padding:"20px 22px", marginBottom:14 }} initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.08 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
+                      <div style={{ width:30, height:30, borderRadius:8, background:"rgba(41,128,185,0.1)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                        <Mail style={{ width:14, height:14, color:"#2980b9" }}/>
+                      </div>
+                      <div style={{ fontSize:13, fontWeight:700, color:"#0f2133" }}>E-mail</div>
+                    </div>
+                    <div className="notif-row">
+                      <div style={{ width:34, height:34, borderRadius:9, background:"rgba(41,128,185,0.1)", border:"1px solid rgba(41,128,185,0.2)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                        <Mail style={{ width:15, height:15, color:"#2980b9" }}/>
+                      </div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontSize:13, fontWeight:700, color:"#0f2133" }}>Interações por e-mail</div>
+                        <div style={{ fontSize:11, color:"rgba(20,45,70,0.45)", marginTop:2 }}>Quando um contato responde, abre ou interage com um e-mail enviado</div>
+                      </div>
+                      <div
+                        className="toggle-track"
+                        style={{ background: notifPrefs.email_interaction ? "#2980b9" : "rgba(150,180,200,0.35)" }}
+                        onClick={() => setNotifPrefs(p => ({ ...p, email_interaction: !p.email_interaction }))}
+                      >
+                        <div className="toggle-thumb" style={{ left: notifPrefs.email_interaction ? "21px" : "3px" }}/>
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  {/* Calendário */}
+                  <motion.div className="glass-card" style={{ padding:"20px 22px", marginBottom:14 }} initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.11 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
+                      <div style={{ width:30, height:30, borderRadius:8, background:"rgba(142,68,173,0.1)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                        <Calendar style={{ width:14, height:14, color:"#8e44ad" }}/>
+                      </div>
+                      <div style={{ fontSize:13, fontWeight:700, color:"#0f2133" }}>Calendário</div>
+                    </div>
+                    <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+
+                      {/* calendar_accepted */}
+                      <div className="notif-row">
+                        <div style={{ width:34, height:34, borderRadius:9, background:"rgba(39,174,96,0.1)", border:"1px solid rgba(39,174,96,0.2)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                          <CalendarCheck style={{ width:15, height:15, color:"#27ae60" }}/>
+                        </div>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontSize:13, fontWeight:700, color:"#0f2133" }}>Evento aceito</div>
+                          <div style={{ fontSize:11, color:"rgba(20,45,70,0.45)", marginTop:2 }}>Quando um contato confirma presença em um evento agendado</div>
+                        </div>
+                        <div
+                          className="toggle-track"
+                          style={{ background: notifPrefs.calendar_accepted ? "#27ae60" : "rgba(150,180,200,0.35)" }}
+                          onClick={() => setNotifPrefs(p => ({ ...p, calendar_accepted: !p.calendar_accepted }))}
+                        >
+                          <div className="toggle-thumb" style={{ left: notifPrefs.calendar_accepted ? "21px" : "3px" }}/>
+                        </div>
+                      </div>
+
+                      {/* calendar_declined */}
+                      <div className="notif-row">
+                        <div style={{ width:34, height:34, borderRadius:9, background:"rgba(231,76,60,0.1)", border:"1px solid rgba(231,76,60,0.2)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                          <Repeat style={{ width:15, height:15, color:"#e74c3c" }}/>
+                        </div>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontSize:13, fontWeight:700, color:"#0f2133" }}>Evento recusado ou reagendado</div>
+                          <div style={{ fontSize:11, color:"rgba(20,45,70,0.45)", marginTop:2 }}>Quando um contato recusa ou solicita alteração no evento</div>
+                        </div>
+                        <div
+                          className="toggle-track"
+                          style={{ background: notifPrefs.calendar_declined ? "#e74c3c" : "rgba(150,180,200,0.35)" }}
+                          onClick={() => setNotifPrefs(p => ({ ...p, calendar_declined: !p.calendar_declined }))}
+                        >
+                          <div className="toggle-thumb" style={{ left: notifPrefs.calendar_declined ? "21px" : "3px" }}/>
+                        </div>
+                      </div>
+
+                      {/* visita_lembrete */}
+                      <div className="notif-row">
+                        <div style={{ width:34, height:34, borderRadius:9, background:"rgba(13,148,136,0.1)", border:"1px solid rgba(13,148,136,0.2)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                          <Bell style={{ width:15, height:15, color:"#0d9488" }}/>
+                        </div>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontSize:13, fontWeight:700, color:"#0f2133" }}>Lembrete de visita agendada</div>
+                          <div style={{ fontSize:11, color:"rgba(20,45,70,0.45)", marginTop:2 }}>Envia um alerta 24h antes de uma visita marcada</div>
+                        </div>
+                        <div
+                          className="toggle-track"
+                          style={{ background: notifPrefs.visita_lembrete ? "#0d9488" : "rgba(150,180,200,0.35)" }}
+                          onClick={() => setNotifPrefs(p => ({ ...p, visita_lembrete: !p.visita_lembrete }))}
+                        >
+                          <div className="toggle-thumb" style={{ left: notifPrefs.visita_lembrete ? "21px" : "3px" }}/>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  {/* Salvar */}
+                  <motion.div className="glass-card" style={{ padding:"14px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:16 }} initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.14 }}>
+                    <div style={{ fontSize:12, color:"rgba(20,45,70,0.45)" }}>
+                      {Object.values(notifPrefs).filter(Boolean).length} de {Object.keys(notifPrefs).length} notificações ativas
+                    </div>
+                    <button className="save-btn" onClick={handleSave}>
+                      <AnimatePresence mode="wait">
+                        {saved ? (
+                          <motion.span key="saved" initial={{ opacity:0, scale:0.8 }} animate={{ opacity:1, scale:1 }} exit={{ opacity:0 }} style={{ display:"flex", alignItems:"center", gap:6 }}>
+                            <Check style={{ width:14, height:14 }}/> Salvo!
+                          </motion.span>
+                        ) : (
+                          <motion.span key="save" initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }} style={{ display:"flex", alignItems:"center", gap:6 }}>
+                            <Save style={{ width:14, height:14 }}/> Salvar preferências
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                    </button>
                   </motion.div>
                 </motion.div>
               )}
