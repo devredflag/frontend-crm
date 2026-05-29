@@ -6,9 +6,9 @@ import {
   ClipboardList, Calendar, ArrowLeft, Edit3,
   MapPin, Tag, Thermometer, TrendingUp, DollarSign,
   Phone, Mail, User, Clock, ChevronRight, MessageCircle, Link2,
+  ChevronDown, Settings,
 } from "lucide-react";
 
-// ── Import do modal de seleção de destinatários ───────────────
 import SelectRecipientsModal, {
   SendChannel,
   Recipient,
@@ -38,18 +38,20 @@ const css = `
   .info-row:last-child { border-bottom:none; }
   .send-btn { display:flex; align-items:center; gap:5px; padding:6px 12px; border-radius:8px; border:1.5px solid; font-size:11px; font-weight:700; cursor:pointer; transition:all 0.18s; font-family:'Plus Jakarta Sans',sans-serif; }
   .skeleton { background:linear-gradient(90deg,rgba(200,225,240,0.4) 25%,rgba(220,240,252,0.7) 50%,rgba(200,225,240,0.4) 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:6px; }
+  .user-card { margin-top:16px; padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; gap:10px; cursor:pointer; transition:background 0.18s; }
+  .user-card:hover { background:rgba(255,255,255,0.12); }
   ::-webkit-scrollbar { width:4px; }
   ::-webkit-scrollbar-track { background:transparent; }
   ::-webkit-scrollbar-thumb { background:rgba(41,128,185,0.25); border-radius:4px; }
 `;
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboards" },
-  { icon: Search,          label: "Buscar Empresas" },
-  { icon: Building2,       label: "Cadastrar Empresas" },
-  { icon: Users,           label: "Todos os clientes" },
-  { icon: ClipboardList,   label: "Gerenciamento de clientes" },
-  { icon: Calendar,        label: "Calendário" },
+  { icon: LayoutDashboard, label: "Dashboards",                path: "/dashboard" },
+  { icon: Search,          label: "Buscar Empresas",           path: "/buscar" },
+  { icon: Building2,       label: "Cadastrar Empresas",        path: "/empresas/nova" },
+  { icon: Users,           label: "Todos os clientes",         path: "/clientes" },
+  { icon: ClipboardList,   label: "Gerenciamento de clientes", path: "/gerenciamento" },
+  { icon: Calendar,        label: "Calendário",                path: "/calendario" },
 ];
 
 interface Contato {
@@ -82,6 +84,13 @@ interface Empresa {
   observacoes?: string;
 }
 
+interface Usuario {
+  nome: string;
+  email: string;
+  cargo: string;
+  empresa_nome: string;
+}
+
 function statusColor(s: string) {
   if (s === "Fechado")    return { bg:"rgba(39,174,96,0.12)",   text:"#1e8449",  border:"rgba(39,174,96,0.25)"   };
   if (s === "Proposta")   return { bg:"rgba(142,68,173,0.12)",  text:"#7d3c98",  border:"rgba(142,68,173,0.25)"  };
@@ -105,7 +114,6 @@ function formatDate(d: string | null) {
   return new Date(d).toLocaleDateString("pt-BR");
 }
 
-// ── Botão de envio reutilizável ───────────────────────────────
 function SendButton({
   channel, color, bg, border, icon: Icon, label, onClick,
 }: {
@@ -132,8 +140,8 @@ export default function EmpresaView() {
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
   const [contatos, setContatos] = useState<Contato[]>([]);
   const [loading, setLoading] = useState(true);
+  const [usuario, setUsuario] = useState<Usuario | null>(null);
 
-  // ── Estado do modal de destinatários ─────────────────────
   const [sendChannel, setSendChannel] = useState<SendChannel | null>(null);
 
   useEffect(() => {
@@ -143,40 +151,39 @@ export default function EmpresaView() {
         const token = localStorage.getItem("token");
         const headers = { Authorization: `Bearer ${token}` };
 
-        const [empRes, contatosRes] = await Promise.all([
+        const [empRes, contatosRes, meRes] = await Promise.all([
           fetch(`${API}/empresas/${id}`, { headers }),
           fetch(`${API}/empresas/${id}/contatos`, { headers }),
+          fetch(`${API}/me`, { headers }),
         ]);
 
-        if (empRes.ok) setEmpresa(await empRes.json());
+        if (empRes.ok)      setEmpresa(await empRes.json());
         if (contatosRes.ok) setContatos(await contatosRes.json());
+        if (meRes.ok)       setUsuario(await meRes.json());
       } catch {}
       setLoading(false);
     };
     fetchAll();
   }, [id]);
 
-  // ── Montar lista de destinatários por canal ───────────────
   const buildRecipients = (channel: SendChannel): Recipient[] => {
-    return contatos
-      .map((c, i) => {
-        let valor = "";
-        if (channel === "email")    valor = c.email || "";
-        if (channel === "whatsapp") valor = c.whatsapp || c.celular || "";
-        if (channel === "telefone") valor = c.celular || c.telefone || "";
-        if (channel === "linkedin") valor = c.linkedin || "";
-        return {
-          id: c.contato_id,
-          nome: c.nome,
-          funcao: c.funcao || c.cargo,
-          valor,
-          principal: i === 0,
-          decisor: c.decisor,
-        };
-      });
+    return contatos.map((c, i) => {
+      let valor = "";
+      if (channel === "email")    valor = c.email || "";
+      if (channel === "whatsapp") valor = c.whatsapp || c.celular || "";
+      if (channel === "telefone") valor = c.celular || c.telefone || "";
+      if (channel === "linkedin") valor = c.linkedin || "";
+      return {
+        id: c.contato_id,
+        nome: c.nome,
+        funcao: c.funcao || c.cargo,
+        valor,
+        principal: i === 0,
+        decisor: c.decisor,
+      };
+    });
   };
 
-  // ── Abrir link após confirmar destinatários ───────────────
   const handleConfirmSend = (selected: Recipient[]) => {
     setSendChannel(null);
     selected.forEach(r => {
@@ -191,11 +198,16 @@ export default function EmpresaView() {
   const sc = empresa ? statusColor(empresa.status) : statusColor("");
   const tc = empresa ? tempColor(empresa.temperatura) : tempColor("");
 
+  const nomeUsuario   = usuario?.nome || "...";
+  const cargoUsuario  = usuario?.cargo || "Administrador";
+  const corUsuario    = usuario ? avatarColor(usuario.nome) : "#2980b9";
+  const iniciaisUsu   = usuario ? initials(usuario.nome) : "?";
+
   return (
     <div style={{ display:"flex", height:"100vh", overflow:"hidden", position:"relative" }}>
       <style>{css}</style>
 
-      {/* ── Modal de seleção de destinatários ── */}
+      {/* Modal */}
       <SelectRecipientsModal
         open={!!sendChannel}
         channel={sendChannel ?? "email"}
@@ -219,8 +231,9 @@ export default function EmpresaView() {
         ))}
       </div>
 
-      {/* Sidebar */}
+      {/* ── Sidebar ── */}
       <div style={{ width:220, flexShrink:0, height:"100vh", overflowY:"auto", position:"relative", zIndex:10, background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)", boxShadow:"4px 0 24px rgba(0,0,0,0.18)", display:"flex", flexDirection:"column", padding:"0 12px 20px" }}>
+        {/* Logo */}
         <div style={{ padding:"22px 4px 24px", borderBottom:"1px solid rgba(255,255,255,0.08)", marginBottom:16 }}>
           <div style={{ display:"flex", alignItems:"center", gap:10 }}>
             <div style={{ width:36, height:36, borderRadius:10, background:"linear-gradient(135deg,#2980b9,#1abc9c)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 12px rgba(41,128,185,0.4)" }}>
@@ -232,23 +245,34 @@ export default function EmpresaView() {
             </div>
           </div>
         </div>
+
+        {/* Nav */}
         <nav style={{ flex:1, display:"flex", flexDirection:"column", gap:2 }}>
           {navItems.map(item => (
-            <div key={item.label} className="nav-item" onClick={() => {
-              if (item.label === "Dashboards") navigate("/dashboard");
-              if (item.label === "Cadastrar Empresas") navigate("/empresas/nova");
-              if (item.label === "Todos os clientes") navigate("/clientes");
-              if (item.label === "Gerenciamento de clientes") navigate("/gerenciamento");
-              if (item.label === "Calendário") navigate("/calendario");
-            }}>
+            <div key={item.label} className="nav-item" onClick={() => navigate(item.path)}>
               <item.icon style={{ width:16, height:16, flexShrink:0 }} />
               {item.label}
             </div>
           ))}
         </nav>
+
+        {/* ── Card do usuário ── */}
+        <div
+          className="user-card"
+          onClick={() => navigate("/perfil")}
+        >
+          <div style={{ width:34, height:34, borderRadius:"50%", background:`linear-gradient(135deg,${corUsuario},${corUsuario}cc)`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#fff", flexShrink:0 }}>
+            {iniciaisUsu}
+          </div>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ fontSize:12, fontWeight:600, color:"#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{nomeUsuario}</div>
+            <div style={{ fontSize:10, color:"rgba(255,255,255,0.45)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{cargoUsuario}</div>
+          </div>
+          <ChevronDown style={{ width:13, height:13, color:"rgba(255,255,255,0.4)", flexShrink:0 }} />
+        </div>
       </div>
 
-      {/* Main */}
+      {/* ── Main ── */}
       <div style={{ flex:1, height:"100vh", overflowY:"auto", position:"relative", zIndex:5 }}>
 
         {/* Top bar */}
@@ -267,16 +291,14 @@ export default function EmpresaView() {
             </p>
           </div>
 
-          {/* ── Botões de envio rápido no topo ── */}
           {!loading && contatos.length > 0 && (
             <div style={{ display:"flex", gap:6 }}>
-              <SendButton channel="email"    color="#2980b9" bg="rgba(41,128,185,0.08)"  border="rgba(41,128,185,0.3)"  icon={Mail}           label="E-mail"    onClick={() => setSendChannel("email")} />
-              <SendButton channel="whatsapp" color="#27ae60" bg="rgba(39,174,96,0.08)"   border="rgba(39,174,96,0.3)"   icon={MessageCircle}  label="WhatsApp"  onClick={() => setSendChannel("whatsapp")} />
-              <SendButton channel="telefone" color="#e67e22" bg="rgba(230,126,34,0.08)"  border="rgba(230,126,34,0.3)"  icon={Phone}          label="Ligar"     onClick={() => setSendChannel("telefone")} />
+              <SendButton channel="email"    color="#2980b9" bg="rgba(41,128,185,0.08)"  border="rgba(41,128,185,0.3)"  icon={Mail}           label="E-mail"   onClick={() => setSendChannel("email")} />
+              <SendButton channel="whatsapp" color="#27ae60" bg="rgba(39,174,96,0.08)"   border="rgba(39,174,96,0.3)"   icon={MessageCircle}  label="WhatsApp" onClick={() => setSendChannel("whatsapp")} />
+              <SendButton channel="telefone" color="#e67e22" bg="rgba(230,126,34,0.08)"  border="rgba(230,126,34,0.3)"  icon={Phone}          label="Ligar"    onClick={() => setSendChannel("telefone")} />
             </div>
           )}
 
-          {/* ── Sino de notificações de e-mail ── */}
           {!loading && empresa && (
             <EmpresaNotificationBell
               empresaId={empresa.empresa_id}
@@ -384,24 +406,23 @@ export default function EmpresaView() {
                 </motion.div>
               </div>
 
-              {/* ── Contatos com botões de envio ── */}
+              {/* Contatos */}
               {contatos.length > 0 && (
                 <motion.div className="glass-card" style={{ padding:"22px 24px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.18 }}>
                   <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
                     <div style={{ fontSize:13, fontWeight:700, color:"#0f2133", display:"flex", alignItems:"center", gap:7 }}>
                       <Users style={{ width:15, height:15, color:"#2980b9" }} /> Contatos ({contatos.length})
                     </div>
-                    {/* Botões de envio em massa */}
                     <div style={{ display:"flex", gap:6 }}>
-                      <SendButton channel="email"    color="#2980b9" bg="rgba(41,128,185,0.08)"  border="rgba(41,128,185,0.25)"  icon={Mail}          label="Enviar e-mail"   onClick={() => setSendChannel("email")} />
-                      <SendButton channel="whatsapp" color="#27ae60" bg="rgba(39,174,96,0.08)"   border="rgba(39,174,96,0.25)"   icon={MessageCircle} label="WhatsApp"        onClick={() => setSendChannel("whatsapp")} />
-                      <SendButton channel="telefone" color="#e67e22" bg="rgba(230,126,34,0.08)"  border="rgba(230,126,34,0.25)"  icon={Phone}         label="Ligar"           onClick={() => setSendChannel("telefone")} />
-                      <SendButton channel="linkedin" color="#0077b5" bg="rgba(0,119,181,0.08)"   border="rgba(0,119,181,0.25)"   icon={Link2}         label="LinkedIn"        onClick={() => setSendChannel("linkedin")} />
+                      <SendButton channel="email"    color="#2980b9" bg="rgba(41,128,185,0.08)"  border="rgba(41,128,185,0.25)"  icon={Mail}          label="Enviar e-mail" onClick={() => setSendChannel("email")} />
+                      <SendButton channel="whatsapp" color="#27ae60" bg="rgba(39,174,96,0.08)"   border="rgba(39,174,96,0.25)"   icon={MessageCircle} label="WhatsApp"      onClick={() => setSendChannel("whatsapp")} />
+                      <SendButton channel="telefone" color="#e67e22" bg="rgba(230,126,34,0.08)"  border="rgba(230,126,34,0.25)"  icon={Phone}         label="Ligar"         onClick={() => setSendChannel("telefone")} />
+                      <SendButton channel="linkedin" color="#0077b5" bg="rgba(0,119,181,0.08)"   border="rgba(0,119,181,0.25)"   icon={Link2}         label="LinkedIn"      onClick={() => setSendChannel("linkedin")} />
                     </div>
                   </div>
 
                   <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(260px, 1fr))", gap:12 }}>
-                    {contatos.map((c, i) => (
+                    {contatos.map((c) => (
                       <div key={c.contato_id} style={{ padding:"14px 16px", borderRadius:12, background:"rgba(255,255,255,0.55)", border:"1px solid rgba(200,225,240,0.6)" }}>
                         <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:10 }}>
                           <div style={{ width:38, height:38, borderRadius:10, background:avatarColor(c.nome), display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700, color:"#fff", flexShrink:0 }}>
@@ -420,7 +441,6 @@ export default function EmpresaView() {
                           </div>
                         </div>
 
-                        {/* Contatos do card */}
                         <div style={{ display:"flex", flexDirection:"column", gap:4, marginBottom:10 }}>
                           {c.email && (
                             <div style={{ display:"flex", alignItems:"center", gap:5 }}>
@@ -442,7 +462,6 @@ export default function EmpresaView() {
                           )}
                         </div>
 
-                        {/* Botões de ação individuais por contato */}
                         <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
                           {c.email && (
                             <button onClick={() => window.open(`mailto:${c.email}`)} style={{ flex:1, height:28, borderRadius:7, border:"1px solid rgba(41,128,185,0.25)", background:"rgba(41,128,185,0.06)", color:"#2980b9", fontSize:10, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:4, transition:"all 0.15s" }}
