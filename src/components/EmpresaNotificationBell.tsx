@@ -1,7 +1,7 @@
   import { useState, useEffect, useRef, useCallback } from "react";
   import { Bell, Mail, X } from "lucide-react";
 
-  let crmMailTab: Window | null = null;
+  
 
   const API = "https://backend-crm-production-157b.up.railway.app";
 
@@ -219,35 +219,17 @@
                       }
 
                         // reutiliza aba existente
-                        try {
+                        const existingTab = window.open(
+                          "",
+                          "crm_mail_tab"
+                        );
 
-                          if (
-                            crmMailTab &&
-                            !crmMailTab.closed
-                          ) {
-                            crmMailTab.location.href =
-                              targetUrl;
-
-                            crmMailTab.focus();
-
-                          } else {
-
-                            crmMailTab = window.open(
-                              targetUrl,
-                              "crm_mail_tab"
-                            );
-
-                            crmMailTab?.focus();
-                          }
-
-                        } catch {
-
-                          crmMailTab = window.open(
-                            targetUrl,
-                            "crm_mail_tab"
+                        if (existingTab) {
+                          existingTab.location.replace(
+                            targetUrl
                           );
 
-                          crmMailTab?.focus();
+                          existingTab.focus();
                         }
 
                         return;
