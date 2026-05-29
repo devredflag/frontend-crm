@@ -75,7 +75,7 @@ function avatarColor(n: string) {
 function initials(n: string) { return n?.split(" ").slice(0,2).map(w => w[0]).join("").toUpperCase() || "?"; }
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboards",                path: "/dashboard" },
+  { icon: LayoutDashboard, label: "Dashboards",                path: "/dashboards" },
   { icon: Search,          label: "Buscar Empresas",           path: "/buscar" },
   { icon: Building2,       label: "Cadastrar Empresas",        path: "/empresas/nova" },
   { icon: Users,           label: "Todos os clientes",         path: "/clientes" },
