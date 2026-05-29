@@ -53,7 +53,7 @@ const navItems = [
   { icon: LayoutDashboard, label: "Dashboards",                active: false },
   { icon: Search,          label: "Buscar Empresas",           active: false },
   { icon: Building2,       label: "Cadastrar Empresas",        active: false },
-  { icon: Users,           label: "Todos os clientes",         active: true  },
+  { icon: Users,           label: "Todos os clientes",         active: false },
   { icon: ClipboardList,   label: "Gerenciamento de clientes", active: false },
   { icon: Calendar,        label: "Calendário",                active: false },
 ];
