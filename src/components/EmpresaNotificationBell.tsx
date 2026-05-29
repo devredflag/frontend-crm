@@ -219,18 +219,10 @@
                       }
 
                         // reutiliza aba existente
-                        const existingTab = window.open(
-                          "",
+                        window.open(
+                          targetUrl,
                           "crm_mail_tab"
                         );
-
-                        if (existingTab) {
-                          existingTab.location.replace(
-                            targetUrl
-                          );
-
-                          existingTab.focus();
-                        }
 
                         return;
                     }
