@@ -182,7 +182,10 @@
                 return (
                   <div
                     key={n.notificacao_id}
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+
                       markRead(n.notificacao_id);
                       setOpen(false);
 
@@ -218,15 +221,23 @@
                         mailTabRef.current &&
                         !mailTabRef.current.closed
                       ) {
-                        mailTabRef.current.location.href =
-                          targetUrl;
+                        mailTabRef.current.location.replace(
+                          targetUrl
+                        );
 
                         mailTabRef.current.focus();
                       } else {
                         mailTabRef.current = window.open(
-                          targetUrl,
-                          "_blank"
+                          "",
+                          "crm_mail_tab"
                         );
+
+                        if (mailTabRef.current) {
+                          mailTabRef.current.location.href =
+                            targetUrl;
+
+                          mailTabRef.current.focus();
+                        }
                       }
 
                       return;
