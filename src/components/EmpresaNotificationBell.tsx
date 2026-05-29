@@ -1,6 +1,8 @@
   import { useState, useEffect, useRef, useCallback } from "react";
   import { Bell, Mail, X } from "lucide-react";
 
+  let crmMailTab: Window | null = null;
+
   const API = "https://backend-crm-production-157b.up.railway.app";
 
   interface Notif {
@@ -216,32 +218,49 @@
                           : `https://outlook.office.com/mail/search?q=${encodeURIComponent(busca)}`;
                       }
 
-                      // reutiliza aba existente
-                      const mailWindow = window.open(
-                        "",
-                        "crm_mail_tab"
-                      );
+                        // reutiliza aba existente
+                        try {
 
-                      if (mailWindow) {
-                        mailWindow.location.replace(
-                          targetUrl
-                        );
+                          if (
+                            crmMailTab &&
+                            !crmMailTab.closed
+                          ) {
+                            crmMailTab.location.href =
+                              targetUrl;
 
-                        mailWindow.focus();
-                      }
+                            crmMailTab.focus();
 
+                          } else {
 
-                      return;
-                  }
+                            crmMailTab = window.open(
+                              targetUrl,
+                              "crm_mail_tab"
+                            );
 
-                      onVerComunicacoes?.();
-                  }}
-                    style={{
-                      padding: "11px 16px", cursor: "pointer",
-                      borderBottom: "1px solid rgba(200,225,240,0.3)",
-                      background: n.lida ? "transparent" : "rgba(41,128,185,0.04)",
-                      display: "flex", gap: 10, alignItems: "flex-start",
+                            crmMailTab?.focus();
+                          }
+
+                        } catch {
+
+                          crmMailTab = window.open(
+                            targetUrl,
+                            "crm_mail_tab"
+                          );
+
+                          crmMailTab?.focus();
+                        }
+
+                        return;
+                    }
+
+                        onVerComunicacoes?.();
                     }}
+                      style={{
+                        padding: "11px 16px", cursor: "pointer",
+                        borderBottom: "1px solid rgba(200,225,240,0.3)",
+                        background: n.lida ? "transparent" : "rgba(41,128,185,0.04)",
+                        display: "flex", gap: 10, alignItems: "flex-start",
+                      }}
                   >
                     <div style={{
                       width: 32, height: 32, borderRadius: 8, flexShrink: 0,
