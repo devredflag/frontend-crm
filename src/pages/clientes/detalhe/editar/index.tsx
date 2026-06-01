@@ -223,62 +223,203 @@ function IconInput({ icon: Icon, ...props }: any) {
   return <div className="field-input-icon"><Icon className="icon" style={{width:14,height:14}}/><input className="field-input" {...props}/></div>;
 }
 
-// ── ContatoCard para edição ───────────────────────────────────
-function ContatoCard({ contato, index, onChange, onRemove }: {
-  contato: any; index: number;
+// ── Contatos em card único colapsável ────────────────────────
+function ContatosSingleCard({ contatos, onAdd, onChange, onRemove }: {
+  contatos: any[];
+  onAdd: () => void;
   onChange: (localId: number, field: string, value: any) => void;
   onRemove: (localId: number) => void;
 }) {
-  const up = (f: string, v: any) => onChange(contato._localId, f, v);
-  const cor = ["#2980b9","#1abc9c","#e67e22","#8e44ad","#27ae60"][index%5];
-  const ini = contato.nome ? contato.nome.split(" ").map((w:string)=>w[0]).join("").slice(0,2).toUpperCase() : "?";
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const prevLen = useRef(contatos.length);
+  const CORES = ["#2980b9","#1abc9c","#e67e22","#8e44ad","#27ae60"];
+
+  useEffect(() => {
+    if (contatos.length > prevLen.current) {
+      const newest = [...contatos].reverse().find(c => c.isNew);
+      if (newest) setExpandedId(newest._localId);
+    }
+    prevLen.current = contatos.length;
+  }, [contatos.length]);
+
+  const up = (localId: number, f: string, v: any) => onChange(localId, f, v);
+
   return (
-    <motion.div className="contact-card" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}} transition={{duration:0.25}}>
-      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
-        <div style={{width:38,height:38,borderRadius:"50%",background:cor,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:"#fff",flexShrink:0}}>{ini}</div>
-        <div style={{flex:1}}>
-          <div style={{fontSize:13,fontWeight:700,color:"#0f2133"}}>{contato.nome||`Contato ${index+1}`}</div>
-          <div style={{fontSize:11,color:"rgba(20,45,70,0.4)"}}>{contato.funcao||"Função não definida"}</div>
+    <motion.div className="glass-card" style={{padding:"24px"}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.32,delay:0.20}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{width:38,height:38,borderRadius:10,background:"linear-gradient(135deg,#2980b9,#1abc9c)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 12px rgba(41,128,185,0.3)"}}>
+            <Users style={{width:18,height:18,color:"#fff"}}/>
+          </div>
+          <div>
+            <div style={{fontSize:16,fontWeight:800,color:"#0f2133"}}>Contatos Vinculados</div>
+            <div style={{fontSize:11,color:"rgba(20,45,70,0.45)"}}>{contatos.length} contato{contatos.length!==1?"s":""} · clique para expandir</div>
+          </div>
         </div>
-        {contato.isNew&&<span style={{fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:4,background:"rgba(41,128,185,0.1)",color:"#2980b9"}}>NOVO</span>}
-        <div className={`checkbox-decisor${contato.decisor?" checked":""}`} onClick={()=>up("decisor",!contato.decisor)}>
-          <div className="box">{contato.decisor&&<svg width="9" height="9" viewBox="0 0 10 10" fill="none"><polyline points="2,5 4,7.5 8,2.5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}</div>
-          <span style={{fontSize:11,fontWeight:600,color:contato.decisor?"#27ae60":"rgba(20,45,70,0.5)"}}>Decisor</span>
-        </div>
-        <button onClick={()=>onRemove(contato._localId)} style={{width:32,height:32,borderRadius:8,border:"1.5px solid rgba(231,76,60,0.2)",background:"rgba(231,76,60,0.06)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#e74c3c",transition:"all 0.18s"}} onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(231,76,60,0.14)";}} onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(231,76,60,0.06)";}}>
-          <Trash2 style={{width:13,height:13}}/>
+        <button className="btn-grad" style={{height:36,padding:"0 14px",fontSize:12}} onClick={onAdd}>
+          <Plus style={{width:13,height:13}}/> Adicionar
         </button>
       </div>
-      <div style={{marginBottom:14}}>
-        <div className="field-label" style={{marginBottom:6}}>Prioridade</div>
-        <div style={{display:"flex",gap:6}}>
-          {(["Alta","Media","Baixa"] as const).map(p=>(
-            <button key={p} className={`prio-btn ${p.toLowerCase()}${contato.prioridade===p?" active":""}`} onClick={()=>up("prioridade",p)}>{p==="Media"?"Média":p}</button>
-          ))}
+
+      {contatos.length === 0 ? (
+        <div style={{padding:"36px 0",textAlign:"center"}}>
+          <div style={{width:48,height:48,borderRadius:"50%",background:"rgba(41,128,185,0.07)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px"}}>
+            <Users style={{width:22,height:22,color:"rgba(41,128,185,0.3)"}}/>
+          </div>
+          <div style={{fontSize:13,color:"rgba(20,45,70,0.4)",fontWeight:600}}>Nenhum contato cadastrado</div>
+          <div style={{fontSize:11,color:"rgba(20,45,70,0.3)",marginTop:4}}>Clique em "Adicionar" para criar o primeiro</div>
+        </div>
+      ) : (
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          <AnimatePresence>
+            {contatos.map((c, i) => {
+              const cor = CORES[i % CORES.length];
+              const ini = c.nome ? c.nome.split(" ").map((w:string)=>w[0]).join("").slice(0,2).toUpperCase() : "?";
+              const expanded = expandedId === c._localId;
+              return (
+                <motion.div key={c._localId} initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0,scale:0.97}} transition={{duration:0.2}} style={{borderRadius:12,overflow:"hidden"}}>
+                  <div onClick={()=>setExpandedId(expanded?null:c._localId)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"rgba(255,255,255,0.65)",border:`1.5px solid ${expanded?"rgba(41,128,185,0.4)":"rgba(200,225,240,0.7)"}`,borderBottom:expanded?"1px solid rgba(200,225,240,0.4)":undefined,borderRadius:expanded?"12px 12px 0 0":"12px",cursor:"pointer",transition:"all 0.18s"}}>
+                    <div style={{width:34,height:34,borderRadius:"50%",background:cor,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:"#fff",flexShrink:0}}>{ini}</div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:13,fontWeight:700,color:"#0f2133",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.nome||`Contato ${i+1}`}</div>
+                      <div style={{fontSize:10,color:"rgba(20,45,70,0.45)"}}>{c.funcao||"Função não definida"}</div>
+                    </div>
+                    {c.isNew&&<span style={{fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:4,background:"rgba(41,128,185,0.1)",color:"#2980b9",flexShrink:0}}>NOVO</span>}
+                    {c.decisor&&<span style={{fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:4,background:"rgba(39,174,96,0.1)",color:"#27ae60",border:"1px solid rgba(39,174,96,0.2)",flexShrink:0}}>Decisor</span>}
+                    <span style={{fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:4,flexShrink:0,background:c.prioridade==="Alta"?"rgba(231,76,60,0.08)":c.prioridade==="Baixa"?"rgba(39,174,96,0.08)":"rgba(230,126,34,0.08)",color:c.prioridade==="Alta"?"#e74c3c":c.prioridade==="Baixa"?"#27ae60":"#e67e22"}}>
+                      {c.prioridade==="Media"?"Média":c.prioridade||"Média"}
+                    </span>
+                    <ChevronDown style={{width:14,height:14,color:"rgba(20,45,70,0.3)",transform:expanded?"rotate(180deg)":"none",transition:"transform 0.2s",flexShrink:0}}/>
+                  </div>
+                  <AnimatePresence>
+                    {expanded&&(
+                      <motion.div initial={{opacity:0,height:0}} animate={{opacity:1,height:"auto"}} exit={{opacity:0,height:0}} transition={{duration:0.22}} style={{overflow:"hidden"}}>
+                        <div style={{background:"rgba(248,252,255,0.9)",border:"1.5px solid rgba(41,128,185,0.3)",borderTop:"none",borderRadius:"0 0 12px 12px",padding:"16px"}}>
+                          <div style={{marginBottom:12}}>
+                            <div className="field-label" style={{marginBottom:6}}>Prioridade</div>
+                            <div style={{display:"flex",gap:6}}>
+                              {(["Alta","Media","Baixa"] as const).map(p=>(
+                                <button key={p} className={`prio-btn ${p.toLowerCase()}${c.prioridade===p?" active":""}`} onClick={()=>up(c._localId,"prioridade",p)}>{p==="Media"?"Média":p}</button>
+                              ))}
+                            </div>
+                          </div>
+                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                            <Field label="Nome"><IconInput icon={User} placeholder="Nome completo" value={c.nome} onChange={(e:any)=>up(c._localId,"nome",e.target.value)}/></Field>
+                            <Field label="Função / Cargo"><IconInput icon={Briefcase} placeholder="ex: Diretor Comercial" value={c.funcao} onChange={(e:any)=>up(c._localId,"funcao",e.target.value)}/></Field>
+                            <Field label="Email"><IconInput icon={Mail} type="email" placeholder="email@empresa.com" value={c.email} onChange={(e:any)=>up(c._localId,"email",e.target.value)}/></Field>
+                            <Field label="Celular"><IconInput icon={Phone} placeholder="(00) 00000-0000" value={c.celular} onChange={(e:any)=>up(c._localId,"celular",formatPhone(e.target.value))}/></Field>
+                            <Field label="WhatsApp"><IconInput icon={Phone} placeholder="(00) 00000-0000" value={c.whatsapp} onChange={(e:any)=>up(c._localId,"whatsapp",formatPhone(e.target.value))}/></Field>
+                            <Field label="LinkedIn"><IconInput icon={Link2} placeholder="linkedin.com/in/..." value={c.linkedin} onChange={(e:any)=>up(c._localId,"linkedin",e.target.value)}/></Field>
+                            <Field label="Canal Preferido">
+                              <select className="field-select" value={c.canal_preferido} onChange={(e:any)=>up(c._localId,"canal_preferido",e.target.value)}>
+                                <option value="">Selecionar...</option>
+                                <option>Email</option><option>WhatsApp</option><option>Telefone</option><option>LinkedIn</option><option>Presencial</option>
+                              </select>
+                            </Field>
+                            <Field label="Nível de Influência">
+                              <select className="field-select" value={c.nivel_influencia} onChange={(e:any)=>up(c._localId,"nivel_influencia",e.target.value)}>
+                                <option value="">Selecionar...</option>
+                                <option>Alto</option><option>Médio</option><option>Baixo</option>
+                              </select>
+                            </Field>
+                            <Field label="Último Contato"><input className="field-input" type="date" value={c.data_ultimo_contato} onChange={(e:any)=>up(c._localId,"data_ultimo_contato",e.target.value)}/></Field>
+                            <Field label="Observações"><input className="field-input" placeholder="Notas rápidas..." value={c.observacoes} onChange={(e:any)=>up(c._localId,"observacoes",e.target.value)}/></Field>
+                          </div>
+                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:12,paddingTop:10,borderTop:"1px solid rgba(200,225,240,0.5)"}}>
+                            <div className={`checkbox-decisor${c.decisor?" checked":""}`} onClick={()=>up(c._localId,"decisor",!c.decisor)}>
+                              <div className="box">{c.decisor&&<svg width="9" height="9" viewBox="0 0 10 10" fill="none"><polyline points="2,5 4,7.5 8,2.5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}</div>
+                              <span style={{fontSize:11,fontWeight:600,color:c.decisor?"#27ae60":"rgba(20,45,70,0.5)"}}>Decisor</span>
+                            </div>
+                            <button onClick={()=>onRemove(c._localId)} style={{height:32,padding:"0 12px",borderRadius:8,border:"1.5px solid rgba(231,76,60,0.25)",background:"rgba(231,76,60,0.06)",cursor:"pointer",display:"flex",alignItems:"center",gap:6,color:"#e74c3c",fontSize:12,fontWeight:600}}>
+                              <Trash2 style={{width:12,height:12}}/> Remover contato
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+// ── Status das atividades ─────────────────────────────────────
+const STATUS_ATIV: Record<string, { label: string; color: string; bg: string; border: string; icon: React.ReactNode }> = {
+  aceito:       { label:"Aceito",       color:"#27ae60", bg:"rgba(39,174,96,0.08)",  border:"rgba(39,174,96,0.3)",
+    icon:<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9.5 10,2.5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg> },
+  negado:       { label:"Negado",       color:"#e74c3c", bg:"rgba(231,76,60,0.08)", border:"rgba(231,76,60,0.3)",
+    icon:<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><line x1="2" y1="2" x2="10" y2="10" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"/></svg> },
+  talvez:       { label:"Talvez",       color:"#f39c12", bg:"rgba(243,156,18,0.08)", border:"rgba(243,156,18,0.3)",
+    icon:<span style={{color:"#fff",fontSize:13,fontWeight:900,lineHeight:1}}>?</span> },
+  novo_horario: { label:"Novo horário", color:"#2980b9", bg:"rgba(41,128,185,0.08)", border:"rgba(41,128,185,0.3)",
+    icon:<Clock style={{width:11,height:11,color:"#fff"}}/> },
+};
+
+function AtividadesCard({ atividades }: { atividades: any[] }) {
+  const fmt = (dt: string) => {
+    if(!dt) return "—";
+    try {
+      const d = new Date(dt);
+      return d.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"}) + " às " + d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+    } catch { return dt; }
+  };
+
+  return (
+    <motion.div className="glass-card" style={{padding:"24px"}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.32,delay:0.24}}>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+        <div style={{width:38,height:38,borderRadius:10,background:"linear-gradient(135deg,#8e44ad,#2980b9)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 12px rgba(142,68,173,0.3)"}}>
+          <Calendar style={{width:18,height:18,color:"#fff"}}/>
+        </div>
+        <div>
+          <div style={{fontSize:16,fontWeight:800,color:"#0f2133"}}>Atividades & Eventos</div>
+          <div style={{fontSize:11,color:"rgba(20,45,70,0.45)"}}>Respostas do calendário</div>
         </div>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-        <Field label="Nome"><IconInput icon={User} placeholder="Nome completo" value={contato.nome} onChange={(e:any)=>up("nome",e.target.value)}/></Field>
-        <Field label="Função / Cargo"><IconInput icon={Briefcase} placeholder="ex: Diretor Comercial" value={contato.funcao} onChange={(e:any)=>up("funcao",e.target.value)}/></Field>
-        <Field label="Email"><IconInput icon={Mail} type="email" placeholder="email@empresa.com" value={contato.email} onChange={(e:any)=>up("email",e.target.value)}/></Field>
-        <Field label="Celular"><IconInput icon={Phone} placeholder="(00) 00000-0000" value={contato.celular} onChange={(e:any)=>up("celular",formatPhone(e.target.value))}/></Field>
-        <Field label="WhatsApp"><IconInput icon={Phone} placeholder="(00) 00000-0000" value={contato.whatsapp} onChange={(e:any)=>up("whatsapp",formatPhone(e.target.value))}/></Field>
-        <Field label="LinkedIn"><IconInput icon={Link2} placeholder="linkedin.com/in/..." value={contato.linkedin} onChange={(e:any)=>up("linkedin",e.target.value)}/></Field>
-        <Field label="Canal Preferido">
-          <select className="field-select" value={contato.canal_preferido} onChange={(e:any)=>up("canal_preferido",e.target.value)}>
-            <option value="">Selecionar...</option>
-            <option>Email</option><option>WhatsApp</option><option>Telefone</option><option>LinkedIn</option><option>Presencial</option>
-          </select>
-        </Field>
-        <Field label="Nível de Influência">
-          <select className="field-select" value={contato.nivel_influencia} onChange={(e:any)=>up("nivel_influencia",e.target.value)}>
-            <option value="">Selecionar...</option>
-            <option>Alto</option><option>Médio</option><option>Baixo</option>
-          </select>
-        </Field>
-        <Field label="Último Contato"><input className="field-input" type="date" value={contato.data_ultimo_contato} onChange={(e:any)=>up("data_ultimo_contato",e.target.value)}/></Field>
-        <Field label="Observações"><input className="field-input" placeholder="Notas rápidas..." value={contato.observacoes} onChange={(e:any)=>up("observacoes",e.target.value)}/></Field>
+
+      {/* Legenda */}
+      <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+        {Object.entries(STATUS_ATIV).map(([k,v])=>(
+          <div key={k} style={{display:"flex",alignItems:"center",gap:5}}>
+            <div style={{width:16,height:16,borderRadius:"50%",background:v.color,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{v.icon}</div>
+            <span style={{fontSize:9,fontWeight:600,color:"rgba(20,45,70,0.5)"}}>{v.label}</span>
+          </div>
+        ))}
       </div>
+
+      {atividades.length === 0 ? (
+        <div style={{padding:"28px 0",textAlign:"center"}}>
+          <div style={{width:48,height:48,borderRadius:"50%",background:"rgba(142,68,173,0.07)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px"}}>
+            <Calendar style={{width:22,height:22,color:"rgba(142,68,173,0.3)"}}/>
+          </div>
+          <div style={{fontSize:13,color:"rgba(20,45,70,0.4)",fontWeight:600}}>Nenhuma atividade agendada</div>
+          <div style={{fontSize:11,color:"rgba(20,45,70,0.3)",marginTop:4}}>Agende pelo calendário e as respostas aparecerão aqui</div>
+        </div>
+      ) : (
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {atividades.map((a: any) => {
+            const cfg = STATUS_ATIV[a.status] || STATUS_ATIV.talvez;
+            return (
+              <div key={a.atividade_id||a.id||Math.random()} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",borderRadius:10,background:cfg.bg,border:`1.5px solid ${cfg.border}`,transition:"all 0.18s"}}>
+                <div style={{width:30,height:30,borderRadius:"50%",background:cfg.color,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:`0 2px 8px ${cfg.color}55`}}>
+                  {cfg.icon}
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:12,fontWeight:700,color:"#0f2133",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{a.titulo||a.nome||"Atividade"}</div>
+                  <div style={{fontSize:10,color:"rgba(20,45,70,0.5)",marginTop:1}}>{fmt(a.data_hora||a.data)}</div>
+                </div>
+                <span style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,background:cfg.color,color:"#fff",flexShrink:0,boxShadow:`0 2px 6px ${cfg.color}44`,whiteSpace:"nowrap"}}>
+                  {cfg.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </motion.div>
   );
 }
@@ -292,6 +433,7 @@ export default function EmpresaEdit() {
   const [segmentos, setSegmentos] = useState<string[]>(SEGMENTOS_PADRAO);
   const [contatos, setContatos] = useState<any[]>([]);
   const [deletedContatoIds, setDeletedContatoIds] = useState<string[]>([]);
+  const [atividades, setAtividades] = useState<any[]>([]);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [usuario, setUsuario] = useState<any>(null);
 
@@ -360,6 +502,11 @@ export default function EmpresaEdit() {
               isNew: false,
             })));
           }
+        } catch {}
+        // Carregar atividades vinculadas
+        try {
+          const aRes = await fetch(`${API}/empresas/${id}/atividades`, { headers: hdrs() });
+          if(aRes.ok) setAtividades(await aRes.json());
         } catch {}
       } catch { navigate("/clientes"); }
       setLoading(false);
@@ -706,66 +853,14 @@ export default function EmpresaEdit() {
                 </div>
               </motion.div>
 
-              {/* Preview contatos */}
-              <motion.div className="glass-card" style={{padding:"20px 24px"}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.32,delay:0.16}}>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-                  <div style={{fontSize:13,fontWeight:700,color:"#0f2133"}}>Contatos</div>
-                  <span style={{padding:"3px 10px",borderRadius:20,background:"rgba(41,128,185,0.1)",color:"#2980b9",fontSize:11,fontWeight:700}}>
-                    {contatos.length} contato{contatos.length!==1?"s":""}
-                  </span>
-                </div>
-                {contatos.length===0?(
-                  <div style={{padding:"16px 0",textAlign:"center",fontSize:12,color:"rgba(20,45,70,0.4)"}}>Nenhum contato cadastrado</div>
-                ):(
-                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                    {contatos.map((c,i)=>{
-                      const cor=["#2980b9","#1abc9c","#e67e22","#8e44ad","#27ae60"][i%5];
-                      const ini=c.nome?c.nome.split(" ").map((w:string)=>w[0]).join("").slice(0,2).toUpperCase():"?";
-                      return(
-                        <div key={c._localId} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:8,background:"rgba(255,255,255,0.55)",border:"1px solid rgba(200,225,240,0.5)"}}>
-                          <div style={{width:26,height:26,borderRadius:"50%",background:cor,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:"#fff",flexShrink:0}}>{ini}</div>
-                          <div style={{flex:1,minWidth:0}}>
-                            <div style={{fontSize:11,fontWeight:600,color:"#0f2133",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.nome||`Contato ${i+1}`}</div>
-                            <div style={{fontSize:10,color:"rgba(20,45,70,0.4)"}}>{c.funcao||"—"}</div>
-                          </div>
-                          {c.decisor&&<span style={{fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:4,background:"rgba(39,174,96,0.1)",color:"#27ae60",border:"1px solid rgba(39,174,96,0.2)"}}>Decisor</span>}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </motion.div>
             </div>
           </div>
 
-          {/* Seção contatos */}
-          <motion.div style={{marginTop:20}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.32,delay:0.20}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
-              <div style={{display:"flex",alignItems:"center",gap:12}}>
-                <div style={{width:38,height:38,borderRadius:10,background:"linear-gradient(135deg,#2980b9,#1abc9c)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 12px rgba(41,128,185,0.3)"}}>
-                  <Users style={{width:18,height:18,color:"#fff"}}/>
-                </div>
-                <div>
-                  <div style={{fontSize:16,fontWeight:800,color:"#0f2133"}}>Contatos Vinculados</div>
-                  <div style={{fontSize:12,color:"rgba(20,45,70,0.45)"}}>Edite, adicione ou remova contatos</div>
-                </div>
-              </div>
-              <button className="btn-grad" style={{height:40,padding:"0 18px",fontSize:13}} onClick={addContato}>
-                <Plus style={{width:15,height:15}}/> Adicionar Contato
-              </button>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:16}}>
-              {contatos.map((c,i)=>(
-                <ContatoCard key={c._localId} contato={c} index={i} onChange={handleContatoChange} onRemove={removeContato}/>
-              ))}
-              <div onClick={addContato} style={{border:"2px dashed rgba(41,128,185,0.25)",borderRadius:14,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8,cursor:"pointer",padding:"32px 20px",transition:"all 0.18s",minHeight:120,background:"rgba(255,255,255,0.35)"}} onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.borderColor="rgba(41,128,185,0.5)";}} onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.borderColor="rgba(41,128,185,0.25)";}}>
-                <div style={{width:40,height:40,borderRadius:"50%",background:"rgba(41,128,185,0.08)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                  <Plus style={{width:18,height:18,color:"#2980b9"}}/>
-                </div>
-                <span style={{fontSize:13,fontWeight:600,color:"rgba(41,128,185,0.7)"}}>Adicionar contato</span>
-              </div>
-            </div>
-          </motion.div>
+          {/* Contatos + Atividades */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,marginTop:20}}>
+            <ContatosSingleCard contatos={contatos} onAdd={addContato} onChange={handleContatoChange} onRemove={removeContato}/>
+            <AtividadesCard atividades={atividades}/>
+          </div>
 
           {/* Rodapé */}
           <div style={{marginTop:28,display:"flex",justifyContent:"flex-end",gap:10}}>
