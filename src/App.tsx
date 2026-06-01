@@ -14,6 +14,7 @@ import Calendario from "./pages/calendario";
 import Gerenciamento from "./pages/gerenciamento";
 import OutlookCallback from "./pages/auth/OutlookCallback";
 import GoogleCallback from "./pages/auth/GoogleCallback";
+import BuscarEmpresas from "./pages/buscar";
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
         <Route path="/perfil" element={<Perfil />} />
         <Route path="/calendario" element={<Calendario />} />
         <Route path="/gerenciamento" element={<Gerenciamento />} />
+        <Route path="/buscar" element={<BuscarEmpresas />} />
         <Route path="/auth/outlook/callback" element={<OutlookCallback />} />
         <Route path="/auth/google/callback" element={<GoogleCallback />} />
         <Route path="*" element={<div>Página não encontrada</div>} />
