@@ -108,116 +108,115 @@ const GoogleIcon = ({ size = 18 }: { size?: number }) => (
 );
 
 // ─────────────────────────────────────────────────────────────
-// EmailConvidadoField — FORA do Calendario para evitar
-// que o React destrua/recrie o componente a cada re-render
+// EmailsConvidadosField — suporte a múltiplos e-mails
 // ─────────────────────────────────────────────────────────────
-interface EmailFieldProps {
-  emailConvidado: string;
-  setEmailConvidado: (v: string) => void;
-  showEmailDropdown: boolean;
-  setShowEmailDropdown: (v: boolean) => void;
+interface EmailsFieldProps {
+  emails: string[];
+  setEmails: (v: string[]) => void;
   contatos: Contato[];
   empresaNome: string;
   dropdownRef: React.RefObject<HTMLDivElement | null>;
 }
 
-function EmailConvidadoField({
-  emailConvidado, setEmailConvidado,
-  showEmailDropdown, setShowEmailDropdown,
-  contatos, empresaNome, dropdownRef,
-}: EmailFieldProps) {
-  const contatosComEmail = contatos.filter(c => c.email);
-  const filtrados = emailConvidado
-    ? contatosComEmail.filter(c =>
-        c.email!.toLowerCase().includes(emailConvidado.toLowerCase()) ||
-        c.nome.toLowerCase().includes(emailConvidado.toLowerCase())
+function EmailsConvidadosField({ emails, setEmails, contatos, empresaNome, dropdownRef }: EmailsFieldProps) {
+  const [input, setInput] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  const contatosDisponiveis = contatos.filter(c => c.email && !emails.includes(c.email!));
+  const filtrados = input
+    ? contatosDisponiveis.filter(c =>
+        c.email!.toLowerCase().includes(input.toLowerCase()) ||
+        c.nome.toLowerCase().includes(input.toLowerCase())
       )
-    : contatosComEmail;
+    : contatosDisponiveis;
+
+  const addEmail = (email: string) => {
+    const trimmed = email.trim().replace(/,\s*$/, "");
+    if (trimmed && !emails.includes(trimmed)) setEmails([...emails, trimmed]);
+    setInput(""); setShowDropdown(false);
+  };
+
+  const removeEmail = (email: string) => setEmails(emails.filter(e => e !== email));
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if ((e.key === "Enter" || e.key === ",") && input.trim()) {
+      e.preventDefault(); addEmail(input);
+    }
+    if (e.key === "Backspace" && !input && emails.length > 0) removeEmail(emails[emails.length - 1]);
+  };
 
   return (
-    <div style={{ marginTop: 10 }}>
+    <div style={{ marginTop:10 }}>
       <label style={{ fontSize:10, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"rgba(20,45,70,0.5)", display:"block", marginBottom:6 }}>
-        E-mail do cliente para convite (opcional)
+        E-mails dos convidados (opcional)
       </label>
 
+      {/* Chips de emails adicionados */}
+      {emails.length > 0 && (
+        <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:8 }}>
+          {emails.map(email => (
+            <div key={email} style={{ display:"flex", alignItems:"center", gap:5, padding:"4px 10px 4px 8px", borderRadius:20, background:"rgba(41,128,185,0.1)", border:"1px solid rgba(41,128,185,0.28)" }}>
+              <Mail style={{ width:11, height:11, color:"#2980b9", flexShrink:0 }}/>
+              <span style={{ fontSize:12, fontWeight:600, color:"#2980b9", maxWidth:200, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{email}</span>
+              <button type="button" onClick={() => removeEmail(email)} style={{ background:"none", border:"none", cursor:"pointer", padding:0, display:"flex", flexShrink:0 }}>
+                <X style={{ width:11, height:11, color:"#2980b9" }}/>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Input + botão dropdown */}
       <div ref={dropdownRef} style={{ position:"relative" }}>
         <div style={{ display:"flex", gap:8 }}>
           <input
             className="input-field"
             type="email"
-            value={emailConvidado}
+            value={input}
             onMouseDown={e => e.stopPropagation()}
             onClick={e => e.stopPropagation()}
-            onChange={e => { setEmailConvidado(e.target.value); setShowEmailDropdown(true); }}
-            onFocus={() => setShowEmailDropdown(true)}
-            placeholder="Digite ou selecione o e-mail..."
+            onChange={e => { setInput(e.target.value); setShowDropdown(true); }}
+            onFocus={() => setShowDropdown(true)}
+            onKeyDown={handleKeyDown}
+            placeholder={emails.length > 0 ? "Adicionar outro e-mail..." : "Digite ou selecione e-mails..."}
             style={{ flex:1 }}
           />
-          {contatosComEmail.length > 0 && (
-            <button
-              type="button"
-              onClick={e => { e.stopPropagation(); setShowEmailDropdown(!showEmailDropdown); }}
-              style={{ height:44, padding:"0 12px", borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.85)", cursor:"pointer", display:"flex", alignItems:"center", gap:6, fontSize:12, fontWeight:600, color:"#2980b9", flexShrink:0 }}
-            >
-              <Users2 style={{ width:13, height:13 }} />
-              Contatos
-              <ChevronDown style={{ width:12, height:12 }} />
+          {input.trim() && (
+            <button type="button" onClick={() => addEmail(input)}
+              style={{ height:44, padding:"0 14px", borderRadius:10, border:"none", background:"#2980b9", color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer", flexShrink:0 }}>
+              + Adicionar
+            </button>
+          )}
+          {contatosDisponiveis.length > 0 && (
+            <button type="button" onClick={e => { e.stopPropagation(); setShowDropdown(!showDropdown); }}
+              style={{ height:44, padding:"0 12px", borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.85)", cursor:"pointer", display:"flex", alignItems:"center", gap:6, fontSize:12, fontWeight:600, color:"#2980b9", flexShrink:0 }}>
+              <Users2 style={{ width:13, height:13 }}/>Contatos<ChevronDown style={{ width:12, height:12 }}/>
             </button>
           )}
         </div>
 
         <AnimatePresence>
-          {showEmailDropdown && filtrados.length > 0 && (
-            <motion.div
-              initial={{ opacity:0, y:-4 }}
-              animate={{ opacity:1, y:0 }}
-              exit={{ opacity:0, y:-4 }}
-              transition={{ duration:0.15 }}
+          {showDropdown && filtrados.length > 0 && (
+            <motion.div initial={{ opacity:0, y:-4 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-4 }} transition={{ duration:0.15 }}
               onClick={e => e.stopPropagation()}
-              style={{ position:"absolute", top:"calc(100% + 6px)", left:0, right:0, zIndex:300, background:"rgba(240,250,255,0.98)", backdropFilter:"blur(16px)", border:"1px solid rgba(200,225,240,0.9)", borderRadius:12, boxShadow:"0 8px 32px rgba(41,128,185,0.15)", overflow:"hidden", maxHeight:200, overflowY:"auto" }}
-            >
+              style={{ position:"absolute", top:"calc(100% + 6px)", left:0, right:0, zIndex:300, background:"rgba(240,250,255,0.98)", backdropFilter:"blur(16px)", border:"1px solid rgba(200,225,240,0.9)", borderRadius:12, boxShadow:"0 8px 32px rgba(41,128,185,0.15)", overflow:"hidden", maxHeight:200, overflowY:"auto" }}>
               {empresaNome && (
-                <div style={{ padding:"8px 14px 4px", fontSize:10, fontWeight:700, color:"rgba(20,45,70,0.4)", letterSpacing:"0.06em", textTransform:"uppercase" }}>
-                  {empresaNome}
-                </div>
+                <div style={{ padding:"8px 14px 4px", fontSize:10, fontWeight:700, color:"rgba(20,45,70,0.4)", letterSpacing:"0.06em", textTransform:"uppercase" }}>{empresaNome}</div>
               )}
               {filtrados.map(c => (
-                <div
-                  key={c.contato_id}
-                  className="email-option"
-                  onMouseDown={e => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setEmailConvidado(c.email!);
-                    setShowEmailDropdown(false);
-                  }}
-                >
+                <div key={c.contato_id} className="email-option"
+                  onMouseDown={e => { e.preventDefault(); e.stopPropagation(); addEmail(c.email!); }}>
                   <span style={{ fontWeight:600, color:"#0f2133" }}>{c.nome}</span>
                   <span style={{ fontSize:12, color:"#2980b9" }}>{c.email}</span>
                 </div>
               ))}
-              <div
-                className="email-option"
-                style={{ borderTop:"1px solid rgba(200,225,240,0.5)", color:"rgba(20,45,70,0.5)" }}
-                onMouseDown={e => { e.preventDefault(); setShowEmailDropdown(false); }}
-              >
-                <span style={{ fontSize:12 }}>✏️ Digitar outro e-mail</span>
-              </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {emailConvidado && !showEmailDropdown && (
-          <div style={{ marginTop:8, display:"flex", alignItems:"center", gap:8, padding:"6px 10px", borderRadius:8, background:"rgba(41,128,185,0.08)", border:"1px solid rgba(41,128,185,0.2)", width:"fit-content" }}>
-            <Mail style={{ width:12, height:12, color:"#2980b9" }} />
-            <span style={{ fontSize:12, fontWeight:600, color:"#2980b9" }}>{emailConvidado}</span>
-            <button
-              type="button"
-              onClick={() => setEmailConvidado("")}
-              style={{ background:"none", border:"none", cursor:"pointer", padding:0, display:"flex" }}
-            >
-              <X style={{ width:12, height:12, color:"#2980b9" }} />
-            </button>
+        {emails.length === 0 && !input && (
+          <div style={{ marginTop:6, fontSize:11, color:"rgba(20,45,70,0.4)" }}>
+            Pressione Enter ou vírgula para adicionar. Múltiplos convidados permitidos.
           </div>
         )}
       </div>
@@ -245,18 +244,18 @@ export default function Calendario() {
   const [googleConectado, setGoogleConectado] = useState(false);
   const [agendarOutlook, setAgendarOutlook] = useState(false);
   const [agendarGoogle, setAgendarGoogle] = useState(false);
-  const [emailConvidado, setEmailConvidado] = useState("");
+  const [emailsConvidados, setEmailsConvidados] = useState<string[]>([]);
   const [conectandoOutlook, setConectandoOutlook] = useState(false);
   const [conectandoGoogle, setConectandoGoogle] = useState(false);
-  const [showEmailDropdown, setShowEmailDropdown] = useState(false);
   const emailDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { fetchAll(); checkIntegrations(); }, []);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (emailDropdownRef.current && !emailDropdownRef.current.contains(e.target as Node))
-        setShowEmailDropdown(false);
+      if (emailDropdownRef.current && !emailDropdownRef.current.contains(e.target as Node)) {
+        // fecha dropdown interno gerenciado pelo EmailsConvidadosField
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -338,14 +337,14 @@ export default function Calendario() {
 
   const openNew = (date: string, hour?: string) => {
     setEditEvento(null); setAgendarOutlook(false); setAgendarGoogle(false);
-    setEmailConvidado(""); setContatos([]);
+    setEmailsConvidados([]); setContatos([]);
     setForm({ titulo:"", tipo:"call", data:date, hora_inicio:hour||"09:00", hora_fim:hour?`${padZero(parseInt(hour)+1)}:00`:"10:00", empresa_id:"", empresa_nome:"", descricao:"" });
     setShowModal(true);
   };
 
   const openEdit = (ev: Evento, e: React.MouseEvent) => {
     e.stopPropagation();
-    setEditEvento(ev); setAgendarOutlook(false); setAgendarGoogle(false); setEmailConvidado("");
+    setEditEvento(ev); setAgendarOutlook(false); setAgendarGoogle(false); setEmailsConvidados([]);
     if (ev.empresa_id) fetchContatosEmpresa(ev.empresa_id); else setContatos([]);
     setForm({ titulo:ev.titulo, tipo:ev.tipo, data:ev.data, hora_inicio:ev.hora_inicio?.slice(0,5)||"09:00", hora_fim:ev.hora_fim?.slice(0,5)||"10:00", empresa_id:ev.empresa_id||"", empresa_nome:ev.empresa_nome||"", descricao:ev.descricao||"" });
     setShowModal(true);
@@ -367,7 +366,8 @@ export default function Calendario() {
           data: form.data,
           hora_inicio: form.hora_inicio,
           hora_fim: form.hora_fim,
-          email_convidado: emailConvidado || null,
+          emails_convidados: emailsConvidados.length > 0 ? emailsConvidados : null,
+          email_convidado: emailsConvidados[0] || null,
         };
 
         if (agendarOutlook && outlookConectado && eventoId) {
@@ -698,7 +698,7 @@ export default function Calendario() {
                 <select className="select-field" value={form.empresa_id} onChange={e=>{
                   const emp=empresas.find(em=>em.empresa_id===e.target.value);
                   setForm({...form,empresa_id:e.target.value,empresa_nome:emp?.nome||""});
-                  setEmailConvidado("");
+                  setEmailsConvidados([]);
                 }}>
                   <option value="">Selecione uma empresa...</option>
                   {empresas.map(emp=><option key={emp.empresa_id} value={emp.empresa_id}>{emp.nome}</option>)}
@@ -744,11 +744,9 @@ export default function Calendario() {
                 </div>
 
                 {(agendarOutlook || agendarGoogle) && (
-                  <EmailConvidadoField
-                    emailConvidado={emailConvidado}
-                    setEmailConvidado={setEmailConvidado}
-                    showEmailDropdown={showEmailDropdown}
-                    setShowEmailDropdown={setShowEmailDropdown}
+                  <EmailsConvidadosField
+                    emails={emailsConvidados}
+                    setEmails={setEmailsConvidados}
                     contatos={contatos}
                     empresaNome={form.empresa_nome}
                     dropdownRef={emailDropdownRef}
