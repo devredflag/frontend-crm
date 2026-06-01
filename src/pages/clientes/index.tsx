@@ -418,7 +418,7 @@ export default function TodosClientes() {
                       className={`client-row${isDraft?" draft-row":""}`}
                       initial={{opacity:0,x:-8}} animate={{opacity:1,x:0}} exit={{opacity:0,height:0}}
                       transition={{duration:0.2,delay:idx*0.03}}
-                      onClick={()=>navigate(isDraft?`/clientes/${emp.empresa_id}/editar`:`/clientes/${emp.empresa_id}`)}>
+                      onClick={()=>navigate(isDraft?`/clientes/${emp.empresa_id}/editar`:`/clientes/${emp.empresa_id}`,{state:{from:"/clientes"}})}>
 
                       {/* Nome */}
                       <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -458,7 +458,7 @@ export default function TodosClientes() {
                       {/* Ações */}
                       <div style={{display:"flex",alignItems:"center",gap:5}} onClick={e=>e.stopPropagation()}>
                         <button className="action-btn" style={{background:"rgba(41,128,185,0.08)",color:"#2980b9"}}
-                          onClick={e=>{e.stopPropagation();navigate(isDraft?`/clientes/${emp.empresa_id}/editar`:`/clientes/${emp.empresa_id}`);}} title="Ver perfil">
+                          onClick={e=>{e.stopPropagation();navigate(isDraft?`/clientes/${emp.empresa_id}/editar`:`/clientes/${emp.empresa_id}`,{state:{from:"/clientes"}});}} title="Ver perfil">
                           <Eye style={{width:13,height:13}}/>
                         </button>
                         <button className="action-btn" style={{background:"rgba(142,68,173,0.08)",color:"#8e44ad"}}

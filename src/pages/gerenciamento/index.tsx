@@ -618,7 +618,7 @@ export default function Gerenciamento() {
                             animate={{opacity:movingId===emp.empresa_id?0.45:1,y:0}}
                             exit={{opacity:0,scale:0.95}}
                             transition={{duration:0.2,delay:idx*0.04}}
-                            onClick={()=>navigate(`/clientes/${emp.empresa_id}`)}
+                            onClick={()=>navigate(`/clientes/${emp.empresa_id}`,{state:{from:"/gerenciamento"}})}
                           >
                             {/* Top accent bar */}
                             <div style={{position:"absolute",top:0,left:0,right:0,height:3,borderRadius:"14px 14px 0 0",background:col.color}}/>
@@ -735,7 +735,7 @@ export default function Gerenciamento() {
                     </div>
                     <span style={{fontSize:12,fontWeight:700,color:"rgba(20,45,70,0.55)"}}>{daysInStage(emp)} {daysInStage(emp)===1?"dia":"dias"}</span>
                     <div style={{display:"flex",gap:5,alignItems:"center"}}>
-                      <button onClick={()=>navigate(`/clientes/${emp.empresa_id}`)} style={{width:30,height:30,borderRadius:8,border:"1px solid rgba(200,225,240,0.7)",background:"rgba(255,255,255,0.7)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+                      <button onClick={()=>navigate(`/clientes/${emp.empresa_id}`,{state:{from:"/gerenciamento"}})} style={{width:30,height:30,borderRadius:8,border:"1px solid rgba(200,225,240,0.7)",background:"rgba(255,255,255,0.7)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
                         <ChevronRight style={{width:13,height:13,color:"#2980b9"}}/>
                       </button>
                     </div>
@@ -864,7 +864,7 @@ export default function Gerenciamento() {
                       {/* Ações rápidas */}
                       <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0}}>
                         <button
-                          onClick={()=>navigate(`/clientes/${emp.empresa_id}`)}
+                          onClick={()=>navigate(`/clientes/${emp.empresa_id}`,{state:{from:"/gerenciamento"}})}
                           style={{height:26,padding:"0 9px",borderRadius:7,border:"1px solid rgba(41,128,185,0.3)",background:"rgba(41,128,185,0.08)",color:"#2980b9",fontSize:10,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}
                         >
                           <Eye style={{width:10,height:10}}/> Ver empresa
