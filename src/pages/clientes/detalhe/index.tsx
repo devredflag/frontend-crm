@@ -214,20 +214,15 @@ export default function EmpresaDetalhe() {
     selected.forEach(r => {
       if (!r.valor) return;
       if (sendChannel === "email") {
-        window.open(
-          resolvedProvider === "gmail"
-            ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(r.valor)}`
-            : `https://outlook.live.com/mail/0/deeplink/compose?to=${encodeURIComponent(r.valor)}`,
-          "_blank"
-        );
+        openEmail(r.valor, resolvedProvider as "gmail" | "outlook");
         return;
       }
       if (sendChannel === "whatsapp") {
-        window.open(`https://wa.me/${r.valor.replace(/\D/g, "")}`);
+        openWhatsApp(r.valor);
         return;
       }
       if (sendChannel === "telefone") {
-        window.open(`tel:${r.valor}`);
+        window.open(`tel:${r.valor}`, "_self");
         return;
       }
       if (sendChannel === "linkedin") {
