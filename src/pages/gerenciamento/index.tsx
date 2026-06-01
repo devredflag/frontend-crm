@@ -666,55 +666,8 @@ export default function Gerenciamento() {
 
                             {/* ── SEÇÃO EXPANSÍVEL NO HOVER ── */}
                             <div className="card-expand-section">
-                            {/* Valor */}
-                            <div style={{marginBottom:8}} onClick={e=>e.stopPropagation()}>
-                              {editValorId===emp.empresa_id?(
-                                <div style={{display:"flex",gap:5}}>
-                                  <input className="mini-input" autoFocus value={valorDraft} onChange={e=>setValorDraft(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")saveValor(emp.empresa_id);if(e.key==="Escape")setEditValorId(null);}} placeholder="Ex: 5000"/>
-                                  <button className="quick-btn" onClick={e=>saveValor(emp.empresa_id,e)}><Save style={{width:12,height:12}}/></button>
-                                  <button className="quick-btn" onClick={()=>setEditValorId(null)}><X style={{width:12,height:12}}/></button>
-                                </div>
-                              ):(
-                                <button onClick={e=>{e.stopPropagation();setEditValorId(emp.empresa_id);setValorDraft(emp.ticket_medio_estimado?.toString()||"");}} style={{width:"100%",height:28,borderRadius:8,border:"1px solid rgba(39,174,96,0.25)",background:"rgba(39,174,96,0.07)",color:"#16a34a",fontSize:12,fontWeight:900,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 9px"}}>
-                                  <span>{formatMoney(emp.ticket_medio_estimado)}</span><Edit3 style={{width:11,height:11}}/>
-                                </button>
-                              )}
-                            </div>
-
-                            {/* Próxima ação + data */}
-                            <div style={{display:"flex",gap:5,marginBottom:8}} onClick={e=>e.stopPropagation()}>
-                              <select className="mini-select" style={{flex:"1 1 0",minWidth:0}} value={emp.proxima_acao||""} onChange={e=>updateNextAction(emp.empresa_id,{proxima_acao:e.target.value})}>
-                                <option value="">Próxima ação</option>
-                                {PROXIMAS_ACOES.map(a=><option key={a}>{a}</option>)}
-                              </select>
-                              <input
-                                className="mini-input"
-                                type="date"
-                                style={{width:120,flexShrink:0}}
-                                value={dateOnly(emp.data_proxima_acao)}
-                                onChange={e=>updateNextAction(emp.empresa_id,{data_proxima_acao:e.target.value || null})}
-                              />
-                            </div>
-
                             <div style={{height:1,background:"rgba(200,225,240,0.5)",marginBottom:8}}/>
-
-                            {/* Temperatura + ações rápidas + status */}
-                            <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:7}}>
-                              <div style={{display:"flex",gap:3}}>
-                                {TEMPS.map(t=>(
-                                  <button key={t.key} onClick={ev=>updateTemp(emp.empresa_id,t.key,ev)} title={t.key} style={{width:26,height:26,borderRadius:5,border:`1.5px solid ${emp.temperatura===t.key?t.color:"rgba(200,225,240,0.7)"}`,background:emp.temperatura===t.key?t.bg:"rgba(255,255,255,0.6)",cursor:"pointer",fontSize:13,transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                                    {t.icon}
-                                  </button>
-                                ))}
-                              </div>
-                              <div style={{flex:1}}/>
-                              {renderQuickActions(emp)}
-                              <button onClick={ev=>{ev.stopPropagation();navigate(`/clientes/${emp.empresa_id}`);}} style={{width:24,height:24,borderRadius:6,border:"1px solid rgba(200,225,240,0.7)",background:"rgba(255,255,255,0.7)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
-                                <Eye style={{width:11,height:11,color:"#2980b9"}}/>
-                              </button>
-                            </div>
-
-                            {/* Status dropdown */}
+                            {/* Mover etapa */}
                             <div onClick={e=>e.stopPropagation()} style={{position:"relative"}}>
                               <select
                                 className="mini-status-select"
@@ -743,8 +696,8 @@ export default function Gerenciamento() {
 
           {view==="lista"&&(
             <div style={{display:"flex",flexDirection:"column",gap:8,maxWidth:1320}}>
-              <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr 105px 145px 120px 100px 110px",gap:12,padding:"6px 18px",fontSize:10,fontWeight:700,color:"rgba(20,45,70,0.45)",letterSpacing:"0.07em",textTransform:"uppercase"}}>
-                <span>Empresa</span><span>Status</span><span>Temperatura</span><span>Cidade</span><span>Score</span><span>Próxima ação</span><span>Valor</span><span>Parado</span><span>Ações</span>
+              <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 105px 145px 100px 110px",gap:12,padding:"6px 18px",fontSize:10,fontWeight:700,color:"rgba(20,45,70,0.45)",letterSpacing:"0.07em",textTransform:"uppercase"}}>
+                <span>Empresa</span><span>Status</span><span>Cidade</span><span>Score</span><span>Próxima ação</span><span>Parado</span><span>Ações</span>
               </div>
               {loading?([1,2,3,4].map(i=><div key={i} className="skeleton" style={{height:64,borderRadius:12}}/>)):
               filtered.length===0?(
@@ -758,7 +711,7 @@ export default function Gerenciamento() {
                 const si=PIPELINE.find(p=>p.key===emp.status)||PIPELINE[0];
                 const next=nextActionInfo(emp);
                 return(
-                  <motion.div key={emp.empresa_id} className="list-row" initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} transition={{duration:0.18,delay:idx*0.03}} style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr 105px 145px 120px 100px 110px",gap:12,alignItems:"center",padding:"12px 18px"}}>
+                  <motion.div key={emp.empresa_id} className="list-row" initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} transition={{duration:0.18,delay:idx*0.03}} style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 105px 145px 100px 110px",gap:12,alignItems:"center",padding:"12px 18px"}}>
                     <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
                       <div style={{width:36,height:36,borderRadius:9,background:avatarColor(emp.nome),display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"#fff",flexShrink:0}}>{initials(emp.nome)}</div>
                       <div style={{minWidth:0}}>
@@ -769,13 +722,6 @@ export default function Gerenciamento() {
                     <select value={emp.status} onChange={e=>updateStatus(emp.empresa_id,e.target.value)} style={{height:30,padding:"0 8px",borderRadius:7,border:`1px solid ${si.color}40`,background:si.light,fontSize:11,fontWeight:700,color:si.color,outline:"none",cursor:"pointer"}}>
                       {PIPELINE.map(p=><option key={p.key} value={p.key}>{p.label}</option>)}
                     </select>
-                    <div style={{display:"flex",gap:3}}>
-                      {TEMPS.map(t=>(
-                        <button key={t.key} onClick={ev=>updateTemp(emp.empresa_id,t.key,ev)} title={t.key} style={{width:28,height:28,borderRadius:6,border:`1.5px solid ${emp.temperatura===t.key?t.color:"rgba(200,225,240,0.7)"}`,background:emp.temperatura===t.key?t.bg:"rgba(255,255,255,0.6)",cursor:"pointer",fontSize:14,transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                          {t.icon}
-                        </button>
-                      ))}
-                    </div>
                     <span style={{fontSize:12,color:"rgba(20,45,70,0.6)"}}>{emp.cidade||"—"}</span>
                     <div style={{display:"flex",alignItems:"center",gap:5}}>
                       <div style={{width:36,height:4,borderRadius:4,background:"rgba(200,225,240,0.5)"}}>
@@ -787,22 +733,8 @@ export default function Gerenciamento() {
                       <div style={{fontSize:11,fontWeight:800,color:next.color}}>{emp.proxima_acao||"—"}</div>
                       <div style={{fontSize:10,color:"rgba(20,45,70,0.45)"}}>{formatDate(emp.data_proxima_acao)}</div>
                     </div>
-                    <div onClick={e=>e.stopPropagation()}>
-                      {editValorId===emp.empresa_id?(
-                        <div style={{display:"flex",gap:4}}>
-                          <input className="mini-input" autoFocus value={valorDraft} onChange={e=>setValorDraft(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")saveValor(emp.empresa_id);if(e.key==="Escape")setEditValorId(null);}} style={{width:76}}/>
-                          <button className="quick-btn" onClick={e=>saveValor(emp.empresa_id,e)}><Save style={{width:12,height:12}}/></button>
-                        </div>
-                      ):(
-                        <button onClick={e=>{e.stopPropagation();setEditValorId(emp.empresa_id);setValorDraft(emp.ticket_medio_estimado?.toString()||"");}} style={{height:30,width:"100%",borderRadius:8,border:"1px solid rgba(39,174,96,0.25)",background:"rgba(39,174,96,0.06)",fontSize:11,fontWeight:800,color:"#16a34a",cursor:"pointer"}}>
-                          {formatMoney(emp.ticket_medio_estimado)}
-                        </button>
-                      )}
-                    </div>
-                    {/* ✅ MUDANÇA 5: dia / dias na lista */}
                     <span style={{fontSize:12,fontWeight:700,color:"rgba(20,45,70,0.55)"}}>{daysInStage(emp)} {daysInStage(emp)===1?"dia":"dias"}</span>
                     <div style={{display:"flex",gap:5,alignItems:"center"}}>
-                      {renderQuickActions(emp)}
                       <button onClick={()=>navigate(`/clientes/${emp.empresa_id}`)} style={{width:30,height:30,borderRadius:8,border:"1px solid rgba(200,225,240,0.7)",background:"rgba(255,255,255,0.7)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
                         <ChevronRight style={{width:13,height:13,color:"#2980b9"}}/>
                       </button>
