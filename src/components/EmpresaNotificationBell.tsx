@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Bell, Mail, Calendar, Check, X, HelpCircle, Clock } from "lucide-react";
+import { openEmail, isNotifEnabled } from "../utils/commPrefs";
 
 const API = "https://backend-crm-production-157b.up.railway.app";
 
-// ✅ Fora do componente — nunca reseta
-const mailTabRef: { current: Window | null } = { current: null };
 
 interface Notif {
   notificacao_id: string;
@@ -59,7 +58,7 @@ export default function EmpresaNotificationBell({ empresaId, empresaNome, onVerC
       if (res.ok) {
         const data: Notif[] = await res.json();
         const tipos = ["email_interaction", "calendar_accepted", "calendar_declined", "calendar_tentative"];
-        setNotifs(data.filter(n => tipos.includes(n.tipo)));
+        setNotifs(data.filter(n => tipos.includes(n.tipo) && isNotifEnabled(n.tipo)));
       }
     } finally {
       setLoading(false);
@@ -96,29 +95,6 @@ export default function EmpresaNotificationBell({ empresaId, empresaNome, onVerC
     if (tipo === "calendar_tentative") return { bg:"rgba(243,156,18,0.1)",  color:"#f39c12", border:"rgba(243,156,18,0.3)",  label:"Talvez",       Icon: HelpCircle  };
     return null;
   };
-
-  // ✅ Função centralizada para abrir/reutilizar aba
-  function openMailTab(targetUrl: string) {
-
-    if (
-      mailTabRef.current &&
-      !mailTabRef.current.closed
-    ) {
-      mailTabRef.current.location.href =
-        targetUrl;
-
-      mailTabRef.current.focus();
-
-    } else {
-
-      mailTabRef.current = window.open(
-        targetUrl,
-        "crm_mail_tab"
-      );
-
-      mailTabRef.current?.focus();
-    }
-  }
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
@@ -231,18 +207,17 @@ export default function EmpresaNotificationBell({ empresaId, empresaNome, onVerC
                       const senderEmail = n.meta?.sender_email || "";
                       const subject     = n.meta?.subject || "";
                       const isGmail     = n.platform === "gmail";
-                      let targetUrl = "";
                       if (id) {
-                        targetUrl = isGmail
+                        const url = isGmail
                           ? `https://mail.google.com/mail/u/0/#inbox/${id}`
                           : `https://outlook.office.com/mail/inbox/id/${id}`;
+                        openEmail("", isGmail ? "gmail" : "outlook");
+                        // abre thread diretamente
+                        const tab = window.open(url, "crm_mail_tab");
+                        tab?.focus();
                       } else {
-                        const busca = `${senderEmail} ${subject}`;
-                        targetUrl = isGmail
-                          ? `https://mail.google.com/mail/u/0/#search/${encodeURIComponent(busca)}`
-                          : `https://outlook.office.com/mail/search?q=${encodeURIComponent(busca)}`;
+                        openEmail(senderEmail, isGmail ? "gmail" : "outlook");
                       }
-                      openMailTab(targetUrl);
                       return;
                     }
                     onVerComunicacoes?.();

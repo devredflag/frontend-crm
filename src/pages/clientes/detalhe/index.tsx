@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { openEmail, openWhatsApp } from "../../../utils/commPrefs";
 import {
   BarChart3, LayoutDashboard, Search, Building2, Users,
   ClipboardList, Calendar, ArrowLeft, Edit3,
@@ -235,14 +236,8 @@ export default function EmpresaDetalhe() {
     });
   };
 
-  // botões de email nos cards individuais de contato usam o provider já escolhido
-  const openContactEmail = (email: string) => {
-    window.open(
-      lastProvider === "gmail"
-        ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}`
-        : `https://outlook.live.com/mail/0/deeplink/compose?to=${encodeURIComponent(email)}`,
-      "_blank"
-    );
+  const openContactEmail = (email: string, provider?: "gmail" | "outlook") => {
+    openEmail(email, provider || (lastProvider as "gmail" | "outlook"));
   };
 
   const sc = empresa ? statusColor(empresa.status)      : statusColor("");
@@ -521,12 +516,12 @@ export default function EmpresaDetalhe() {
                                           </button>
                                         )}
                                         {(c.whatsapp || c.celular) && (
-                                          <button onClick={() => window.open(`https://wa.me/${(c.whatsapp || c.celular || "").replace(/\D/g,"")}`)} style={{ flex:1, height:26, borderRadius:6, border:"1px solid rgba(39,174,96,0.25)", background:"rgba(39,174,96,0.06)", color:"#27ae60", fontSize:10, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:3 }}>
+                                          <button onClick={() => openWhatsApp(c.whatsapp || c.celular || "")} style={{ flex:1, height:26, borderRadius:6, border:"1px solid rgba(39,174,96,0.25)", background:"rgba(39,174,96,0.06)", color:"#27ae60", fontSize:10, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:3 }}>
                                             <MessageCircle style={{ width:9, height:9 }} /> WhatsApp
                                           </button>
                                         )}
                                         {(c.celular || c.telefone) && (
-                                          <button onClick={() => window.open(`tel:${c.celular || c.telefone}`)} style={{ flex:1, height:26, borderRadius:6, border:"1px solid rgba(230,126,34,0.25)", background:"rgba(230,126,34,0.06)", color:"#e67e22", fontSize:10, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:3 }}>
+                                          <button onClick={() => window.open(`tel:${c.celular || c.telefone}`, "_self")} style={{ flex:1, height:26, borderRadius:6, border:"1px solid rgba(230,126,34,0.25)", background:"rgba(230,126,34,0.06)", color:"#e67e22", fontSize:10, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:3 }}>
                                             <Phone style={{ width:9, height:9 }} /> Ligar
                                           </button>
                                         )}

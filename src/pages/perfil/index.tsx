@@ -46,6 +46,7 @@ const API = "https://backend-crm-production-157b.up.railway.app";
 
 interface Usuario { nome: string; email: string; cargo: string; empresa_nome: string; }
 
+type EmailProvider = "gmail" | "outlook" | null;
 type OutlookMode = "web" | "app" | null;
 type WhatsAppMode = "web" | "app" | null;
 type SettingsTab = "comunicacao" | "perfil" | "notificacoes" | "seguranca";
@@ -92,37 +93,84 @@ const settingsTabs: { key: SettingsTab; icon: any; label: string; badge?: string
 
 export default function Perfil() {
   const navigate = useNavigate();
-  const [usuario, setUsuario] = useState<Usuario | null>(null);
-  const [activeTab, setActiveTab] = useState<SettingsTab>("comunicacao");
+  const [usuario, setUsuario]         = useState<Usuario | null>(null);
+  const [activeTab, setActiveTab]     = useState<SettingsTab>("comunicacao");
+  const [emailProvider, setEmailProvider] = useState<EmailProvider>(null);
   const [outlookMode, setOutlookMode] = useState<OutlookMode>(null);
   const [whatsappMode, setWhatsappMode] = useState<WhatsAppMode>(null);
-  const [notifPrefs, setNotifPrefs] = useState<NotifPrefs>(DEFAULT_NOTIF_PREFS);
-  const [saved, setSaved] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [notifPrefs, setNotifPrefs]   = useState<NotifPrefs>(DEFAULT_NOTIF_PREFS);
+  const [saved, setSaved]             = useState(false);
+  const [loading, setLoading]         = useState(true);
+  const [gmailConectado, setGmailConectado]     = useState(false);
+  const [outlookConectado, setOutlookConectado] = useState(false);
+  const [conectandoGmail, setConectandoGmail]   = useState(false);
+  const [desconectando, setDesconectando]       = useState<"gmail"|"outlook"|null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token") || "";
-    fetch(`${API}/me`, { headers: { Authorization: `Bearer ${token}` } })
+    const h = { Authorization: `Bearer ${token}` };
+
+    fetch(`${API}/me`, { headers: h })
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d) setUsuario(d); })
       .catch(() => {})
       .finally(() => setLoading(false));
 
-    const savedPrefs = localStorage.getItem("crm_comm_prefs");
-    if (savedPrefs) {
-      try {
-        const prefs = JSON.parse(savedPrefs);
-        if (prefs.outlookMode)   setOutlookMode(prefs.outlookMode);
-        if (prefs.whatsappMode)  setWhatsappMode(prefs.whatsappMode);
-        if (prefs.notifPrefs)    setNotifPrefs({ ...DEFAULT_NOTIF_PREFS, ...prefs.notifPrefs });
-      } catch {}
-    }
+    // Carrega preferências salvas
+    try {
+      const prefs = JSON.parse(localStorage.getItem("crm_comm_prefs") || "{}");
+      if (prefs.emailProvider)  setEmailProvider(prefs.emailProvider);
+      if (prefs.outlookMode)    setOutlookMode(prefs.outlookMode);
+      if (prefs.whatsappMode)   setWhatsappMode(prefs.whatsappMode);
+      if (prefs.notifPrefs)     setNotifPrefs({ ...DEFAULT_NOTIF_PREFS, ...prefs.notifPrefs });
+    } catch {}
+
+    // Verifica conexão dos provedores
+    Promise.all([
+      fetch(`${API}/auth/google/status`,  { headers: h }).then(r => r.json()).catch(() => ({})),
+      fetch(`${API}/auth/outlook/status`, { headers: h }).then(r => r.json()).catch(() => ({})),
+    ]).then(([g, o]) => {
+      setGmailConectado(!!g?.conectado);
+      setOutlookConectado(!!o?.conectado);
+    });
   }, []);
 
   const handleSave = () => {
-    localStorage.setItem("crm_comm_prefs", JSON.stringify({ outlookMode, whatsappMode, notifPrefs }));
+    localStorage.setItem("crm_comm_prefs", JSON.stringify({ emailProvider, outlookMode, whatsappMode, notifPrefs }));
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
+  };
+
+  const connectGmail = async () => {
+    setConectandoGmail(true);
+    try {
+      const token = localStorage.getItem("token") || "";
+      const res = await fetch(`${API}/auth/google/login`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (data.auth_url) window.location.href = data.auth_url;
+    } catch {} finally { setConectandoGmail(false); }
+  };
+
+  const connectOutlook = async () => {
+    try {
+      const token = localStorage.getItem("token") || "";
+      const res = await fetch(`${API}/auth/outlook/login`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (data.auth_url) window.location.href = data.auth_url;
+    } catch {}
+  };
+
+  const disconnect = async (prov: "gmail" | "outlook") => {
+    setDesconectando(prov);
+    try {
+      const token = localStorage.getItem("token") || "";
+      await fetch(`${API}/auth/${prov === "gmail" ? "google" : "outlook"}/disconnect`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (prov === "gmail") { setGmailConectado(false); if (emailProvider === "gmail") setEmailProvider(null); }
+      else { setOutlookConectado(false); if (emailProvider === "outlook") setEmailProvider(null); }
+    } catch {} finally { setDesconectando(null); }
   };
 
   const nomeUsuario  = usuario?.nome || "...";
@@ -240,83 +288,101 @@ export default function Perfil() {
 
                   <div style={{ marginBottom:20 }}>
                     <h2 style={{ fontSize:16, fontWeight:800, color:"#0f2133", letterSpacing:"-0.02em" }}>Canais de Comunicação</h2>
-                    <p style={{ fontSize:12, color:"rgba(20,45,70,0.5)", marginTop:3 }}>Escolha como deseja enviar e-mails e mensagens WhatsApp diretamente pelo CRM</p>
+                    <p style={{ fontSize:12, color:"rgba(20,45,70,0.5)", marginTop:3 }}>Configure seus provedores e como deseja enviar mensagens pelo CRM</p>
                   </div>
 
-                  {/* ── OUTLOOK ── */}
+                  {/* ── PROVEDORES DE E-MAIL ── */}
                   <motion.div className="glass-card" style={{ padding:"20px 22px", marginBottom:16 }} initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.05 }}>
                     <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
-                      <div style={{ width:32, height:32, borderRadius:9, background:"rgba(0,120,212,0.1)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                        <Mail style={{ width:15, height:15, color:"#0078d4" }}/>
+                      <div style={{ width:32, height:32, borderRadius:9, background:"rgba(41,128,185,0.1)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                        <Mail style={{ width:15, height:15, color:"#2980b9" }}/>
                       </div>
                       <div>
-                        <div style={{ fontSize:14, fontWeight:700, color:"#0f2133" }}>E-mail (Outlook)</div>
-                        <div style={{ fontSize:11, color:"rgba(20,45,70,0.45)" }}>Selecione como o Outlook será aberto</div>
+                        <div style={{ fontSize:14, fontWeight:700, color:"#0f2133" }}>Provedores de E-mail</div>
+                        <div style={{ fontSize:11, color:"rgba(20,45,70,0.45)" }}>Conecte e escolha qual usar como padrão</div>
                       </div>
                     </div>
 
-                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-
-                      {/* Outlook Web */}
-                      <div className={`channel-card${outlookMode === "web" ? " selected-outlook" : ""}`} onClick={() => setOutlookMode(outlookMode === "web" ? null : "web")}>
-                        {outlookMode === "web" && (
-                          <div style={{ position:"absolute", top:10, right:10, width:20, height:20, borderRadius:"50%", background:"#0078d4", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                            <Check style={{ width:11, height:11, color:"#fff" }}/>
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:14 }}>
+                      {/* Gmail */}
+                      {[
+                        { prov: "gmail" as const,   label:"Gmail",   sub:"Google",   color:"#EA4335", bg:"rgba(234,67,53,0.08)",  conectado:gmailConectado   },
+                        { prov: "outlook" as const, label:"Outlook", sub:"Microsoft", color:"#0078d4", bg:"rgba(0,120,212,0.08)", conectado:outlookConectado },
+                      ].map(({ prov, label, sub, color, bg, conectado }) => (
+                        <div key={prov} style={{ padding:16, borderRadius:12, border:`2px solid ${emailProvider===prov ? color : "rgba(200,225,240,0.6)"}`, background: emailProvider===prov ? bg : "rgba(255,255,255,0.6)", transition:"all 0.2s", position:"relative" }}>
+                          {emailProvider === prov && (
+                            <div style={{ position:"absolute", top:10, right:10, width:20, height:20, borderRadius:"50%", background:color, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                              <Check style={{ width:11, height:11, color:"#fff" }}/>
+                            </div>
+                          )}
+                          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
+                            <div style={{ width:34, height:34, borderRadius:9, background:bg, border:`1.5px solid ${color}33`, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                              <Mail style={{ width:16, height:16, color }}/>
+                            </div>
+                            <div>
+                              <div style={{ fontSize:13, fontWeight:700, color:"#0f2133" }}>{label}</div>
+                              <div style={{ fontSize:10, color:"rgba(20,45,70,0.45)" }}>{sub}</div>
+                            </div>
                           </div>
-                        )}
-                        <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:10 }}>
-                          <div style={{ width:32, height:32, borderRadius:8, background:"#0078d4", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                            <Globe style={{ width:16, height:16, color:"#fff" }}/>
+                          {/* Status */}
+                          <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:10 }}>
+                            <div style={{ width:7, height:7, borderRadius:"50%", background: conectado ? "#27ae60" : "rgba(150,160,170,0.4)", flexShrink:0 }}/>
+                            <span style={{ fontSize:11, fontWeight:600, color: conectado ? "#27ae60" : "rgba(20,45,70,0.4)" }}>
+                              {conectado ? "Conectado" : "Não conectado"}
+                            </span>
                           </div>
-                          <div>
-                            <div style={{ fontSize:14, fontWeight:700, color:"#0f2133" }}>Outlook Web</div>
-                            <div style={{ fontSize:10, color:"rgba(20,45,70,0.45)" }}>Abre no navegador</div>
+                          <div style={{ display:"flex", gap:6 }}>
+                            {conectado ? (
+                              <>
+                                <button
+                                  onClick={() => setEmailProvider(emailProvider === prov ? null : prov)}
+                                  style={{ flex:1, height:30, borderRadius:8, border:`1.5px solid ${color}55`, background: emailProvider===prov ? color : "rgba(255,255,255,0.8)", color: emailProvider===prov ? "#fff" : color, fontSize:11, fontWeight:700, cursor:"pointer" }}
+                                >
+                                  {emailProvider === prov ? "✓ Padrão" : "Usar como padrão"}
+                                </button>
+                                <button
+                                  onClick={() => disconnect(prov)}
+                                  disabled={desconectando === prov}
+                                  style={{ height:30, padding:"0 10px", borderRadius:8, border:"1.5px solid rgba(231,76,60,0.25)", background:"rgba(231,76,60,0.06)", color:"#e74c3c", fontSize:11, fontWeight:600, cursor:"pointer" }}
+                                >
+                                  {desconectando === prov ? "..." : "Desconectar"}
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => prov === "gmail" ? connectGmail() : connectOutlook()}
+                                disabled={conectandoGmail && prov === "gmail"}
+                                style={{ flex:1, height:30, borderRadius:8, border:`1.5px solid ${color}55`, background:bg, color, fontSize:11, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}
+                              >
+                                <ExternalLink style={{ width:11, height:11 }}/>
+                                {conectandoGmail && prov === "gmail" ? "Conectando..." : `Conectar ${label}`}
+                              </button>
+                            )}
                           </div>
                         </div>
-                        <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, color:"rgba(20,45,70,0.5)" }}>
-                          <ExternalLink style={{ width:11, height:11, marginTop:1 }}/>
-                          <span>outlook.live.com</span>
-                        </div>
-                        <div style={{ marginTop:8, padding:"6px 10px", borderRadius:8, background:"rgba(0,120,212,0.06)", border:"1px solid rgba(0,120,212,0.15)", fontSize:10, color:"#0063b1", fontWeight:600 }}>
-                          Não precisa de app instalado
-                        </div>
-                      </div>
-
-                      {/* Outlook App */}
-                      <div className={`channel-card${outlookMode === "app" ? " selected-outlook" : ""}`} onClick={() => setOutlookMode(outlookMode === "app" ? null : "app")}>
-                        {outlookMode === "app" && (
-                          <div style={{ position:"absolute", top:10, right:10, width:20, height:20, borderRadius:"50%", background:"#0078d4", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                            <Check style={{ width:11, height:11, color:"#fff" }}/>
-                          </div>
-                        )}
-                        <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:10 }}>
-                          <div style={{ width:32, height:32, borderRadius:8, background:"linear-gradient(135deg,#0078d4,#106ebe)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                            <Monitor style={{ width:16, height:16, color:"#fff" }}/>
-                          </div>
-                          <div>
-                            <div style={{ fontSize:14, fontWeight:700, color:"#0f2133" }}>Outlook App</div>
-                            <div style={{ fontSize:10, color:"rgba(20,45,70,0.45)" }}>Windows / macOS</div>
-                          </div>
-                        </div>
-                        <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, color:"rgba(20,45,70,0.5)" }}>
-                          <Monitor style={{ width:11, height:11, marginTop:1 }}/>
-                          <span>Protocolo mailto:</span>
-                        </div>
-                        <div style={{ marginTop:8, padding:"6px 10px", borderRadius:8, background:"rgba(0,120,212,0.06)", border:"1px solid rgba(0,120,212,0.15)", fontSize:10, color:"#0063b1", fontWeight:600 }}>
-                          Abre direto no app instalado
-                        </div>
-                      </div>
+                      ))}
                     </div>
 
-                    {outlookMode && (
-                      <motion.div initial={{ opacity:0, y:4 }} animate={{ opacity:1, y:0 }} style={{ marginTop:12, padding:"10px 14px", borderRadius:10, background:"rgba(0,120,212,0.06)", border:"1px solid rgba(0,120,212,0.18)", display:"flex", gap:8, alignItems:"flex-start" }}>
-                        <Info style={{ width:14, height:14, color:"#0078d4", flexShrink:0, marginTop:1 }}/>
-                        <div style={{ fontSize:11, color:"rgba(20,45,70,0.6)", lineHeight:1.5 }}>
-                          {outlookMode === "web"
-                            ? "Ao clicar em \"Enviar e-mail\" em qualquer contato, o Outlook Web será aberto em uma nova aba com o destinatário preenchido."
-                            : "Ao clicar em \"Enviar e-mail\", o link usará o protocolo mailto: para abrir o Outlook instalado no seu computador."}
+                    {/* Modo Outlook */}
+                    {outlookConectado && (
+                      <div style={{ borderTop:"1px solid rgba(200,225,240,0.5)", paddingTop:14 }}>
+                        <div style={{ fontSize:12, fontWeight:700, color:"rgba(20,45,70,0.5)", marginBottom:10, textTransform:"uppercase", letterSpacing:"0.05em" }}>Como abrir o Outlook</div>
+                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                          {[
+                            { mode:"web" as const, label:"Outlook Web",  sub:"outlook.live.com", Icon:Globe },
+                            { mode:"app" as const, label:"App instalado", sub:"Protocolo mailto:", Icon:Monitor },
+                          ].map(({ mode, label, sub, Icon: Ic }) => (
+                            <div key={mode} onClick={() => setOutlookMode(outlookMode===mode ? null : mode)} style={{ padding:"10px 12px", borderRadius:10, border:`1.5px solid ${outlookMode===mode ? "#0078d4" : "rgba(200,225,240,0.6)"}`, background: outlookMode===mode ? "rgba(0,120,212,0.06)" : "rgba(255,255,255,0.6)", cursor:"pointer", display:"flex", alignItems:"center", gap:10, transition:"all 0.18s" }}>
+                              <Ic style={{ width:14, height:14, color: outlookMode===mode ? "#0078d4" : "rgba(20,45,70,0.35)", flexShrink:0 }}/>
+                              <div>
+                                <div style={{ fontSize:12, fontWeight:700, color: outlookMode===mode ? "#0078d4" : "#0f2133" }}>{label}</div>
+                                <div style={{ fontSize:10, color:"rgba(20,45,70,0.4)" }}>{sub}</div>
+                              </div>
+                              {outlookMode === mode && <Check style={{ width:12, height:12, color:"#0078d4", marginLeft:"auto" }}/>}
+                            </div>
+                          ))}
                         </div>
-                      </motion.div>
+                      </div>
                     )}
                   </motion.div>
 
@@ -401,8 +467,8 @@ export default function Perfil() {
                   <motion.div className="glass-card" style={{ padding:"16px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:16 }} initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.15 }}>
                     <div style={{ display:"flex", gap:16, flexWrap:"wrap" }}>
                       <div style={{ fontSize:12, color:"rgba(20,45,70,0.5)" }}>
-                        <span style={{ fontWeight:600, color:"#0f2133" }}>E-mail: </span>
-                        {outlookMode === "web" ? "Outlook Web" : outlookMode === "app" ? "Outlook App" : <span style={{ color:"rgba(20,45,70,0.35)" }}>não configurado</span>}
+                        <span style={{ fontWeight:600, color:"#0f2133" }}>E-mail padrão: </span>
+                        {emailProvider === "gmail" ? "Gmail" : emailProvider === "outlook" ? `Outlook ${outlookMode === "app" ? "App" : "Web"}` : <span style={{ color:"rgba(20,45,70,0.35)" }}>não configurado</span>}
                       </div>
                       <div style={{ fontSize:12, color:"rgba(20,45,70,0.5)" }}>
                         <span style={{ fontWeight:600, color:"#0f2133" }}>WhatsApp: </span>

@@ -1,5 +1,6 @@
 // src/components/SelectRecipientsModal.tsx
 import { useState, useMemo, useEffect } from "react";
+import { getCommPrefs } from "../utils/commPrefs";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Mail, Phone, MessageCircle, Link2,
@@ -91,6 +92,9 @@ export default function SelectRecipientsModal({
     const token = localStorage.getItem("token") || "";
     const h = { Authorization: `Bearer ${token}` };
 
+    // Se usuário já tem um provider salvo nas preferências, usa direto
+    const savedProvider = getCommPrefs().emailProvider;
+
     Promise.all([
       fetch(`${API}/auth/outlook/status`, { headers: h }).then(r => r.json()).catch(() => ({})),
       fetch(`${API}/auth/google/status`,  { headers: h }).then(r => r.json()).catch(() => ({})),
@@ -101,11 +105,15 @@ export default function SelectRecipientsModal({
       setGmailOk(hasGmail);
       setCheckingAuth(false);
 
-      if (hasOutlook && hasGmail) {
-        // ambos conectados → mostra seleção
+      if (savedProvider && ((savedProvider === "gmail" && hasGmail) || (savedProvider === "outlook" && hasOutlook))) {
+        // preferência salva e provedor conectado → pula seleção
+        setProvider(savedProvider);
+        setStep("recipients");
+      } else if (hasOutlook && hasGmail) {
+        // ambos conectados, sem preferência → mostra seleção
         setStep("provider");
       } else {
-        // só um ou nenhum → vai direto, define provider
+        // só um ou nenhum conectado → define automaticamente
         setProvider(hasGmail && !hasOutlook ? "gmail" : "outlook");
         setStep("recipients");
       }
