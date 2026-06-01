@@ -437,7 +437,7 @@ export default function EmpresaDetalhe() {
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:18 }}>
 
                 {/* Card único de contatos */}
-                <motion.div className="glass-card" style={{ padding:"22px 24px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.18 }}>
+                <motion.div className="glass-card" style={{ padding:"22px 24px", display:"flex", flexDirection:"column", maxHeight:420 }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.18 }}>
                   <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
                     <div style={{ fontSize:13, fontWeight:700, color:"#0f2133", display:"flex", alignItems:"center", gap:7 }}>
                       <Users style={{ width:15, height:15, color:"#2980b9" }} /> Contatos ({contatos.length})
@@ -451,7 +451,7 @@ export default function EmpresaDetalhe() {
                   {contatos.length === 0 ? (
                     <div style={{ padding:"24px 0", textAlign:"center", fontSize:12, color:"rgba(20,45,70,0.4)" }}>Nenhum contato cadastrado</div>
                   ) : (
-                    <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                    <div style={{ display:"flex", flexDirection:"column", gap:6, overflowY:"auto", flex:1 }}>
                       <AnimatePresence>
                         {contatos.map((c, i) => {
                           const expanded = expandedContato === c.contato_id;
@@ -531,7 +531,7 @@ export default function EmpresaDetalhe() {
                 </motion.div>
 
                 {/* Card de atividades */}
-                <motion.div className="glass-card" style={{ padding:"22px 24px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.22 }}>
+                <motion.div className="glass-card" style={{ padding:"22px 24px", display:"flex", flexDirection:"column", maxHeight:420 }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.22 }}>
                   <div style={{ fontSize:13, fontWeight:700, color:"#0f2133", marginBottom:14, display:"flex", alignItems:"center", gap:7 }}>
                     <Calendar style={{ width:15, height:15, color:"#8e44ad" }} /> Atividades & Eventos
                   </div>
@@ -560,7 +560,7 @@ export default function EmpresaDetalhe() {
                       <div style={{ fontSize:11, color:"rgba(20,45,70,0.3)", marginTop:3 }}>Agende pelo calendário e as respostas aparecerão aqui</div>
                     </div>
                   ) : (
-                    <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
+                    <div style={{ display:"flex", flexDirection:"column", gap:7, overflowY:"auto", flex:1 }}>
                       {atividades.map((a: any) => {
                         const STATUS: Record<string, { color: string; bg: string; border: string; label: string; icon: React.ReactNode }> = {
                           aceito:       { color:"#27ae60", bg:"rgba(39,174,96,0.08)",  border:"rgba(39,174,96,0.28)",  label:"Aceito",       icon:<svg width="9" height="9" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9.5 10,2.5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg> },
