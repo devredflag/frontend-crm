@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Bell, Mail, X } from "lucide-react";
+import { Bell, Mail, Calendar, Check, X, HelpCircle, Clock } from "lucide-react";
 
 const API = "https://backend-crm-production-157b.up.railway.app";
 
@@ -68,7 +68,7 @@ export default function EmpresaNotificationBell({ empresaId, empresaNome, onVerC
 
   useEffect(() => {
     fetchNotifs();
-    const iv = setInterval(fetchNotifs, 60_000);
+    const iv = setInterval(fetchNotifs, 15_000);
     return () => clearInterval(iv);
   }, [fetchNotifs]);
 
@@ -89,6 +89,13 @@ export default function EmpresaNotificationBell({ empresaId, empresaNome, onVerC
   const platformColor = (p?: string) => p === "gmail"
     ? { bg: "rgba(231,76,60,0.08)", color: "#c0392b", border: "rgba(231,76,60,0.2)" }
     : { bg: "rgba(41,128,185,0.08)", color: "#2980b9", border: "rgba(41,128,185,0.2)" };
+
+  const calendarConfig = (tipo: string) => {
+    if (tipo === "calendar_accepted")  return { bg:"rgba(39,174,96,0.1)",   color:"#27ae60", border:"rgba(39,174,96,0.3)",   label:"Aceito",       Icon: Check       };
+    if (tipo === "calendar_declined")  return { bg:"rgba(231,76,60,0.1)",   color:"#e74c3c", border:"rgba(231,76,60,0.3)",   label:"Recusado",     Icon: X           };
+    if (tipo === "calendar_tentative") return { bg:"rgba(243,156,18,0.1)",  color:"#f39c12", border:"rgba(243,156,18,0.3)",  label:"Talvez",       Icon: HelpCircle  };
+    return null;
+  };
 
   // ✅ Função centralizada para abrir/reutilizar aba
   function openMailTab(targetUrl: string) {
@@ -203,14 +210,19 @@ export default function EmpresaNotificationBell({ empresaId, empresaNome, onVerC
             )}
 
             {!loading && notifs.map(n => {
-              const pc = platformColor(n.platform);
+              const isCalendar = n.tipo.startsWith("calendar_");
+              const cal = isCalendar ? calendarConfig(n.tipo) : null;
+              const pc  = platformColor(n.platform);
+              const iconBg     = cal ? cal.bg     : pc.bg;
+              const iconColor  = cal ? cal.color  : pc.color;
+              const iconBorder = cal ? cal.border : pc.border;
+
               return (
                 <div
                   key={n.notificacao_id}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-
                     markRead(n.notificacao_id);
                     setOpen(false);
 
@@ -219,7 +231,6 @@ export default function EmpresaNotificationBell({ empresaId, empresaNome, onVerC
                       const senderEmail = n.meta?.sender_email || "";
                       const subject     = n.meta?.subject || "";
                       const isGmail     = n.platform === "gmail";
-
                       let targetUrl = "";
                       if (id) {
                         targetUrl = isGmail
@@ -231,27 +242,30 @@ export default function EmpresaNotificationBell({ empresaId, empresaNome, onVerC
                           ? `https://mail.google.com/mail/u/0/#search/${encodeURIComponent(busca)}`
                           : `https://outlook.office.com/mail/search?q=${encodeURIComponent(busca)}`;
                       }
-
-                      // ✅ Reutiliza aba existente
                       openMailTab(targetUrl);
                       return;
                     }
-
                     onVerComunicacoes?.();
                   }}
                   style={{
                     padding: "11px 16px", cursor: "pointer",
                     borderBottom: "1px solid rgba(200,225,240,0.3)",
-                    background: n.lida ? "transparent" : "rgba(41,128,185,0.04)",
+                    background: n.lida ? "transparent" : (cal ? `${cal.bg}` : "rgba(41,128,185,0.04)"),
                     display: "flex", gap: 10, alignItems: "flex-start",
+                    borderLeft: cal ? `3px solid ${cal.color}` : "3px solid transparent",
+                    transition: "background 0.15s",
                   }}
                 >
+                  {/* Ícone */}
                   <div style={{
                     width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-                    background: pc.bg, border: `1px solid ${pc.border}`,
+                    background: iconBg, border: `1px solid ${iconBorder}`,
                     display: "flex", alignItems: "center", justifyContent: "center",
                   }}>
-                    <Mail style={{ width: 13, height: 13, color: pc.color }} />
+                    {cal
+                      ? <cal.Icon style={{ width: 14, height: 14, color: iconColor }} />
+                      : <Mail style={{ width: 13, height: 13, color: iconColor }} />
+                    }
                   </div>
 
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -261,8 +275,7 @@ export default function EmpresaNotificationBell({ empresaId, empresaNome, onVerC
                         color: "#0f2133", lineHeight: 1.4 }}>
                         {n.titulo}
                       </span>
-                      <span style={{ fontSize: 10, color: "rgba(20,45,70,0.4)",
-                        flexShrink: 0 }}>
+                      <span style={{ fontSize: 10, color: "rgba(20,45,70,0.4)", flexShrink: 0 }}>
                         {timeAgo(n.criado_em)}
                       </span>
                     </div>
@@ -275,22 +288,27 @@ export default function EmpresaNotificationBell({ empresaId, empresaNome, onVerC
                       <p style={{ margin: "0 0 4px", fontSize: 11, fontStyle: "italic",
                         color: "rgba(20,45,70,0.4)", overflow: "hidden",
                         textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {n.meta.subject}
+                        "{n.meta.subject}"
                       </p>
                     )}
-                    <span style={{
-                      fontSize: 10, fontWeight: 700, padding: "1px 7px",
-                      borderRadius: 10, background: pc.bg, color: pc.color,
-                    }}>
-                      {platformLabel(n.platform)}
-                    </span>
-                    {!n.lida && (
-                      <span style={{
-                        display: "inline-block", marginLeft: 6,
-                        width: 6, height: 6, borderRadius: "50%",
-                        background: "#e74c3c", verticalAlign: "middle",
-                      }} />
-                    )}
+                    <div style={{ display:"flex", alignItems:"center", gap:5, marginTop:2 }}>
+                      {cal ? (
+                        <span style={{ fontSize:10, fontWeight:700, padding:"1px 8px",
+                          borderRadius:10, background:cal.bg, color:cal.color,
+                          border:`1px solid ${cal.border}` }}>
+                          {cal.label}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize:10, fontWeight:700, padding:"1px 7px",
+                          borderRadius:10, background:pc.bg, color:pc.color }}>
+                          {platformLabel(n.platform)}
+                        </span>
+                      )}
+                      {!n.lida && (
+                        <span style={{ width:6, height:6, borderRadius:"50%",
+                          background:"#e74c3c", display:"inline-block" }} />
+                      )}
+                    </div>
                   </div>
                 </div>
               );

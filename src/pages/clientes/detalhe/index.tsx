@@ -170,6 +170,19 @@ export default function EmpresaDetalhe() {
       setLoading(false);
     };
     fetchAll();
+
+    // Atualiza atividades a cada 20s para capturar respostas de calendário
+    const refreshAtividades = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch(`${API}/empresas/${id}/atividades`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) setAtividades(await res.json());
+      } catch {}
+    };
+    const iv = setInterval(refreshAtividades, 20_000);
+    return () => clearInterval(iv);
   }, [id]);
 
   const buildRecipients = (channel: SendChannel): Recipient[] =>
