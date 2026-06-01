@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   BarChart3, LayoutDashboard, Search, Building2, Users,
   ClipboardList, Calendar, ArrowLeft, Edit3,
@@ -136,10 +136,12 @@ function SendButton({
 export default function EmpresaDetalhe() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [empresa, setEmpresa]   = useState<Empresa | null>(null);
-  const [contatos, setContatos] = useState<Contato[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [usuario, setUsuario]   = useState<Usuario | null>(null);
+  const [empresa, setEmpresa]     = useState<Empresa | null>(null);
+  const [contatos, setContatos]   = useState<Contato[]>([]);
+  const [atividades, setAtividades] = useState<any[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [usuario, setUsuario]     = useState<Usuario | null>(null);
+  const [expandedContato, setExpandedContato] = useState<string | null>(null);
 
   // canal aberto no modal
   const [sendChannel, setSendChannel] = useState<SendChannel | null>(null);
@@ -160,6 +162,10 @@ export default function EmpresaDetalhe() {
         if (empRes.ok)      setEmpresa(await empRes.json());
         if (contatosRes.ok) setContatos(await contatosRes.json());
         if (meRes.ok)       setUsuario(await meRes.json());
+        try {
+          const aRes = await fetch(`${API}/empresas/${id}/atividades`, { headers });
+          if (aRes.ok) setAtividades(await aRes.json());
+        } catch {}
       } catch {}
       setLoading(false);
     };
@@ -427,100 +433,161 @@ export default function EmpresaDetalhe() {
                 </motion.div>
               </div>
 
-              {/* Contatos */}
-              {contatos.length > 0 && (
+              {/* Contatos + Atividades */}
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:18 }}>
+
+                {/* Card único de contatos */}
                 <motion.div className="glass-card" style={{ padding:"22px 24px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.18 }}>
-                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
                     <div style={{ fontSize:13, fontWeight:700, color:"#0f2133", display:"flex", alignItems:"center", gap:7 }}>
                       <Users style={{ width:15, height:15, color:"#2980b9" }} /> Contatos ({contatos.length})
                     </div>
-                    <div style={{ display:"flex", gap:6 }}>
-                      <SendButton color="#2980b9" bg="rgba(41,128,185,0.08)" border="rgba(41,128,185,0.25)" icon={Mail}          label="Enviar e-mail" onClick={() => setSendChannel("email")} />
-                      <SendButton color="#27ae60" bg="rgba(39,174,96,0.08)"  border="rgba(39,174,96,0.25)"  icon={MessageCircle} label="WhatsApp"      onClick={() => setSendChannel("whatsapp")} />
-                      <SendButton color="#e67e22" bg="rgba(230,126,34,0.08)" border="rgba(230,126,34,0.25)" icon={Phone}         label="Ligar"         onClick={() => setSendChannel("telefone")} />
-                      <SendButton color="#0077b5" bg="rgba(0,119,181,0.08)"  border="rgba(0,119,181,0.25)"  icon={Link2}         label="LinkedIn"      onClick={() => setSendChannel("linkedin")} />
+                    <div style={{ display:"flex", gap:5 }}>
+                      <SendButton color="#2980b9" bg="rgba(41,128,185,0.08)" border="rgba(41,128,185,0.25)" icon={Mail}          label="E-mail"   onClick={() => setSendChannel("email")} />
+                      <SendButton color="#27ae60" bg="rgba(39,174,96,0.08)"  border="rgba(39,174,96,0.25)"  icon={MessageCircle} label="WhatsApp" onClick={() => setSendChannel("whatsapp")} />
                     </div>
                   </div>
 
-                  <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(260px, 1fr))", gap:12 }}>
-                    {contatos.map(c => (
-                      <div key={c.contato_id} style={{ padding:"14px 16px", borderRadius:12, background:"rgba(255,255,255,0.55)", border:"1px solid rgba(200,225,240,0.6)" }}>
-                        <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:10 }}>
-                          <div style={{ width:38, height:38, borderRadius:10, background:avatarColor(c.nome), display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700, color:"#fff", flexShrink:0 }}>
-                            {initials(c.nome)}
-                          </div>
-                          <div style={{ flex:1, minWidth:0 }}>
-                            <div style={{ fontSize:13, fontWeight:700, color:"#0f2133", display:"flex", alignItems:"center", gap:6 }}>
-                              {c.nome}
-                              {c.decisor && (
-                                <span style={{ fontSize:9, fontWeight:700, padding:"1px 6px", borderRadius:4, background:"rgba(39,174,96,0.1)", color:"#27ae60", border:"1px solid rgba(39,174,96,0.2)" }}>Decisor</span>
-                              )}
-                            </div>
-                            {(c.funcao || c.cargo) && (
-                              <div style={{ fontSize:11, color:"rgba(20,45,70,0.5)", marginTop:1 }}>{c.funcao || c.cargo}</div>
-                            )}
-                          </div>
-                        </div>
+                  {contatos.length === 0 ? (
+                    <div style={{ padding:"24px 0", textAlign:"center", fontSize:12, color:"rgba(20,45,70,0.4)" }}>Nenhum contato cadastrado</div>
+                  ) : (
+                    <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                      <AnimatePresence>
+                        {contatos.map((c, i) => {
+                          const expanded = expandedContato === c.contato_id;
+                          const cor = ["#2980b9","#1abc9c","#e67e22","#8e44ad","#27ae60"][i % 5];
+                          return (
+                            <motion.div key={c.contato_id} initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.18 }} style={{ borderRadius:10, overflow:"hidden" }}>
+                              {/* Linha compacta */}
+                              <div
+                                onClick={() => setExpandedContato(expanded ? null : c.contato_id)}
+                                style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 12px", background:"rgba(255,255,255,0.6)", border:`1.5px solid ${expanded ? "rgba(41,128,185,0.4)" : "rgba(200,225,240,0.6)"}`, borderBottom: expanded ? "1px solid rgba(200,225,240,0.4)" : undefined, borderRadius: expanded ? "10px 10px 0 0" : "10px", cursor:"pointer", transition:"all 0.15s" }}
+                              >
+                                <div style={{ width:32, height:32, borderRadius:"50%", background:cor, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:"#fff", flexShrink:0 }}>{initials(c.nome)}</div>
+                                <div style={{ flex:1, minWidth:0 }}>
+                                  <div style={{ fontSize:12, fontWeight:700, color:"#0f2133", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{c.nome}</div>
+                                  <div style={{ fontSize:10, color:"rgba(20,45,70,0.45)" }}>{c.funcao || c.cargo || "—"}</div>
+                                </div>
+                                {c.decisor && <span style={{ fontSize:9, fontWeight:700, padding:"2px 6px", borderRadius:4, background:"rgba(39,174,96,0.1)", color:"#27ae60", border:"1px solid rgba(39,174,96,0.2)", flexShrink:0 }}>Decisor</span>}
+                                <ChevronDown style={{ width:13, height:13, color:"rgba(20,45,70,0.3)", transform: expanded ? "rotate(180deg)" : "none", transition:"transform 0.2s", flexShrink:0 }} />
+                              </div>
 
-                        <div style={{ display:"flex", flexDirection:"column", gap:4, marginBottom:10 }}>
-                          {c.email && (
-                            <div style={{ display:"flex", alignItems:"center", gap:5 }}>
-                              <Mail style={{ width:11, height:11, color:"#2980b9", flexShrink:0 }} />
-                              <span style={{ fontSize:11, color:"rgba(20,45,70,0.6)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{c.email}</span>
-                            </div>
-                          )}
-                          {(c.celular || c.telefone) && (
-                            <div style={{ display:"flex", alignItems:"center", gap:5 }}>
-                              <Phone style={{ width:11, height:11, color:"#2980b9", flexShrink:0 }} />
-                              <span style={{ fontSize:11, color:"rgba(20,45,70,0.6)" }}>{c.celular || c.telefone}</span>
-                            </div>
-                          )}
-                          {c.whatsapp && (
-                            <div style={{ display:"flex", alignItems:"center", gap:5 }}>
-                              <MessageCircle style={{ width:11, height:11, color:"#27ae60", flexShrink:0 }} />
-                              <span style={{ fontSize:11, color:"rgba(20,45,70,0.6)" }}>{c.whatsapp}</span>
-                            </div>
-                          )}
-                        </div>
+                              {/* Expandido */}
+                              <AnimatePresence>
+                                {expanded && (
+                                  <motion.div initial={{ opacity:0, height:0 }} animate={{ opacity:1, height:"auto" }} exit={{ opacity:0, height:0 }} transition={{ duration:0.2 }} style={{ overflow:"hidden" }}>
+                                    <div style={{ background:"rgba(248,252,255,0.9)", border:"1.5px solid rgba(41,128,185,0.25)", borderTop:"none", borderRadius:"0 0 10px 10px", padding:"12px 14px", display:"flex", flexDirection:"column", gap:6 }}>
+                                      {c.email && (
+                                        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                                          <Mail style={{ width:11, height:11, color:"#2980b9", flexShrink:0 }} />
+                                          <span style={{ fontSize:11, color:"rgba(20,45,70,0.65)", flex:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{c.email}</span>
+                                        </div>
+                                      )}
+                                      {(c.celular || c.telefone) && (
+                                        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                                          <Phone style={{ width:11, height:11, color:"#2980b9", flexShrink:0 }} />
+                                          <span style={{ fontSize:11, color:"rgba(20,45,70,0.65)" }}>{c.celular || c.telefone}</span>
+                                        </div>
+                                      )}
+                                      {c.whatsapp && (
+                                        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                                          <MessageCircle style={{ width:11, height:11, color:"#27ae60", flexShrink:0 }} />
+                                          <span style={{ fontSize:11, color:"rgba(20,45,70,0.65)" }}>{c.whatsapp}</span>
+                                        </div>
+                                      )}
+                                      {c.linkedin && (
+                                        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                                          <Link2 style={{ width:11, height:11, color:"#0077b5", flexShrink:0 }} />
+                                          <span style={{ fontSize:11, color:"rgba(20,45,70,0.65)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{c.linkedin}</span>
+                                        </div>
+                                      )}
+                                      <div style={{ display:"flex", gap:5, marginTop:4 }}>
+                                        {c.email && (
+                                          <button onClick={() => openContactEmail(c.email!)} style={{ flex:1, height:26, borderRadius:6, border:"1px solid rgba(41,128,185,0.25)", background:"rgba(41,128,185,0.06)", color:"#2980b9", fontSize:10, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:3 }}>
+                                            <Mail style={{ width:9, height:9 }} /> Email
+                                          </button>
+                                        )}
+                                        {(c.whatsapp || c.celular) && (
+                                          <button onClick={() => window.open(`https://wa.me/${(c.whatsapp || c.celular || "").replace(/\D/g,"")}`)} style={{ flex:1, height:26, borderRadius:6, border:"1px solid rgba(39,174,96,0.25)", background:"rgba(39,174,96,0.06)", color:"#27ae60", fontSize:10, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:3 }}>
+                                            <MessageCircle style={{ width:9, height:9 }} /> WhatsApp
+                                          </button>
+                                        )}
+                                        {(c.celular || c.telefone) && (
+                                          <button onClick={() => window.open(`tel:${c.celular || c.telefone}`)} style={{ flex:1, height:26, borderRadius:6, border:"1px solid rgba(230,126,34,0.25)", background:"rgba(230,126,34,0.06)", color:"#e67e22", fontSize:10, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:3 }}>
+                                            <Phone style={{ width:9, height:9 }} /> Ligar
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </motion.div>
+                          );
+                        })}
+                      </AnimatePresence>
+                    </div>
+                  )}
+                </motion.div>
 
-                        {/* Botões inline do card de contato */}
-                        <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
-                          {c.email && (
-                            <button
-                              onClick={() => openContactEmail(c.email!)}
-                              style={{ flex:1, height:28, borderRadius:7, border:"1px solid rgba(41,128,185,0.25)", background:"rgba(41,128,185,0.06)", color:"#2980b9", fontSize:10, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:4, transition:"all 0.15s" }}
-                              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(41,128,185,0.14)"; }}
-                              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(41,128,185,0.06)"; }}
-                            >
-                              <Mail style={{ width:10, height:10 }} /> Email
-                            </button>
-                          )}
-                          {(c.whatsapp || c.celular) && (
-                            <button
-                              onClick={() => window.open(`https://wa.me/${(c.whatsapp || c.celular || "").replace(/\D/g,"")}`)}
-                              style={{ flex:1, height:28, borderRadius:7, border:"1px solid rgba(39,174,96,0.25)", background:"rgba(39,174,96,0.06)", color:"#27ae60", fontSize:10, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:4, transition:"all 0.15s" }}
-                              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(39,174,96,0.14)"; }}
-                              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(39,174,96,0.06)"; }}
-                            >
-                              <MessageCircle style={{ width:10, height:10 }} /> WhatsApp
-                            </button>
-                          )}
-                          {(c.celular || c.telefone) && (
-                            <button
-                              onClick={() => window.open(`tel:${c.celular || c.telefone}`)}
-                              style={{ flex:1, height:28, borderRadius:7, border:"1px solid rgba(230,126,34,0.25)", background:"rgba(230,126,34,0.06)", color:"#e67e22", fontSize:10, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:4, transition:"all 0.15s" }}
-                              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(230,126,34,0.14)"; }}
-                              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(230,126,34,0.06)"; }}
-                            >
-                              <Phone style={{ width:10, height:10 }} /> Ligar
-                            </button>
-                          )}
-                        </div>
+                {/* Card de atividades */}
+                <motion.div className="glass-card" style={{ padding:"22px 24px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.22 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#0f2133", marginBottom:14, display:"flex", alignItems:"center", gap:7 }}>
+                    <Calendar style={{ width:15, height:15, color:"#8e44ad" }} /> Atividades & Eventos
+                  </div>
+
+                  {/* Legenda */}
+                  <div style={{ display:"flex", gap:10, marginBottom:12, flexWrap:"wrap" }}>
+                    {[
+                      { label:"Aceito",       color:"#27ae60", icon:<svg width="9" height="9" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9.5 10,2.5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg> },
+                      { label:"Negado",       color:"#e74c3c", icon:<svg width="9" height="9" viewBox="0 0 12 12" fill="none"><line x1="2" y1="2" x2="10" y2="10" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"/></svg> },
+                      { label:"Talvez",       color:"#f39c12", icon:<span style={{ color:"#fff", fontSize:11, fontWeight:900, lineHeight:1 }}>?</span> },
+                      { label:"Novo horário", color:"#2980b9", icon:<Clock style={{ width:9, height:9, color:"#fff" }}/> },
+                    ].map(s => (
+                      <div key={s.label} style={{ display:"flex", alignItems:"center", gap:4 }}>
+                        <div style={{ width:14, height:14, borderRadius:"50%", background:s.color, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>{s.icon}</div>
+                        <span style={{ fontSize:9, fontWeight:600, color:"rgba(20,45,70,0.5)" }}>{s.label}</span>
                       </div>
                     ))}
                   </div>
+
+                  {atividades.length === 0 ? (
+                    <div style={{ padding:"28px 0", textAlign:"center" }}>
+                      <div style={{ width:44, height:44, borderRadius:"50%", background:"rgba(142,68,173,0.07)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 10px" }}>
+                        <Calendar style={{ width:20, height:20, color:"rgba(142,68,173,0.3)" }} />
+                      </div>
+                      <div style={{ fontSize:12, color:"rgba(20,45,70,0.4)", fontWeight:600 }}>Nenhuma atividade agendada</div>
+                      <div style={{ fontSize:11, color:"rgba(20,45,70,0.3)", marginTop:3 }}>Agende pelo calendário e as respostas aparecerão aqui</div>
+                    </div>
+                  ) : (
+                    <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
+                      {atividades.map((a: any) => {
+                        const STATUS: Record<string, { color: string; bg: string; border: string; label: string; icon: React.ReactNode }> = {
+                          aceito:       { color:"#27ae60", bg:"rgba(39,174,96,0.08)",  border:"rgba(39,174,96,0.28)",  label:"Aceito",       icon:<svg width="9" height="9" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9.5 10,2.5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg> },
+                          negado:       { color:"#e74c3c", bg:"rgba(231,76,60,0.08)",  border:"rgba(231,76,60,0.28)",  label:"Negado",       icon:<svg width="9" height="9" viewBox="0 0 12 12" fill="none"><line x1="2" y1="2" x2="10" y2="10" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"/></svg> },
+                          talvez:       { color:"#f39c12", bg:"rgba(243,156,18,0.08)", border:"rgba(243,156,18,0.28)", label:"Talvez",       icon:<span style={{ color:"#fff", fontSize:11, fontWeight:900, lineHeight:1 }}>?</span> },
+                          novo_horario: { color:"#2980b9", bg:"rgba(41,128,185,0.08)", border:"rgba(41,128,185,0.28)", label:"Novo horário", icon:<Clock style={{ width:9, height:9, color:"#fff" }}/> },
+                        };
+                        const cfg = STATUS[a.status_resposta] || { color:"rgba(100,120,140,0.5)", bg:"rgba(149,165,166,0.07)", border:"rgba(149,165,166,0.2)", label:"Pendente", icon:<span style={{ color:"#fff", fontSize:9 }}>–</span> };
+                        const dt = a.data_hora || a.data;
+                        const fmtDt = dt ? (() => { try { const d = new Date(dt); return d.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"}) + " às " + d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}); } catch { return dt; } })() : "—";
+                        return (
+                          <div key={a.evento_id || a.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", borderRadius:9, background:cfg.bg, border:`1.5px solid ${cfg.border}` }}>
+                            <div style={{ width:26, height:26, borderRadius:"50%", background:cfg.color, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, boxShadow:`0 2px 6px ${cfg.color}55` }}>
+                              {cfg.icon}
+                            </div>
+                            <div style={{ flex:1, minWidth:0 }}>
+                              <div style={{ fontSize:12, fontWeight:700, color:"#0f2133", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{a.titulo || a.nome || "Atividade"}</div>
+                              <div style={{ fontSize:10, color:"rgba(20,45,70,0.5)", marginTop:1 }}>{fmtDt}</div>
+                            </div>
+                            <span style={{ fontSize:9, fontWeight:700, padding:"2px 8px", borderRadius:20, background:cfg.color, color:"#fff", flexShrink:0 }}>{cfg.label}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </motion.div>
-              )}
+              </div>
             </>
           ) : (
             <div style={{ textAlign:"center", padding:48 }}>
