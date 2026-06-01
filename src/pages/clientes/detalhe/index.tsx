@@ -7,7 +7,7 @@ import {
   ClipboardList, Calendar, ArrowLeft, Edit3,
   MapPin, Tag, Thermometer, TrendingUp, DollarSign,
   Phone, Mail, User, Clock, ChevronRight, MessageCircle, Link2,
-  ChevronDown,
+  ChevronDown, Check, X as XIcon,
 } from "lucide-react";
 
 import SelectRecipientsModal, {
@@ -143,6 +143,8 @@ export default function EmpresaDetalhe() {
   const [loading, setLoading]     = useState(true);
   const [usuario, setUsuario]     = useState<Usuario | null>(null);
   const [expandedContato, setExpandedContato] = useState<string | null>(null);
+  const [editValor, setEditValor] = useState(false);
+  const [valorDraft, setValorDraft] = useState("");
 
   // canal aberto no modal
   const [sendChannel, setSendChannel] = useState<SendChannel | null>(null);
@@ -233,6 +235,40 @@ export default function EmpresaDetalhe() {
 
   const openContactEmail = (email: string, provider?: "gmail" | "outlook") => {
     openEmail(email, provider || (lastProvider as "gmail" | "outlook"));
+  };
+
+  const hdrs = () => ({
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+  });
+
+  const updateTemperatura = async (temperatura: string) => {
+    if (!empresa) return;
+    const anterior = empresa.temperatura;
+    setEmpresa(prev => prev ? { ...prev, temperatura } : prev);
+    try {
+      await fetch(`${API}/empresas/${empresa.empresa_id}`, {
+        method: "PUT", headers: hdrs(), body: JSON.stringify({ temperatura }),
+      });
+    } catch {
+      setEmpresa(prev => prev ? { ...prev, temperatura: anterior } : prev);
+    }
+  };
+
+  const saveValor = async () => {
+    if (!empresa) return;
+    const norm = valorDraft.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
+    const valor = Number.isFinite(Number(norm)) && Number(norm) > 0 ? Number(norm) : null;
+    const anterior = empresa.ticket_medio_estimado;
+    setEmpresa(prev => prev ? { ...prev, ticket_medio_estimado: valor } : prev);
+    setEditValor(false);
+    try {
+      await fetch(`${API}/empresas/${empresa.empresa_id}`, {
+        method: "PUT", headers: hdrs(), body: JSON.stringify({ ticket_medio_estimado: valor }),
+      });
+    } catch {
+      setEmpresa(prev => prev ? { ...prev, ticket_medio_estimado: anterior } : prev);
+    }
   };
 
   const sc = empresa ? statusColor(empresa.status)      : statusColor("");
@@ -367,7 +403,16 @@ export default function EmpresaDetalhe() {
                     <h2 style={{ fontSize:22, fontWeight:800, color:"#0f2133", letterSpacing:"-0.02em" }}>{empresa.nome}</h2>
                     <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:6, flexWrap:"wrap" }}>
                       <span className="chip" style={{ background:sc.bg, color:sc.text, border:`1px solid ${sc.border}` }}>{empresa.status}</span>
-                      <span className="chip" style={{ background:tc.bg, color:tc.text }}>{tc.icon} {empresa.temperatura}</span>
+                      {/* Temperatura interativa */}
+                      {[
+                        { key:"Quente", icon:"🔥", color:"#c0392b", bg:"rgba(192,57,43,0.13)", border:"rgba(192,57,43,0.35)" },
+                        { key:"Morno",  icon:"🌡️", color:"#d68910", bg:"rgba(214,137,16,0.13)", border:"rgba(214,137,16,0.35)" },
+                        { key:"Frio",   icon:"❄️", color:"#2980b9", bg:"rgba(41,128,185,0.13)", border:"rgba(41,128,185,0.35)" },
+                      ].map(t => (
+                        <button key={t.key} onClick={() => updateTemperatura(t.key)} style={{ display:"inline-flex", alignItems:"center", gap:3, padding:"4px 11px", borderRadius:20, fontSize:11, fontWeight:700, border:`1.5px solid ${empresa.temperatura===t.key ? t.border : "rgba(200,225,240,0.6)"}`, background:empresa.temperatura===t.key ? t.bg : "rgba(255,255,255,0.45)", color:empresa.temperatura===t.key ? t.color : "rgba(20,45,70,0.35)", cursor:"pointer", transition:"all 0.15s" }}>
+                          {t.icon} {t.key}
+                        </button>
+                      ))}
                       <span style={{ fontSize:12, color:"rgba(20,45,70,0.55)", display:"flex", alignItems:"center", gap:4 }}>
                         <MapPin style={{ width:12, height:12 }} />
                         {empresa.cidade}{empresa.estado ? `, ${empresa.estado}` : ""}
@@ -376,10 +421,37 @@ export default function EmpresaDetalhe() {
                   </div>
                   <div style={{ display:"flex", gap:16, flexShrink:0 }}>
                     <div style={{ textAlign:"center" }}>
-                      <div style={{ fontSize:20, fontWeight:800, color:"#2980b9" }}>
-                        {empresa.ticket_medio_estimado ? `R$ ${(empresa.ticket_medio_estimado/1000).toFixed(0)}k` : "—"}
-                      </div>
-                      <div style={{ fontSize:10, color:"rgba(20,45,70,0.45)", fontWeight:600 }}>Ticket médio</div>
+                      {editValor ? (
+                        <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                          <input
+                            autoFocus
+                            value={valorDraft}
+                            onChange={e => setValorDraft(e.target.value)}
+                            onKeyDown={e => { if (e.key === "Enter") saveValor(); if (e.key === "Escape") setEditValor(false); }}
+                            placeholder="Ex: 5000"
+                            style={{ width:90, height:30, borderRadius:8, border:"1.5px solid rgba(41,128,185,0.4)", background:"rgba(255,255,255,0.9)", fontSize:12, fontWeight:700, padding:"0 8px", outline:"none", color:"#0f2133" }}
+                          />
+                          <button onClick={saveValor} style={{ width:26, height:26, borderRadius:7, border:"1px solid rgba(39,174,96,0.4)", background:"rgba(39,174,96,0.1)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"#27ae60" }}><Check style={{ width:12, height:12 }}/></button>
+                          <button onClick={() => setEditValor(false)} style={{ width:26, height:26, borderRadius:7, border:"1px solid rgba(200,225,240,0.7)", background:"rgba(255,255,255,0.7)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"rgba(20,45,70,0.4)" }}><XIcon style={{ width:12, height:12 }}/></button>
+                        </div>
+                      ) : (
+                        <div
+                          onClick={empresa.status === "Proposta" ? () => { setEditValor(true); setValorDraft(empresa.ticket_medio_estimado?.toString() || ""); } : undefined}
+                          title={empresa.status === "Proposta" ? "Clique para definir o valor" : undefined}
+                          style={{ cursor: empresa.status === "Proposta" ? "pointer" : "default" }}
+                        >
+                          <div style={{ fontSize:20, fontWeight:800, color:"#2980b9", display:"flex", alignItems:"center", gap:4, justifyContent:"center" }}>
+                            {empresa.ticket_medio_estimado
+                              ? `R$ ${(empresa.ticket_medio_estimado/1000).toFixed(0)}k`
+                              : empresa.status === "Proposta"
+                                ? <span style={{ fontSize:13, color:"rgba(41,128,185,0.7)" }}>Definir</span>
+                                : "—"
+                            }
+                            {empresa.status === "Proposta" && <Edit3 style={{ width:11, height:11, color:"rgba(41,128,185,0.5)" }}/>}
+                          </div>
+                          <div style={{ fontSize:10, color:"rgba(20,45,70,0.45)", fontWeight:600 }}>Ticket médio</div>
+                        </div>
+                      )}
                     </div>
                     <div style={{ textAlign:"center" }}>
                       <div style={{ fontSize:20, fontWeight:800, color:"#1abc9c" }}>{contatos.length || "—"}</div>
