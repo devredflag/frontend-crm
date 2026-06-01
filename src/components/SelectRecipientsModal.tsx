@@ -92,7 +92,7 @@ export default function SelectRecipientsModal({
     const token = localStorage.getItem("token") || "";
     const h = { Authorization: `Bearer ${token}` };
 
-    // Se usuário já tem um provider salvo nas preferências, usa direto
+    // Preferência salva serve como pré-seleção, não pula a escolha
     const savedProvider = getCommPrefs().emailProvider;
 
     Promise.all([
@@ -105,15 +105,12 @@ export default function SelectRecipientsModal({
       setGmailOk(hasGmail);
       setCheckingAuth(false);
 
-      if (savedProvider && ((savedProvider === "gmail" && hasGmail) || (savedProvider === "outlook" && hasOutlook))) {
-        // preferência salva e provedor conectado → pula seleção
-        setProvider(savedProvider);
-        setStep("recipients");
-      } else if (hasOutlook && hasGmail) {
-        // ambos conectados, sem preferência → mostra seleção
+      if (hasOutlook && hasGmail) {
+        // ambos conectados → sempre mostra escolha, com preferência pré-selecionada
+        if (savedProvider) setProvider(savedProvider);
         setStep("provider");
       } else {
-        // só um ou nenhum conectado → define automaticamente
+        // só um conectado → vai direto, sem escolha
         setProvider(hasGmail && !hasOutlook ? "gmail" : "outlook");
         setStep("recipients");
       }
@@ -245,7 +242,9 @@ export default function SelectRecipientsModal({
                             Enviar e-mail
                           </div>
                           <div style={{ fontSize:12, color:"rgba(20,45,70,0.5)" }}>
-                            Escolha o provedor de e-mail
+                            {provider
+                              ? <>Padrão: <strong style={{ color:"#0f2133" }}>{provider === "gmail" ? "Gmail" : "Outlook"}</strong> — clique para confirmar ou trocar</>
+                              : "Escolha o provedor de e-mail"}
                           </div>
                         </div>
                       </div>
@@ -260,6 +259,7 @@ export default function SelectRecipientsModal({
                         hoverBg="rgba(0,120,212,0.1)"
                         hoverBorder="rgba(0,120,212,0.4)"
                         icon={<OutlookIcon/>}
+                        selected={provider === "outlook"}
                         onClick={() => handleProviderSelect("outlook")}
                       />
 
@@ -275,6 +275,7 @@ export default function SelectRecipientsModal({
                         hoverBg="rgba(234,67,53,0.1)"
                         hoverBorder="rgba(234,67,53,0.4)"
                         icon={<GmailIcon/>}
+                        selected={provider === "gmail"}
                         onClick={() => handleProviderSelect("gmail")}
                       />
                     </motion.div>
@@ -456,27 +457,33 @@ export default function SelectRecipientsModal({
 }
 
 // ── ProviderButton ─────────────────────────────────────────────
-function ProviderButton({ name, subtitle, color, bgColor, borderColor, hoverBg, hoverBorder, icon, onClick }: {
+function ProviderButton({ name, subtitle, color, bgColor, borderColor, hoverBg, hoverBorder, icon, selected, onClick }: {
   name: string; subtitle: string; color: string;
   bgColor: string; borderColor: string; hoverBg: string; hoverBorder: string;
-  icon: React.ReactNode; onClick: () => void;
+  icon: React.ReactNode; selected?: boolean; onClick: () => void;
 }) {
   return (
     <button onClick={onClick}
       style={{
         width:"100%", display:"flex", alignItems:"center", gap:14,
         padding:"16px 18px", borderRadius:13,
-        border:`1.5px solid ${borderColor}`,
-        background:bgColor, cursor:"pointer", transition:"all 0.18s", textAlign:"left",
+        border:`2px solid ${selected ? color : borderColor}`,
+        background: selected ? `${color}12` : bgColor,
+        cursor:"pointer", transition:"all 0.18s", textAlign:"left",
+        boxShadow: selected ? `0 0 0 3px ${color}22` : "none",
       }}
       onMouseEnter={e => {
-        e.currentTarget.style.background = hoverBg;
-        e.currentTarget.style.borderColor = hoverBorder;
+        if (!selected) {
+          e.currentTarget.style.background = hoverBg;
+          e.currentTarget.style.borderColor = hoverBorder;
+        }
         e.currentTarget.style.transform = "translateY(-1px)";
       }}
       onMouseLeave={e => {
-        e.currentTarget.style.background = bgColor;
-        e.currentTarget.style.borderColor = borderColor;
+        if (!selected) {
+          e.currentTarget.style.background = bgColor;
+          e.currentTarget.style.borderColor = borderColor;
+        }
         e.currentTarget.style.transform = "translateY(0)";
       }}
     >
@@ -491,11 +498,15 @@ function ProviderButton({ name, subtitle, color, bgColor, borderColor, hoverBg, 
         <div style={{ fontSize:14, fontWeight:700, color:"#0f2133" }}>{name}</div>
         <div style={{ fontSize:11, color:"rgba(20,45,70,0.5)", marginTop:2 }}>{subtitle}</div>
       </div>
-      <div style={{
-        fontSize:10, fontWeight:700, padding:"3px 10px", borderRadius:6,
-        background:`${color}18`, color,
-      }}>
-        Conectado
+      <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4, flexShrink:0 }}>
+        <div style={{ fontSize:10, fontWeight:700, padding:"3px 10px", borderRadius:6, background:`${color}18`, color }}>
+          Conectado
+        </div>
+        {selected && (
+          <div style={{ fontSize:9, fontWeight:700, padding:"2px 8px", borderRadius:6, background:color, color:"#fff" }}>
+            ✓ Padrão
+          </div>
+        )}
       </div>
     </button>
   );
