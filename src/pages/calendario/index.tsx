@@ -247,6 +247,7 @@ export default function Calendario() {
   const [emailsConvidados, setEmailsConvidados] = useState<string[]>([]);
   const [conectandoOutlook, setConectandoOutlook] = useState(false);
   const [conectandoGoogle, setConectandoGoogle] = useState(false);
+  const mouseDownOnOverlay = useRef(false);
   const emailDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { fetchAll(); checkIntegrations(); }, []);
@@ -635,7 +636,8 @@ export default function Calendario() {
           <motion.div
             initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
             style={{position:"fixed",inset:0,zIndex:100,background:"rgba(10,30,50,0.45)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}
-            onClick={()=>setShowModal(false)}
+            onMouseDown={e=>{ mouseDownOnOverlay.current = e.target === e.currentTarget; }}
+            onClick={e=>{ if(e.target === e.currentTarget && mouseDownOnOverlay.current) setShowModal(false); }}
           >
             <motion.div
               initial={{opacity:0,scale:0.94,y:20}} animate={{opacity:1,scale:1,y:0}} exit={{opacity:0,scale:0.94}} transition={{duration:0.22}}
