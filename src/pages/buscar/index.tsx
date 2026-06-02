@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 
 const API = "https://backend-crm-production-157b.up.railway.app";
-const MAPS_KEY = "AIzaSyDTL_JsYi09tWNbzE_JhcpnvA_9yUL_fYU8";
+const MAPS_KEY = "AIzaSyBYLYOGC9tpf2uTjPPalfzvq06H_gV0dwM";
 const MAPS_ID  = "34faf6a32c6d9465de4b4809";
 
 const css = `
