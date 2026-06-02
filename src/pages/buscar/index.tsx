@@ -467,6 +467,7 @@ export default function BuscarEmpresas() {
                   style={{ width:"100%", height:"100%" }}
                   gestureHandling="greedy"
                   disableDefaultUI={false}
+                  onCameraChanged={(e) => setMapCenter(e.detail.center)}
                 >
                   {resultadosFiltrados.map((place, i) => (
                     place.lat && place.lng ? (
