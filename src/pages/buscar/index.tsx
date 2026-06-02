@@ -13,7 +13,7 @@ import {
 
 const API = "https://backend-crm-production-157b.up.railway.app";
 const MAPS_KEY = "AIzaSyBYLYOGC9tpf2uTjPPalfzvq06H_gV0dwM";
-const MAPS_ID  = "34faf6a32c6d9465de4b4809";
+const MAPS_ID  = "34faf6a32c6d946937cf70eb";
 
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
