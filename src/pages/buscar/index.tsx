@@ -197,6 +197,8 @@ export default function BuscarEmpresas() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [mapCenter, setMapCenter] = useState({ lat: -15.7801, lng: -47.9292 });
   const [myLocation, setMyLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [quotaExcedida, setQuotaExcedida] = useState(false);
+  const [quotaResetTime, setQuotaResetTime] = useState<Date | null>(null);
 
   const hdrs = () => ({ "Content-Type":"application/json", Authorization:`Bearer ${localStorage.getItem("token")||""}` });
 
@@ -208,6 +210,17 @@ export default function BuscarEmpresas() {
       setMapCenter(loc);
       setMyLocation(loc);
     });
+    // Verifica quota travada
+    const until = localStorage.getItem("places_quota_until");
+    if (until) {
+      const resetDate = new Date(until);
+      if (resetDate > new Date()) {
+        setQuotaExcedida(true);
+        setQuotaResetTime(resetDate);
+      } else {
+        localStorage.removeItem("places_quota_until");
+      }
+    }
   }, []);
 
   const showToast = (msg: string, tipo: "ok" | "err") => {
@@ -217,6 +230,7 @@ export default function BuscarEmpresas() {
 
   const buscar = useCallback(async (q: string) => {
     if (!q.trim()) { setResults([]); return; }
+    if (quotaExcedida) return;
     setLoading(true);
     setError(null);
     try {
@@ -225,17 +239,25 @@ export default function BuscarEmpresas() {
         headers: hdrs(),
         body: JSON.stringify({ query: q, lat: mapCenter.lat, lng: mapCenter.lng, radius: 20000 }),
       });
+      if (res.status === 429) {
+        const reset = new Date();
+        reset.setUTCHours(24, 0, 0, 0);
+        localStorage.setItem("places_quota_until", reset.toISOString());
+        setQuotaExcedida(true);
+        setQuotaResetTime(reset);
+        setLoading(false);
+        return;
+      }
       if (!res.ok) throw new Error("Erro na busca");
       const data = await res.json();
       setResults(data);
-      // Centraliza o mapa no primeiro resultado com coordenadas
       const primeiro = data.find((p: PlaceResult) => p.lat && p.lng);
       if (primeiro) setMapCenter({ lat: primeiro.lat!, lng: primeiro.lng! });
     } catch {
       setError("Não foi possível conectar ao Google Places. Verifique a chave de API.");
     }
     setLoading(false);
-  }, [mapCenter]);
+  }, [mapCenter, quotaExcedida]);
 
   const handleInput = (v: string) => {
     setQuery(v);
@@ -374,9 +396,10 @@ export default function BuscarEmpresas() {
                 <input
                   value={query}
                   onChange={e => handleInput(e.target.value)}
-                  placeholder="Buscar por categoria, segmento..."
+                  placeholder={quotaExcedida ? "Busca indisponível no momento..." : "Buscar por categoria, segmento..."}
                   onKeyDown={e => e.key === "Enter" && buscar(query)}
-                  style={{ width:"100%", height:42, paddingLeft:32, paddingRight:query ? 32 : 12, borderRadius:12, border:"1.5px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.9)", fontSize:13, color:"#1a2e40", outline:"none", boxShadow:"0 2px 8px rgba(41,128,185,0.08)" }}
+                  disabled={quotaExcedida}
+                  style={{ width:"100%", height:42, paddingLeft:32, paddingRight:query ? 32 : 12, borderRadius:12, border:`1.5px solid ${quotaExcedida ? "rgba(220,38,38,0.3)" : "rgba(200,225,240,0.9)"}`, background: quotaExcedida ? "rgba(255,240,240,0.7)" : "rgba(255,255,255,0.9)", fontSize:13, color:"#1a2e40", outline:"none", boxShadow:"0 2px 8px rgba(41,128,185,0.08)", cursor: quotaExcedida ? "not-allowed" : "text" }}
                 />
                 {query && (
                   <button onClick={() => { setQuery(""); setResults([]); }} style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", width:20, height:20, borderRadius:"50%", border:"none", background:"rgba(20,45,70,0.12)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -396,8 +419,26 @@ export default function BuscarEmpresas() {
             {/* Lista */}
             <div style={{ flex:1, overflowY:"auto", padding:"0 14px 14px", display:"flex", flexDirection:"column", gap:8 }}>
 
+              {/* Quota excedida */}
+              {quotaExcedida && (
+                <div style={{ marginTop:8, padding:"16px 14px", borderRadius:14, background:"rgba(220,38,38,0.06)", border:"1.5px solid rgba(220,38,38,0.25)", display:"flex", flexDirection:"column", gap:8 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <AlertCircle style={{ width:18, height:18, color:"#dc2626", flexShrink:0 }} />
+                    <span style={{ fontSize:13, fontWeight:700, color:"#dc2626" }}>Limite gratuito atingido</span>
+                  </div>
+                  <p style={{ fontSize:12, color:"rgba(20,45,70,0.6)", lineHeight:1.5 }}>
+                    O limite da API do Google Places foi atingido. Uma notificação será enviada quando a busca estiver disponível novamente.
+                  </p>
+                  {quotaResetTime && (
+                    <div style={{ fontSize:11, fontWeight:600, color:"rgba(20,45,70,0.45)", padding:"6px 10px", borderRadius:8, background:"rgba(0,0,0,0.04)" }}>
+                      Previsão de reset: {quotaResetTime.toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" })}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Estado vazio — sugestões */}
-              {!loading && results.length === 0 && !error && (
+              {!quotaExcedida && !loading && results.length === 0 && !error && (
                 <div style={{ paddingTop:8 }}>
                   <div style={{ fontSize:11, fontWeight:700, color:"rgba(20,45,70,0.45)", textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:10 }}>Sugestões rápidas</div>
                   <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
