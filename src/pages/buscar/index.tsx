@@ -12,8 +12,8 @@ import {
 } from "lucide-react";
 
 const API = "https://backend-crm-production-157b.up.railway.app";
-const MAPS_KEY = process.env.VITE_GOOGLE_MAPS_KEY as string;
-const MAPS_ID  = process.env.VITE_GOOGLE_MAPS_ID  as string;
+const MAPS_KEY = "AIzaSyDTL_JsYi09tWNbzE_JhcpnvA_9yUL_fYU8";
+const MAPS_ID  = "34faf6a32c6d9465de4b4809";
 
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
