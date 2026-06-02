@@ -260,6 +260,7 @@ export default function TodosClientes() {
           {navItems.map(item=>(
             <div key={item.label} className={`nav-item${item.active?" active":""}`} onClick={()=>{
               if(item.label==="Dashboards")navigate("/dashboard");
+              if(item.label==="Buscar Empresas")navigate("/buscar");
               if(item.label==="Cadastrar Empresas")navigate("/empresas/nova");
               if(item.label==="Todos os clientes")navigate("/clientes");
               if(item.label==="Gerenciamento de clientes")navigate("/gerenciamento");

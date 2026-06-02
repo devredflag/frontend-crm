@@ -137,7 +137,7 @@ const css = `
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboards",                path: "/dashboard" },
-  { icon: Search,          label: "Buscar Empresas",           path: null },
+  { icon: Search,          label: "Buscar Empresas",           path: "/buscar" },
   { icon: Building2,       label: "Cadastrar Empresas",        path: "/empresas/nova" },
   { icon: Users,           label: "Todos os clientes",         path: "/clientes" },
   { icon: ClipboardList,   label: "Gerenciamento de clientes", path: "/gerenciamento" },
