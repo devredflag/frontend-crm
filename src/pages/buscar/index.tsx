@@ -271,6 +271,20 @@ export default function BuscarEmpresas() {
       }
       if (!res.ok) throw new Error();
       const body = await res.json();
+
+      if (place.telefone) {
+        await fetch(`${API}/contatos`, {
+          method: "POST",
+          headers: hdrs(),
+          body: JSON.stringify({
+            empresa_id: body.empresa_id,
+            nome: "Contato Principal",
+            celular: place.telefone,
+            whatsapp: place.telefone,
+          }),
+        });
+      }
+
       setTotalRascunhos(n => n + 1);
       showToast("Rascunho criado! Redirecionando...", "ok");
       setTimeout(() => navigate(`/clientes/${body.empresa_id}/editar`), 1200);
@@ -477,7 +491,7 @@ export default function BuscarEmpresas() {
                   center={mapCenter}
                   zoom={results.length > 0 ? 13 : 11}
                   style={{ width:"100%", height:"100%" }}
-                  gestureHandling="cooperative"
+                  gestureHandling="greedy"
                   disableDefaultUI={false}
                   onCameraChanged={(e) => setMapCenter(e.detail.center)}
                 >
