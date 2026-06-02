@@ -8,7 +8,7 @@ import {
   BarChart3, LayoutDashboard, Search, Building2, Users,
   ClipboardList, Calendar, MapPin, Star, Phone, Globe,
   ChevronRight, ChevronDown, X, ExternalLink, Plus,
-  Loader2, AlertCircle, CheckCircle2,
+  Loader2, AlertCircle, CheckCircle2, Navigation2,
 } from "lucide-react";
 
 const API = "https://backend-crm-production-157b.up.railway.app";
@@ -196,15 +196,17 @@ export default function BuscarEmpresas() {
   const [toast, setToast] = useState<{ msg: string; tipo: "ok" | "err" } | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [mapCenter, setMapCenter] = useState({ lat: -15.7801, lng: -47.9292 });
+  const [myLocation, setMyLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   const hdrs = () => ({ "Content-Type":"application/json", Authorization:`Bearer ${localStorage.getItem("token")||""}` });
 
   useEffect(() => {
     fetch(`${API}/me`, { headers: hdrs() }).then(r => r.ok && r.json()).then(d => d && setUsuario(d));
     fetch(`${API}/empresas/rascunhos`, { headers: hdrs() }).then(r => r.ok && r.json()).then(d => Array.isArray(d) && setTotalRascunhos(d.length));
-    // Geolocalização para centrar o mapa
     navigator.geolocation?.getCurrentPosition(pos => {
-      setMapCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      setMapCenter(loc);
+      setMyLocation(loc);
     });
   }, []);
 
@@ -452,6 +454,16 @@ export default function BuscarEmpresas() {
 
           {/* Google Maps */}
           <div style={{ position:"relative", overflow:"hidden" }}>
+            {/* Botão minha localização */}
+            {myLocation && (
+              <button
+                onClick={() => setMapCenter({ ...myLocation })}
+                title="Minha localização"
+                style={{ position:"absolute", bottom:120, right:10, zIndex:10, width:40, height:40, borderRadius:10, border:"none", background:"#fff", boxShadow:"0 2px 8px rgba(0,0,0,0.2)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}
+              >
+                <Navigation2 style={{ width:18, height:18, color:"#2980b9" }} />
+              </button>
+            )}
             {!MAPS_KEY ? (
               <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100%", flexDirection:"column", gap:12, background:"rgba(200,225,240,0.3)" }}>
                 <AlertCircle style={{ width:32, height:32, color:"rgba(20,45,70,0.3)" }} />
@@ -465,7 +477,7 @@ export default function BuscarEmpresas() {
                   center={mapCenter}
                   zoom={results.length > 0 ? 13 : 11}
                   style={{ width:"100%", height:"100%" }}
-                  gestureHandling="greedy"
+                  gestureHandling="cooperative"
                   disableDefaultUI={false}
                   onCameraChanged={(e) => setMapCenter(e.detail.center)}
                 >
@@ -480,6 +492,12 @@ export default function BuscarEmpresas() {
                       </AdvancedMarker>
                     ) : null
                   ))}
+
+                  {myLocation && (
+                    <AdvancedMarker position={myLocation}>
+                      <div style={{ width:16, height:16, borderRadius:"50%", background:"#2980b9", border:"3px solid #fff", boxShadow:"0 2px 8px rgba(41,128,185,0.5)" }} />
+                    </AdvancedMarker>
+                  )}
 
                   {infoWindowId && selectedPlace && selectedPlace.lat && selectedPlace.lng && (
                     <InfoWindow
