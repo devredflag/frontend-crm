@@ -53,6 +53,7 @@ interface PlaceResult {
   place_id: string;
   nome: string;
   endereco: string;
+  cidade: string | null;
   lat: number | null;
   lng: number | null;
   rating: number | null;
@@ -275,8 +276,9 @@ export default function BuscarEmpresas() {
           google_place_id: place.place_id,
           nome: place.nome,
           endereco_completo: place.endereco,
-          lat: place.lat, lng: place.lng,
-          latitude: place.lat, longitude: place.lng,
+          cidade: place.cidade || null,
+          latitude: place.lat,
+          longitude: place.lng,
           telefone_empresa: place.telefone,
           site: place.site,
           google_rating: place.rating,

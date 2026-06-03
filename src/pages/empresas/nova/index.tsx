@@ -278,11 +278,12 @@ function ValidacaoModal({
 
 // ── Componente: Autocomplete de Segmento ──────────────────────
 function SegmentoAutocomplete({
-  value, onChange, opcoes,
+  value, onChange, opcoes, hasError,
 }: {
   value: string;
   onChange: (v: string) => void;
   opcoes: string[];
+  hasError?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [highlighted, setHighlighted] = useState(-1);
@@ -336,6 +337,7 @@ function SegmentoAutocomplete({
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
           autoComplete="off"
+          style={hasError&&!value.trim()?{borderColor:"rgba(231,76,60,0.6)",background:"rgba(231,76,60,0.03)"}:{}}
         />
         <ChevronDown className={`seg-chevron${open?" open":""}`}/>
       </div>
@@ -451,6 +453,7 @@ export default function NovaEmpresa() {
   const [showUnsaved, setShowUnsaved] = useState(false);
   const [pendingNavPath, setPendingNavPath] = useState<string | null>(null);
   const [formTouched, setFormTouched] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
 
   // Estado da validação
   const [validacaoStatus, setValidacaoStatus] = useState<ValidacaoStatus>("idle");
@@ -549,10 +552,28 @@ export default function NovaEmpresa() {
     }
   };
 
+  const camposObrigatorios = {
+    nome: empresa.nome.trim(),
+    segmento: empresa.segmento.trim(),
+    porte: empresa.porte,
+    cidade: empresa.cidade.trim(),
+    endereco: empresa.endereco.trim(),
+    cep: empresa.cep.trim(),
+    bairro: empresa.bairro.trim(),
+  };
+
   const handleSubmit = async () => {
     if (!empresa.nome.trim()) { alert("Nome da empresa é obrigatório"); return; }
-    if (!empresa.segmento.trim()) { alert("Segmento da empresa é obrigatório"); return; }
 
+    const todosCamposPreenchidos = Object.values(camposObrigatorios).every(Boolean);
+
+    if (!todosCamposPreenchidos) {
+      setShowErrors(true);
+      await handleAutoRascunho();
+      return;
+    }
+
+    setShowErrors(false);
     const seg = empresa.segmento.trim();
     setValidacaoSegmento(seg);
 
@@ -620,7 +641,29 @@ export default function NovaEmpresa() {
     // "continue" → só fecha o modal, não faz nada
   };
 
-  // ── Salvar como rascunho ──────────────────────────────────
+  // ── Payload base para rascunho ───────────────────────────
+  const buildRascunhoPayload = () => ({
+    nome: empresa.nome,
+    segmento: empresa.segmento?.trim() || null,
+    porte: empresa.porte || "Pequeno",
+    cidade: empresa.cidade,
+    endereco: empresa.endereco,
+    cep: empresa.cep,
+    bairro: empresa.bairro,
+    regiao: empresa.regiao,
+    observacoes: empresa.observacoes,
+    cnpj: empresa.cnpj,
+    site: empresa.site,
+    linkedin_empresa: empresa.linkedin_empresa,
+    responsavel_principal: empresa.responsavel_principal,
+    status: "Rascunho",
+    origem_lead: empresa.origem_lead || "Manual",
+    ultima_interacao: dateInputToIso(empresa.ultima_interacao),
+    proxima_acao: empresa.proxima_acao,
+    temperatura: empresa.temperatura || "Frio",
+  });
+
+  // ── Salvar como rascunho (modal unsaved) ─────────────────
   const handleSaveDraft = async () => {
     if (!empresa.nome.trim()) {
       alert("Informe ao menos o nome da empresa para salvar o rascunho");
@@ -631,30 +674,32 @@ export default function NovaEmpresa() {
       const res = await fetch(`${API}/empresas`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nome: empresa.nome,
-          segmento: empresa.segmento?.trim() || null,
-          porte: empresa.porte || "Pequeno",
-          cidade: empresa.cidade,
-          endereco: empresa.endereco,
-          cep: empresa.cep,
-          bairro: empresa.bairro,
-          regiao: empresa.regiao,
-          observacoes: empresa.observacoes,
-          cnpj: empresa.cnpj,
-          site: empresa.site,
-          linkedin_empresa: empresa.linkedin_empresa,
-          responsavel_principal: empresa.responsavel_principal,
-          status: "Rascunho",
-          origem_lead: empresa.origem_lead || "Manual",
-          ultima_interacao: dateInputToIso(empresa.ultima_interacao),
-          proxima_acao: empresa.proxima_acao,
-          temperatura: empresa.temperatura || "Frio",
-        }),
+        body: JSON.stringify(buildRascunhoPayload()),
       });
       if (!res.ok) throw new Error("Erro ao salvar rascunho");
       setFormTouched(false);
       navigate(pendingNavPath || "/dashboard");
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Erro ao salvar rascunho");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── Auto-rascunho quando campos obrigatórios incompletos ─
+  const handleAutoRascunho = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/empresas`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildRascunhoPayload()),
+      });
+      if (!res.ok) throw new Error("Erro ao salvar rascunho");
+      const data = await res.json();
+      const empresaId = data.empresa_id ?? data.id;
+      setFormTouched(false);
+      navigate(`/clientes/${empresaId}/editar`);
     } catch (error) {
       alert(error instanceof Error ? error.message : "Erro ao salvar rascunho");
     } finally {
@@ -743,6 +788,22 @@ export default function NovaEmpresa() {
 
         {/* Conteúdo */}
         <div style={{padding:"24px 28px 48px"}}>
+
+          {/* Banner campos incompletos */}
+          <AnimatePresence>
+            {showErrors && (
+              <motion.div
+                initial={{opacity:0,y:-8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}}
+                style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderRadius:12,background:"rgba(231,76,60,0.07)",border:"1.5px solid rgba(231,76,60,0.22)",marginBottom:18}}
+              >
+                <AlertTriangle style={{width:16,height:16,color:"#e74c3c",flexShrink:0}}/>
+                <span style={{fontSize:12,fontWeight:600,color:"#c0392b"}}>
+                  Campos obrigatórios não preenchidos — empresa salva como <strong>rascunho</strong>. Complete os campos em vermelho para converter em Lead.
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <div style={{display:"grid",gridTemplateColumns:"1fr 380px",gap:20,alignItems:"start"}}>
 
             {/* Coluna esquerda */}
@@ -770,6 +831,7 @@ export default function NovaEmpresa() {
                       value={empresa.segmento}
                       onChange={v=>setEmp("segmento",v)}
                       opcoes={segmentosOrdenados}
+                      hasError={showErrors}
                     />
                     {empresa.segmento.trim()&&!segmentoExiste&&(
                       <div style={{marginTop:5,fontSize:10,fontWeight:600,color:"#e67e22",display:"flex",alignItems:"center",gap:4}}>
@@ -783,7 +845,7 @@ export default function NovaEmpresa() {
                     )}
                   </Field>
                   <Field label="Porte *">
-                    <select className="field-select" value={empresa.porte} onChange={e=>setEmp("porte",e.target.value)}>
+                    <select className="field-select" value={empresa.porte} onChange={e=>setEmp("porte",e.target.value)} style={showErrors&&!empresa.porte?{borderColor:"rgba(231,76,60,0.6)",background:"rgba(231,76,60,0.03)"}:{}}>
                       <option value="">Selecionar porte...</option>
                       <option>Pequeno</option><option>Médio</option><option>Grande</option>
                     </select>
@@ -815,12 +877,12 @@ export default function NovaEmpresa() {
                   </div>
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                  <Field label="Cidade *"><IconInput icon={MapPin} placeholder="Nome da cidade" value={empresa.cidade} onChange={(e:any)=>setEmp("cidade",e.target.value)}/></Field>
-                  <Field label="CEP"><input className="field-input" placeholder="00000-000" value={empresa.cep} onChange={e=>setEmp("cep",formatCep(e.target.value))}/></Field>
+                  <Field label="Cidade *"><IconInput icon={MapPin} placeholder="Nome da cidade" value={empresa.cidade} onChange={(e:any)=>setEmp("cidade",e.target.value)} style={showErrors&&!empresa.cidade.trim()?{borderColor:"rgba(231,76,60,0.6)",background:"rgba(231,76,60,0.03)"}:{}}/></Field>
+                  <Field label="CEP *"><input className="field-input" placeholder="00000-000" value={empresa.cep} onChange={e=>setEmp("cep",formatCep(e.target.value))} style={showErrors&&!empresa.cep.trim()?{borderColor:"rgba(231,76,60,0.6)",background:"rgba(231,76,60,0.03)"}:{}}/></Field>
                   <div style={{gridColumn:"1 / -1"}}>
-                    <Field label="Endereço"><input className="field-input" placeholder="Rua, número, complemento" value={empresa.endereco} onChange={e=>setEmp("endereco",e.target.value)}/></Field>
+                    <Field label="Endereço *"><input className="field-input" placeholder="Rua, número, complemento" value={empresa.endereco} onChange={e=>setEmp("endereco",e.target.value)} style={showErrors&&!empresa.endereco.trim()?{borderColor:"rgba(231,76,60,0.6)",background:"rgba(231,76,60,0.03)"}:{}}/></Field>
                   </div>
-                  <Field label="Bairro"><input className="field-input" placeholder="Bairro" value={empresa.bairro} onChange={e=>setEmp("bairro",e.target.value)}/></Field>
+                  <Field label="Bairro *"><input className="field-input" placeholder="Bairro" value={empresa.bairro} onChange={e=>setEmp("bairro",e.target.value)} style={showErrors&&!empresa.bairro.trim()?{borderColor:"rgba(231,76,60,0.6)",background:"rgba(231,76,60,0.03)"}:{}}/></Field>
                   <Field label="Região"><input className="field-input" placeholder="ex: Sul, Norte, Centro..." value={empresa.regiao} onChange={e=>setEmp("regiao",e.target.value)}/></Field>
                 </div>
               </motion.div>
