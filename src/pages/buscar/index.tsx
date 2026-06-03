@@ -53,7 +53,10 @@ interface PlaceResult {
   place_id: string;
   nome: string;
   endereco: string;
+  endereco_rua: string | null;
   cidade: string | null;
+  bairro: string | null;
+  cep: string | null;
   lat: number | null;
   lng: number | null;
   rating: number | null;
@@ -266,56 +269,26 @@ export default function BuscarEmpresas() {
     debounceRef.current = setTimeout(() => buscar(v), 600);
   };
 
-  const cadastrar = async (place: PlaceResult) => {
-    setSalvandoId(place.place_id);
-    try {
-      const res = await fetch(`${API}/empresas/rascunho`, {
-        method: "POST",
-        headers: hdrs(),
-        body: JSON.stringify({
-          google_place_id: place.place_id,
+  const cadastrar = (place: PlaceResult) => {
+    navigate("/empresas/nova", {
+      state: {
+        prefill: {
           nome: place.nome,
-          endereco_completo: place.endereco,
-          cidade: place.cidade || null,
+          endereco: place.endereco_rua || place.endereco,
+          cidade: place.cidade || "",
+          bairro: place.bairro || "",
+          cep: place.cep || "",
+          site: place.site || "",
+          google_place_id: place.place_id,
           latitude: place.lat,
           longitude: place.lng,
-          telefone_empresa: place.telefone,
-          site: place.site,
           google_rating: place.rating,
           google_rating_count: place.rating_count,
           business_status: place.business_status,
-        }),
-      });
-      if (res.status === 409) {
-        const body = await res.json();
-        const eid = body.detail?.empresa_id || body.empresa_id;
-        showToast("Empresa já está no CRM!", "err");
-        if (eid) setTimeout(() => navigate(`/clientes/${eid}/editar`), 1500);
-        return;
-      }
-      if (!res.ok) throw new Error();
-      const body = await res.json();
-
-      if (place.telefone) {
-        await fetch(`${API}/contatos`, {
-          method: "POST",
-          headers: hdrs(),
-          body: JSON.stringify({
-            empresa_id: body.empresa_id,
-            nome: "Contato Principal",
-            celular: place.telefone,
-            whatsapp: place.telefone,
-          }),
-        });
-      }
-
-      setTotalRascunhos(n => n + 1);
-      showToast("Rascunho criado! Redirecionando...", "ok");
-      setTimeout(() => navigate(`/clientes/${body.empresa_id}/editar`), 1200);
-    } catch {
-      showToast("Erro ao criar rascunho.", "err");
-    }
-    setSalvandoId(null);
+          telefone: place.telefone || "",
+        },
+      },
+    });
   };
 
   const resultadosFiltrados = results.filter(r => {

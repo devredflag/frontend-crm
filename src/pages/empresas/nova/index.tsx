@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Building2, Users, LayoutDashboard, Search, Calendar,
@@ -445,9 +445,16 @@ function ContatoCard({ contato, index, onChange, onRemove }: {
 // ── Página principal ──────────────────────────────────────────
 export default function NovaEmpresa() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const prefill = (location.state as any)?.prefill || null;
+
   const [loading, setLoading] = useState(false);
   const [segmentos, setSegmentos] = useState<string[]>(SEGMENTOS_PADRAO);
-  const [contatos, setContatos] = useState([contatoVazio()]);
+  const [contatos, setContatos] = useState(() =>
+    prefill?.telefone
+      ? [{ ...contatoVazio(), celular: prefill.telefone, whatsapp: prefill.telefone }]
+      : [contatoVazio()]
+  );
 
   // ── States novos: proteção de navegação ──────────────────
   const [showUnsaved, setShowUnsaved] = useState(false);
@@ -461,12 +468,29 @@ export default function NovaEmpresa() {
   const submitCallbackRef = useRef<(() => Promise<void>) | null>(null);
 
   const [empresa, setEmpresa] = useState({
-    nome:"",segmento:"",porte:"",cidade:"",endereco:"",
-    cep:"",bairro:"",regiao:"",observacoes:"",
-    cnpj:"",site:"",linkedin_empresa:"",responsavel_principal:"",
-    status:"Lead",origem_lead:"",
-    ultima_interacao:todayInputValue(),proxima_acao:"",temperatura:"",
+    nome: prefill?.nome || "",
+    segmento: "", porte: "",
+    cidade: prefill?.cidade || "",
+    endereco: prefill?.endereco || "",
+    cep: prefill?.cep || "",
+    bairro: prefill?.bairro || "",
+    regiao: "", observacoes: "",
+    cnpj: "",
+    site: prefill?.site || "",
+    linkedin_empresa: "", responsavel_principal: "",
+    status: "Lead", origem_lead: prefill ? "Google Maps" : "",
+    ultima_interacao: todayInputValue(), proxima_acao: "", temperatura: "",
   });
+
+  // campos extras do Google Places (não editáveis no form)
+  const placesExtra = prefill ? {
+    google_place_id: prefill.google_place_id,
+    latitude: prefill.latitude,
+    longitude: prefill.longitude,
+    google_rating: prefill.google_rating,
+    google_rating_count: prefill.google_rating_count,
+    business_status: prefill.business_status,
+  } : {};
 
   // ── setEmp marca o form como tocado ──────────────────────
   const setEmp = (key: string, val: string) => {
@@ -522,6 +546,7 @@ export default function NovaEmpresa() {
           status: "Lead", origem_lead: empresa.origem_lead || "Manual",
           ultima_interacao: dateInputToIso(empresa.ultima_interacao),
           proxima_acao: empresa.proxima_acao, temperatura: empresa.temperatura || "Frio",
+          ...placesExtra,
         }),
       });
       const empresaData = await empresaRes.json();
@@ -661,6 +686,7 @@ export default function NovaEmpresa() {
     ultima_interacao: dateInputToIso(empresa.ultima_interacao),
     proxima_acao: empresa.proxima_acao,
     temperatura: empresa.temperatura || "Frio",
+    ...placesExtra,
   });
 
   // ── Salvar como rascunho (modal unsaved) ─────────────────
