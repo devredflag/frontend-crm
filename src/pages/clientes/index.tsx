@@ -5,8 +5,9 @@ import {
   LayoutDashboard, Search, Building2, Users, ClipboardList,
   Calendar, BarChart3, ChevronDown, Plus, Filter,
   Eye, Edit3, Trash2, ArrowUpDown, RefreshCw,
-  Star, AlertTriangle, X, FileText,
+  Star, AlertTriangle, X, FileText, Map as MapIcon, List,
 } from "lucide-react";
+import MapaProximidade from "../../components/MapaProximidade";
 
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
@@ -46,6 +47,7 @@ interface Empresa {
   cidade: string; status: string; temperatura: string;
   ticket_medio_estimado: number | null; responsavel_principal: string;
   origem_lead: string; ultima_interacao: string | null; proxima_acao: string;
+  latitude?: number | null; longitude?: number | null;
 }
 interface Usuario { nome: string; cargo: string; }
 
@@ -145,6 +147,7 @@ export default function TodosClientes() {
   const [filterRascunho, setFilterRascunho] = useState(false);
   const [sortField, setSortField] = useState<"nome"|"score"|"ticket_medio_estimado"|"porte">("score");
   const [sortDir, setSortDir] = useState<"asc"|"desc">("desc");
+  const [view, setView] = useState<"lista"|"mapa">("lista");
   const [deleteTarget, setDeleteTarget] = useState<Empresa|null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -288,6 +291,20 @@ export default function TodosClientes() {
             <h1 style={{fontSize:18,fontWeight:800,color:"#0f2133",letterSpacing:"-0.02em"}}>Todos os Clientes</h1>
             <p style={{fontSize:12,color:"rgba(20,45,70,0.5)",marginTop:1}}>{filtered.length} empresa{filtered.length!==1?"s":""} encontrada{filtered.length!==1?"s":""}</p>
           </div>
+          {/* Toggle Lista / Mapa */}
+          <div style={{display:"flex",padding:3,borderRadius:10,background:"rgba(255,255,255,0.6)",border:"1px solid rgba(200,225,240,0.9)",gap:2}}>
+            {([
+              {k:"lista",icon:List,label:"Lista"},
+              {k:"mapa", icon:MapIcon,label:"Mapa"},
+            ] as const).map(o=>(
+              <button key={o.k} onClick={()=>setView(o.k)}
+                style={{display:"flex",alignItems:"center",gap:5,height:30,padding:"0 12px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,
+                  background: view===o.k ? "linear-gradient(135deg,#2980b9,#1abc9c)" : "transparent",
+                  color: view===o.k ? "#fff" : "rgba(20,45,70,0.55)"}}>
+                <o.icon style={{width:13,height:13}}/> {o.label}
+              </button>
+            ))}
+          </div>
           <button onClick={fetchAll} style={{width:36,height:36,borderRadius:10,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.75)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
             <RefreshCw style={{width:15,height:15,color:"#2980b9"}}/>
           </button>
@@ -382,7 +399,13 @@ export default function TodosClientes() {
             )}
           </AnimatePresence>
 
-          {/* Table */}
+          {/* Mapa de proximidade (custo zero) */}
+          {view === "mapa" ? (
+            <motion.div className="glass-card" style={{padding:"18px 20px"}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.38}}>
+              <MapaProximidade empresas={filtered} />
+            </motion.div>
+          ) : (
+          /* Table */
           <motion.div className="glass-card" style={{overflow:"hidden"}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.38}}>
             <div className="th">
               <SortTh label="Empresa" field="nome"/>
@@ -477,6 +500,7 @@ export default function TodosClientes() {
               </AnimatePresence>
             )}
           </motion.div>
+          )}
         </div>
       </div>
     </div>
