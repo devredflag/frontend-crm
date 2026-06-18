@@ -8,8 +8,9 @@ import {
   BarChart3, LayoutDashboard, Search, Building2, Users,
   ClipboardList, Calendar, MapPin, Star, Phone, Globe,
   ChevronRight, ChevronDown, X, ExternalLink, Plus,
-  Loader2, AlertCircle, CheckCircle2, Navigation2,
+  Loader2, AlertCircle, CheckCircle2, Navigation2, Menu,
 } from "lucide-react";
+import useIsMobile from "../../hooks/useIsMobile";
 
 const API = "https://backend-crm-production-157b.up.railway.app";
 const MAPS_KEY = "AIzaSyBYLYOGC9tpf2uTjPPalfzvq06H_gV0dwM";
@@ -185,6 +186,8 @@ function ResultadoCard({
 
 export default function BuscarEmpresas() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const [menuOpen, setMenuOpen] = useState(false);
   const [usuario, setUsuario] = useState<{ nome: string; cargo: string } | null>(null);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<PlaceResult[]>([]);
@@ -310,8 +313,16 @@ export default function BuscarEmpresas() {
         <div style={{ position:"absolute", inset:0, opacity:0.4, backgroundImage:"radial-gradient(circle,rgba(41,128,185,0.2) 1px,transparent 1px)", backgroundSize:"22px 22px" }} />
       </div>
 
+      {/* Backdrop mobile */}
+      {isMobile && menuOpen && (
+        <div onClick={()=>setMenuOpen(false)} style={{ position:"fixed", inset:0, background:"rgba(10,31,51,0.45)", zIndex:999 }}/>
+      )}
+
       {/* Sidebar nav */}
-      <div style={{ width:220, flexShrink:0, height:"100vh", overflowY:"auto", position:"relative", zIndex:10, background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)", boxShadow:"4px 0 24px rgba(0,0,0,0.18)", display:"flex", flexDirection:"column", padding:"0 12px 20px" }}>
+      <div style={{ width:220, flexShrink:0, height:"100vh", overflowY:"auto", zIndex:1000, background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)", boxShadow:"4px 0 24px rgba(0,0,0,0.18)", display:"flex", flexDirection:"column", padding:"0 12px 20px",
+        position: isMobile ? "fixed" : "relative", top:0, left:0,
+        transform: isMobile && !menuOpen ? "translateX(-100%)" : "translateX(0)",
+        transition:"transform 0.28s ease" }}>
         <div style={{ padding:"22px 4px 24px", borderBottom:"1px solid rgba(255,255,255,0.08)", marginBottom:16 }}>
           <div style={{ display:"flex", alignItems:"center", gap:10 }}>
             <div style={{ width:36, height:36, borderRadius:10, background:"linear-gradient(135deg,#2980b9,#1abc9c)", display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -345,8 +356,13 @@ export default function BuscarEmpresas() {
       <div style={{ flex:1, display:"flex", flexDirection:"column", position:"relative", zIndex:5, overflow:"hidden" }}>
 
         {/* Topbar */}
-        <div style={{ padding:"14px 24px", background:"rgba(210,238,248,0.85)", backdropFilter:"blur(20px)", borderBottom:"1px solid rgba(255,255,255,0.6)", flexShrink:0, display:"flex", alignItems:"center", gap:14 }}>
-          <div style={{ flex:1 }}>
+        <div style={{ padding:isMobile?"12px 14px":"14px 24px", background:"rgba(210,238,248,0.85)", backdropFilter:"blur(20px)", borderBottom:"1px solid rgba(255,255,255,0.6)", flexShrink:0, display:"flex", alignItems:"center", gap:isMobile?10:14 }}>
+          {isMobile && (
+            <button onClick={()=>setMenuOpen(true)} style={{ width:36, height:36, borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.75)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+              <Menu style={{ width:18, height:18, color:"#2980b9" }}/>
+            </button>
+          )}
+          <div style={{ flex:1, minWidth:0 }}>
             <div style={{ fontSize:11, fontWeight:700, color:"rgba(20,45,70,0.45)", letterSpacing:"0.08em", textTransform:"uppercase" }}>Prospecção</div>
             <h1 style={{ fontSize:20, fontWeight:900, color:"#0f2133", letterSpacing:"-0.02em" }}>Buscar Empresas</h1>
           </div>
@@ -359,7 +375,7 @@ export default function BuscarEmpresas() {
         </div>
 
         {/* Search + mapa */}
-        <div style={{ flex:1, display:"grid", gridTemplateColumns:"320px 1fr", overflow:"hidden" }}>
+        <div style={{ flex:1, display:"grid", gridTemplateColumns:isMobile?"1fr":"320px 1fr", gridTemplateRows:isMobile?"42vh 1fr":undefined, overflow:"hidden" }}>
 
           {/* Sidebar de resultados */}
           <div style={{ display:"flex", flexDirection:"column", overflow:"hidden", background:"rgba(228,244,252,0.6)", backdropFilter:"blur(12px)", borderRight:"1px solid rgba(200,225,240,0.5)" }}>

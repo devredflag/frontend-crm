@@ -7,8 +7,9 @@ import {
   Globe, ExternalLink, Info, Save, BarChart3,
   LayoutDashboard, Building2, Users,
   Search, ClipboardList, Calendar,
-  AlertTriangle, CalendarCheck, Repeat, Trash2, FileText
+  AlertTriangle, CalendarCheck, Repeat, Trash2, FileText, Menu
 } from "lucide-react";
+import useIsMobile from "../../hooks/useIsMobile";
 
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
@@ -93,6 +94,8 @@ const settingsTabs: { key: SettingsTab; icon: any; label: string; badge?: string
 
 export default function Perfil() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const [menuOpen, setMenuOpen] = useState(false);
   const [usuario, setUsuario]         = useState<Usuario | null>(null);
   const [activeTab, setActiveTab]     = useState<SettingsTab>("comunicacao");
   const [emailProvider, setEmailProvider] = useState<EmailProvider>(null);
@@ -199,7 +202,13 @@ export default function Perfil() {
       </div>
 
       {/* Sidebar */}
-      <div style={{ width:220, flexShrink:0, height:"100vh", overflowY:"auto", position:"relative", zIndex:10, background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)", boxShadow:"4px 0 24px rgba(0,0,0,0.18)", display:"flex", flexDirection:"column", padding:"0 12px 20px" }}>
+      {isMobile && menuOpen && (
+        <div onClick={()=>setMenuOpen(false)} style={{ position:"fixed", inset:0, background:"rgba(10,31,51,0.45)", zIndex:999 }}/>
+      )}
+      <div style={{ width:220, flexShrink:0, height:"100vh", overflowY:"auto", zIndex:1000, background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)", boxShadow:"4px 0 24px rgba(0,0,0,0.18)", display:"flex", flexDirection:"column", padding:"0 12px 20px",
+        position: isMobile ? "fixed" : "relative", top:0, left:0,
+        transform: isMobile && !menuOpen ? "translateX(-100%)" : "translateX(0)",
+        transition:"transform 0.28s ease" }}>
         <div style={{ padding:"22px 4px 24px", borderBottom:"1px solid rgba(255,255,255,0.08)", marginBottom:16 }}>
           <div style={{ display:"flex", alignItems:"center", gap:10 }}>
             <div style={{ width:36, height:36, borderRadius:10, background:"linear-gradient(135deg,#2980b9,#1abc9c)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 12px rgba(41,128,185,0.4)" }}>
@@ -232,8 +241,13 @@ export default function Perfil() {
       <div style={{ flex:1, height:"100vh", overflowY:"auto", position:"relative", zIndex:5 }}>
 
         {/* Topbar */}
-        <div style={{ position:"sticky", top:0, zIndex:20, padding:"14px 28px", background:"rgba(210,238,248,0.75)", backdropFilter:"blur(20px)", borderBottom:"1px solid rgba(255,255,255,0.6)", display:"flex", alignItems:"center", gap:16 }}>
-          <button onClick={() => navigate("/dashboard")} style={{ width:36, height:36, borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.75)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+        <div style={{ position:"sticky", top:0, zIndex:20, padding:isMobile?"12px 14px":"14px 28px", background:"rgba(210,238,248,0.75)", backdropFilter:"blur(20px)", borderBottom:"1px solid rgba(255,255,255,0.6)", display:"flex", alignItems:"center", gap:isMobile?8:16 }}>
+          {isMobile && (
+            <button onClick={()=>setMenuOpen(true)} style={{ width:36, height:36, borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.75)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+              <Menu style={{ width:18, height:18, color:"#2980b9" }}/>
+            </button>
+          )}
+          <button onClick={() => navigate("/dashboard")} style={{ width:36, height:36, borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.75)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
             <ArrowLeft style={{ width:15, height:15, color:"#2980b9" }}/>
           </button>
           <div style={{ flex:1 }}>
@@ -303,7 +317,7 @@ export default function Perfil() {
                       </div>
                     </div>
 
-                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:14 }}>
+                    <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr", gap:12, marginBottom:14 }}>
                       {/* Gmail */}
                       {[
                         { prov: "gmail" as const,   label:"Gmail",   sub:"Google",   color:"#EA4335", bg:"rgba(234,67,53,0.08)",  conectado:gmailConectado   },
@@ -367,7 +381,7 @@ export default function Perfil() {
                     {outlookConectado && (
                       <div style={{ borderTop:"1px solid rgba(200,225,240,0.5)", paddingTop:14 }}>
                         <div style={{ fontSize:12, fontWeight:700, color:"rgba(20,45,70,0.5)", marginBottom:10, textTransform:"uppercase", letterSpacing:"0.05em" }}>Como abrir o Outlook</div>
-                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                        <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr", gap:8 }}>
                           {[
                             { mode:"web" as const, label:"Outlook Web",  sub:"outlook.live.com", Icon:Globe },
                             { mode:"app" as const, label:"App instalado", sub:"Protocolo mailto:", Icon:Monitor },
@@ -398,7 +412,7 @@ export default function Perfil() {
                       </div>
                     </div>
 
-                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                    <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr", gap:12 }}>
 
                       {/* WhatsApp Web */}
                       <div className={`channel-card${whatsappMode === "web" ? " selected-green" : ""}`} onClick={() => setWhatsappMode(whatsappMode === "web" ? null : "web")}>
@@ -504,7 +518,7 @@ export default function Perfil() {
                         <div style={{ fontSize:11, fontWeight:600, color:"#2980b9", marginTop:4 }}>{cargoUsuario}</div>
                       </div>
                     </div>
-                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
+                    <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr", gap:14 }}>
                       {[
                         { label:"Nome completo", value:nomeUsuario },
                         { label:"Cargo",         value:cargoUsuario },

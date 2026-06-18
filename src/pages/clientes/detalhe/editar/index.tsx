@@ -7,8 +7,9 @@ import {
   Plus, Trash2, Globe, Link2, Phone, Mail,
   MapPin, Briefcase, Hash, User, Thermometer,
   Target, Clock, FileText, Save, CheckCircle,
-  XCircle, Loader, AlertTriangle, Star,
+  XCircle, Loader, AlertTriangle, Star, Menu,
 } from "lucide-react";
+import useIsMobile from "../../../../hooks/useIsMobile";
 
 const API = "https://backend-crm-production-157b.up.railway.app";
 
@@ -287,6 +288,8 @@ function ContatoCard({ contato, index, onChange, onRemove }: {
 export default function EmpresaEdit() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const [menuOpen, setMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [segmentos, setSegmentos] = useState<string[]>(SEGMENTOS_PADRAO);
@@ -496,7 +499,13 @@ export default function EmpresaEdit() {
       </div>
 
       {/* Sidebar */}
-      <div style={{width:220,flexShrink:0,height:"100vh",overflowY:"auto",position:"relative",zIndex:10,background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)",boxShadow:"4px 0 24px rgba(0,0,0,0.18)",display:"flex",flexDirection:"column",padding:"0 12px 20px"}}>
+      {isMobile && menuOpen && (
+        <div onClick={()=>setMenuOpen(false)} style={{position:"fixed",inset:0,background:"rgba(10,31,51,0.45)",zIndex:999}}/>
+      )}
+      <div style={{width:220,flexShrink:0,height:"100vh",overflowY:"auto",zIndex:1000,background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)",boxShadow:"4px 0 24px rgba(0,0,0,0.18)",display:"flex",flexDirection:"column",padding:"0 12px 20px",
+        position: isMobile ? "fixed" : "relative", top:0, left:0,
+        transform: isMobile && !menuOpen ? "translateX(-100%)" : "translateX(0)",
+        transition:"transform 0.28s ease"}}>
         <div style={{padding:"22px 4px 24px",borderBottom:"1px solid rgba(255,255,255,0.08)",marginBottom:16}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#2980b9,#1abc9c)",display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -528,23 +537,28 @@ export default function EmpresaEdit() {
       <div style={{flex:1,height:"100vh",overflowY:"auto",position:"relative",zIndex:5}}>
 
         {/* Top bar */}
-        <div style={{position:"sticky",top:0,zIndex:20,padding:"14px 28px",background:"rgba(210,238,248,0.75)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,0.6)",display:"flex",alignItems:"center",gap:16}}>
-          <button className="btn-ghost" style={{height:38,padding:"0 14px",fontSize:13}} onClick={()=>navigate(`/clientes/${id}`)}>
-            <ArrowLeft style={{width:15,height:15}}/> Voltar
+        <div style={{position:"sticky",top:0,zIndex:20,padding:isMobile?"12px 14px":"14px 28px",background:"rgba(210,238,248,0.75)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,0.6)",display:"flex",alignItems:"center",gap:isMobile?8:16}}>
+          {isMobile && (
+            <button onClick={()=>setMenuOpen(true)} style={{width:36,height:36,borderRadius:10,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.75)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <Menu style={{width:18,height:18,color:"#2980b9"}}/>
+            </button>
+          )}
+          <button className="btn-ghost" title="Voltar" style={{height:38,padding:isMobile?"0 10px":"0 14px",fontSize:13,flexShrink:0}} onClick={()=>navigate(`/clientes/${id}`)}>
+            <ArrowLeft style={{width:15,height:15}}/>{!isMobile && " Voltar"}
           </button>
-          <div style={{flex:1}}>
-            <h1 style={{fontSize:18,fontWeight:800,color:"#0f2133",letterSpacing:"-0.02em"}}>Editar Empresa</h1>
-            <p style={{fontSize:12,color:"rgba(20,45,70,0.5)",marginTop:1}}>{form.nome||"..."} — todas as alterações são salvas no banco de dados</p>
+          <div style={{flex:1,minWidth:0}}>
+            <h1 style={{fontSize:isMobile?16:18,fontWeight:800,color:"#0f2133",letterSpacing:"-0.02em"}}>Editar Empresa</h1>
+            {!isMobile && <p style={{fontSize:12,color:"rgba(20,45,70,0.5)",marginTop:1}}>{form.nome||"..."} — todas as alterações são salvas no banco de dados</p>}
           </div>
-          <button className="btn-grad" style={{height:38,padding:"0 18px",fontSize:13,opacity:saving?0.7:1}} onClick={handleSubmit} disabled={saving}>
+          <button className="btn-grad" title="Salvar Alterações" style={{height:38,padding:isMobile?"0 12px":"0 18px",fontSize:13,opacity:saving?0.7:1,flexShrink:0,whiteSpace:"nowrap"}} onClick={handleSubmit} disabled={saving}>
             {saving?<Loader className="spin" style={{width:14,height:14}}/>:<Save style={{width:15,height:15}}/>}
-            {saving?"Salvando...":"Salvar Alterações"}
+            {saving?"Salvando...":(isMobile?"Salvar":"Salvar Alterações")}
           </button>
         </div>
 
         {/* Conteúdo */}
-        <div style={{padding:"24px 28px 48px"}}>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 380px",gap:20,alignItems:"start"}}>
+        <div style={{padding:isMobile?"16px 14px 40px":"24px 28px 48px"}}>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 380px",gap:isMobile?14:20,alignItems:"start"}}>
 
             {/* Coluna esquerda */}
             <div style={{display:"flex",flexDirection:"column",gap:16}}>
@@ -754,7 +768,7 @@ export default function EmpresaEdit() {
                 <Plus style={{width:15,height:15}}/> Adicionar Contato
               </button>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:16}}>
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(2,1fr)",gap:16}}>
               {contatos.map((c,i)=>(
                 <ContatoCard key={c._localId} contato={c} index={i} onChange={handleContatoChange} onRemove={removeContato}/>
               ))}

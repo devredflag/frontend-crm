@@ -6,8 +6,9 @@ import {
   Calendar, BarChart3, Plus, RefreshCw, Eye,
   ChevronRight, MapPin, TrendingUp,
   Phone, Mail, MessageCircle, History, Save, X,
-  CalendarClock, Clock, Filter, Edit3, AlertCircle,
+  CalendarClock, Clock, Filter, Edit3, AlertCircle, Menu,
 } from "lucide-react";
+import useIsMobile from "../../hooks/useIsMobile";
 
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
@@ -231,6 +232,8 @@ function uniqueOptions(values: Array<string | null | undefined>) {
 
 export default function Gerenciamento() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const [menuOpen, setMenuOpen] = useState(false);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [usuario, setUsuario] = useState<Usuario|null>(null);
   const [loading, setLoading] = useState(true);
@@ -428,7 +431,13 @@ export default function Gerenciamento() {
       </div>
 
       {/* Sidebar */}
-      <div style={{width:220,flexShrink:0,height:"100vh",overflowY:"auto",position:"relative",zIndex:10,background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)",boxShadow:"4px 0 24px rgba(0,0,0,0.18)",display:"flex",flexDirection:"column",padding:"0 12px 20px"}}>
+      {isMobile && menuOpen && (
+        <div onClick={()=>setMenuOpen(false)} style={{position:"fixed",inset:0,background:"rgba(10,31,51,0.45)",zIndex:999}}/>
+      )}
+      <div style={{width:220,flexShrink:0,height:"100vh",overflowY:"auto",zIndex:1000,background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)",boxShadow:"4px 0 24px rgba(0,0,0,0.18)",display:"flex",flexDirection:"column",padding:"0 12px 20px",
+        position: isMobile ? "fixed" : "relative", top:0, left:0,
+        transform: isMobile && !menuOpen ? "translateX(-100%)" : "translateX(0)",
+        transition:"transform 0.28s ease"}}>
         <div style={{padding:"22px 4px 24px",borderBottom:"1px solid rgba(255,255,255,0.08)",marginBottom:16}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#2980b9,#1abc9c)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 12px rgba(41,128,185,0.4)"}}>
@@ -467,9 +476,14 @@ export default function Gerenciamento() {
       <div style={{flex:1,height:"100vh",overflow:"hidden",display:"flex",flexDirection:"column",position:"relative",zIndex:5}}>
 
         {/* Header */}
-        <div style={{padding:"16px 28px",background:"rgba(210,238,248,0.85)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,0.6)",flexShrink:0}}>
-          <div style={{display:"flex",alignItems:"flex-start",gap:16,marginBottom:14}}>
-            <div style={{flex:1}}>
+        <div style={{padding:isMobile?"12px 14px":"16px 28px",background:"rgba(210,238,248,0.85)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,0.6)",flexShrink:0}}>
+          <div style={{display:"flex",alignItems:"flex-start",gap:isMobile?10:16,marginBottom:14}}>
+            {isMobile && (
+              <button onClick={()=>setMenuOpen(true)} style={{width:36,height:36,borderRadius:10,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.75)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <Menu style={{width:18,height:18,color:"#2980b9"}}/>
+              </button>
+            )}
+            <div style={{flex:1,minWidth:0}}>
               <div style={{fontSize:11,fontWeight:700,color:"rgba(20,45,70,0.45)",letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:3}}>Pipeline</div>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
                 <h1 style={{fontSize:22,fontWeight:900,color:"#0f2133",letterSpacing:"-0.03em"}}>Pipeline de Vendas</h1>
@@ -697,8 +711,8 @@ export default function Gerenciamento() {
           )}
 
           {view==="lista"&&(
-            <div style={{display:"flex",flexDirection:"column",gap:8,maxWidth:1320}}>
-              <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 105px 145px 100px 110px",gap:12,padding:"6px 18px",fontSize:10,fontWeight:700,color:"rgba(20,45,70,0.45)",letterSpacing:"0.07em",textTransform:"uppercase"}}>
+            <div style={{display:"flex",flexDirection:"column",gap:8,maxWidth:1320,overflowX:isMobile?"auto":undefined}}>
+              <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 105px 145px 100px 110px",gap:12,padding:"6px 18px",fontSize:10,fontWeight:700,color:"rgba(20,45,70,0.45)",letterSpacing:"0.07em",textTransform:"uppercase",minWidth:isMobile?900:undefined}}>
                 <span>Empresa</span><span>Status</span><span>Cidade</span><span>Score</span><span>Próxima ação</span><span>Parado</span><span>Ações</span>
               </div>
               {loading?([1,2,3,4].map(i=><div key={i} className="skeleton" style={{height:64,borderRadius:12}}/>)):
@@ -713,7 +727,7 @@ export default function Gerenciamento() {
                 const si=PIPELINE.find(p=>p.key===emp.status)||PIPELINE[0];
                 const next=nextActionInfo(emp);
                 return(
-                  <motion.div key={emp.empresa_id} className="list-row" initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} transition={{duration:0.18,delay:idx*0.03}} style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 105px 145px 100px 110px",gap:12,alignItems:"center",padding:"12px 18px"}}>
+                  <motion.div key={emp.empresa_id} className="list-row" initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} transition={{duration:0.18,delay:idx*0.03}} style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 105px 145px 100px 110px",gap:12,alignItems:"center",padding:"12px 18px",minWidth:isMobile?900:undefined}}>
                     <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
                       <div style={{width:36,height:36,borderRadius:9,background:avatarColor(emp.nome),display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"#fff",flexShrink:0}}>{initials(emp.nome)}</div>
                       <div style={{minWidth:0}}>

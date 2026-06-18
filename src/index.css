@@ -3,6 +3,16 @@
 @tailwind utilities;
 
 /* ========================= */
+/* 📱 TRAVA DE OVERFLOW HORIZONTAL (mobile) */
+/* Impede que arrastar para o lado mova a página inteira. */
+/* ========================= */
+html, body, #root {
+  max-width: 100%;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+}
+
+/* ========================= */
 /* 🌈 GRADIENTES DE TEXTO */
 /* ========================= */
 

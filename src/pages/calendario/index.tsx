@@ -5,8 +5,9 @@ import {
   LayoutDashboard, Search, Building2, Users, ClipboardList,
   Calendar, BarChart3, ChevronLeft, ChevronRight,
   Plus, X, Phone, Eye, Users2, FileText, Trash2, Clock,
-  Mail, CheckCircle2, Link2, ChevronDown,
+  Mail, CheckCircle2, Link2, ChevronDown, Menu,
 } from "lucide-react";
+import useIsMobile from "../../hooks/useIsMobile";
 
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
@@ -228,6 +229,8 @@ function EmailsConvidadosField({ emails, setEmails, contatos, empresaNome, dropd
 
 export default function Calendario() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const [menuOpen, setMenuOpen] = useState(false);
   const today = new Date();
   const [view, setView] = useState<"mes"|"semana"|"dia">("mes");
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -445,7 +448,13 @@ export default function Calendario() {
       </div>
 
       {/* Sidebar */}
-      <div style={{width:220,flexShrink:0,height:"100vh",overflowY:"auto",position:"relative",zIndex:10,background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)",boxShadow:"4px 0 24px rgba(0,0,0,0.18)",display:"flex",flexDirection:"column",padding:"0 12px 20px"}}>
+      {isMobile && menuOpen && (
+        <div onClick={()=>setMenuOpen(false)} style={{position:"fixed",inset:0,background:"rgba(10,31,51,0.45)",zIndex:999}}/>
+      )}
+      <div style={{width:220,flexShrink:0,height:"100vh",overflowY:"auto",zIndex:1000,background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)",boxShadow:"4px 0 24px rgba(0,0,0,0.18)",display:"flex",flexDirection:"column",padding:"0 12px 20px",
+        position: isMobile ? "fixed" : "relative", top:0, left:0,
+        transform: isMobile && !menuOpen ? "translateX(-100%)" : "translateX(0)",
+        transition:"transform 0.28s ease"}}>
         <div style={{padding:"22px 4px 24px",borderBottom:"1px solid rgba(255,255,255,0.08)",marginBottom:16}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#2980b9,#1abc9c)",display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -483,10 +492,15 @@ export default function Calendario() {
 
       {/* Main */}
       <div style={{flex:1,height:"100vh",overflowY:"auto",position:"relative",zIndex:5,display:"flex",flexDirection:"column"}}>
-        <div style={{position:"sticky",top:0,zIndex:20,padding:"14px 28px",background:"rgba(210,238,248,0.85)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,0.6)",display:"flex",alignItems:"center",gap:14,flexShrink:0}}>
-          <div style={{flex:1}}>
+        <div style={{position:"sticky",top:0,zIndex:20,padding:isMobile?"12px 14px":"14px 28px",background:"rgba(210,238,248,0.85)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,0.6)",display:"flex",alignItems:"center",gap:isMobile?10:14,flexShrink:0}}>
+          {isMobile && (
+            <button onClick={()=>setMenuOpen(true)} style={{width:36,height:36,borderRadius:10,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.75)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <Menu style={{width:18,height:18,color:"#2980b9"}}/>
+            </button>
+          )}
+          <div style={{flex:1,minWidth:0}}>
             <h1 style={{fontSize:18,fontWeight:800,color:"#0f2133"}}>Calendário</h1>
-            <p style={{fontSize:12,color:"rgba(20,45,70,0.5)",marginTop:1}}>Agenda e planejamento de atividades</p>
+            <p style={{fontSize:12,color:"rgba(20,45,70,0.5)",marginTop:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Agenda e planejamento de atividades</p>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <button type="button" onClick={prev} style={{width:32,height:32,borderRadius:8,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.75)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><ChevronLeft style={{width:15,height:15,color:"#2980b9"}}/></button>
@@ -680,7 +694,7 @@ export default function Calendario() {
                 />
               </div>
 
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:14}}>
+              <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:10,marginBottom:14}}>
                 <div>
                   <label style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(20,45,70,0.5)",display:"block",marginBottom:6}}>Data *</label>
                   <input type="date" className="input-field" value={form.data} onChange={e=>setForm({...form,data:e.target.value})}/>

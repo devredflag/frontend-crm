@@ -7,8 +7,9 @@ import {
   ClipboardList, Calendar, ArrowLeft, Edit3,
   MapPin, Tag, Thermometer, TrendingUp, DollarSign,
   Phone, Mail, User, Clock, ChevronRight, MessageCircle, Link2,
-  ChevronDown, Check, X as XIcon, Star, RefreshCw,
+  ChevronDown, Check, X as XIcon, Star, RefreshCw, Menu,
 } from "lucide-react";
+import useIsMobile from "../../../hooks/useIsMobile";
 
 import SelectRecipientsModal, {
   SendChannel,
@@ -169,6 +170,8 @@ export default function EmpresaDetalhe() {
   const [contatos, setContatos]   = useState<Contato[]>([]);
   const [atividades, setAtividades] = useState<any[]>([]);
   const [loading, setLoading]     = useState(true);
+  const isMobile = useIsMobile();
+  const [menuOpen, setMenuOpen] = useState(false);
   const [usuario, setUsuario]     = useState<Usuario | null>(null);
   const [expandedContato, setExpandedContato] = useState<string | null>(null);
   const [editValor, setEditValor] = useState(false);
@@ -370,7 +373,13 @@ export default function EmpresaDetalhe() {
       </div>
 
       {/* ── Sidebar ── */}
-      <div style={{ width:220, flexShrink:0, height:"100vh", overflowY:"auto", position:"relative", zIndex:10, background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)", boxShadow:"4px 0 24px rgba(0,0,0,0.18)", display:"flex", flexDirection:"column", padding:"0 12px 20px" }}>
+      {isMobile && menuOpen && (
+        <div onClick={()=>setMenuOpen(false)} style={{ position:"fixed", inset:0, background:"rgba(10,31,51,0.45)", zIndex:999 }}/>
+      )}
+      <div style={{ width:220, flexShrink:0, height:"100vh", overflowY:"auto", zIndex:1000, background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)", boxShadow:"4px 0 24px rgba(0,0,0,0.18)", display:"flex", flexDirection:"column", padding:"0 12px 20px",
+        position: isMobile ? "fixed" : "relative", top:0, left:0,
+        transform: isMobile && !menuOpen ? "translateX(-100%)" : "translateX(0)",
+        transition:"transform 0.28s ease" }}>
         <div style={{ padding:"22px 4px 24px", borderBottom:"1px solid rgba(255,255,255,0.08)", marginBottom:16 }}>
           <div style={{ display:"flex", alignItems:"center", gap:10 }}>
             <div style={{ width:36, height:36, borderRadius:10, background:"linear-gradient(135deg,#2980b9,#1abc9c)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 12px rgba(41,128,185,0.4)" }}>
@@ -406,11 +415,16 @@ export default function EmpresaDetalhe() {
       <div style={{ flex:1, height:"100vh", overflowY:"auto", position:"relative", zIndex:5 }}>
 
         {/* Topbar */}
-        <div style={{ position:"sticky", top:0, zIndex:20, padding:"14px 28px", background:"rgba(210,238,248,0.75)", backdropFilter:"blur(20px)", borderBottom:"1px solid rgba(255,255,255,0.6)", display:"flex", alignItems:"center", gap:14 }}>
+        <div style={{ position:"sticky", top:0, zIndex:20, padding:isMobile?"12px 14px":"14px 28px", background:"rgba(210,238,248,0.75)", backdropFilter:"blur(20px)", borderBottom:"1px solid rgba(255,255,255,0.6)", display:"flex", alignItems:"center", gap:isMobile?8:14 }}>
+          {isMobile && (
+            <button onClick={()=>setMenuOpen(true)} style={{ width:36, height:36, borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.75)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+              <Menu style={{ width:18, height:18, color:"#2980b9" }}/>
+            </button>
+          )}
           <button onClick={() => navigate(backTo)} style={{ width:36, height:36, borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.75)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
             <ArrowLeft style={{ width:15, height:15, color:"#2980b9" }} />
           </button>
-          <div style={{ flex:1 }}>
+          <div style={{ flex:1, minWidth:0 }}>
             <h1 style={{ fontSize:18, fontWeight:800, color:"#0f2133", letterSpacing:"-0.02em" }}>
               {loading ? "Carregando..." : empresa?.nome}
             </h1>
@@ -421,7 +435,7 @@ export default function EmpresaDetalhe() {
             </p>
           </div>
 
-          {!loading && contatos.length > 0 && (
+          {!loading && !isMobile && contatos.length > 0 && (
             <div style={{ display:"flex", gap:6 }}>
               <SendButton color="#2980b9" bg="rgba(41,128,185,0.08)" border="rgba(41,128,185,0.3)"  icon={Mail}          label="E-mail"   onClick={() => setSendChannel("email")} />
               <SendButton color="#27ae60" bg="rgba(39,174,96,0.08)"  border="rgba(39,174,96,0.3)"   icon={MessageCircle} label="WhatsApp" onClick={() => setSendChannel("whatsapp")} />
@@ -437,14 +451,14 @@ export default function EmpresaDetalhe() {
             />
           )}
 
-          <button onClick={() => navigate(`/clientes/${id}/editar`)} style={{ height:38, padding:"0 16px", borderRadius:10, border:"none", cursor:"pointer", background:"linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)", backgroundSize:"200% 200%", animation:"gradientShift 4s ease infinite", color:"#fff", fontSize:13, fontWeight:700, display:"flex", alignItems:"center", gap:6, boxShadow:"0 4px 14px rgba(41,128,185,0.35)" }}>
-            <Edit3 style={{ width:14, height:14 }} /> Editar
+          <button onClick={() => navigate(`/clientes/${id}/editar`)} title="Editar" style={{ height:38, padding:isMobile?"0 12px":"0 16px", borderRadius:10, border:"none", cursor:"pointer", background:"linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)", backgroundSize:"200% 200%", animation:"gradientShift 4s ease infinite", color:"#fff", fontSize:13, fontWeight:700, display:"flex", alignItems:"center", gap:6, boxShadow:"0 4px 14px rgba(41,128,185,0.35)", flexShrink:0 }}>
+            <Edit3 style={{ width:14, height:14 }} />{!isMobile && " Editar"}
           </button>
         </div>
 
-        <div style={{ padding:"24px 28px 40px", display:"flex", flexDirection:"column", gap:18 }}>
+        <div style={{ padding:isMobile?"16px 14px 32px":"24px 28px 40px", display:"flex", flexDirection:"column", gap:18 }}>
           {loading ? (
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:18 }}>
+            <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr", gap:18 }}>
               {[1,2,3,4].map(i => (
                 <div key={i} className="glass-card" style={{ padding:24 }}>
                   <div className="skeleton" style={{ height:20, width:"40%", marginBottom:16 }} />
@@ -524,7 +538,7 @@ export default function EmpresaDetalhe() {
                 </div>
               </motion.div>
 
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:18 }}>
+              <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr", gap:18 }}>
                 {/* Informações */}
                 <motion.div className="glass-card" style={{ padding:"22px 24px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.07 }}>
                   <div style={{ fontSize:13, fontWeight:700, color:"#0f2133", marginBottom:16, display:"flex", alignItems:"center", gap:7 }}>
@@ -631,7 +645,7 @@ export default function EmpresaDetalhe() {
               </div>
 
               {/* Contatos + Atividades */}
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:18 }}>
+              <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr", gap:18 }}>
 
                 {/* Card único de contatos */}
                 <motion.div className="glass-card" style={{ padding:"22px 24px", display:"flex", flexDirection:"column", maxHeight:420 }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.18 }}>

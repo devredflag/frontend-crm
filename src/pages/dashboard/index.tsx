@@ -9,8 +9,9 @@
     MapPin, Phone, Mail, User, ArrowRight,
     Eye, X, CalendarCheck, Repeat, FileText, Edit3,
     Trash2, CheckCheck, AlertTriangle, Info,
-    CheckCircle2
+    CheckCircle2, Menu
   } from "lucide-react";
+  import useIsMobile from "../../hooks/useIsMobile";
 
     const css = `
       @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
@@ -146,6 +147,8 @@
       const navigate = useNavigate();
       const [empresas, setEmpresas] = useState<Empresa[]>([]);
       const [loading, setLoading] = useState(true);
+      const isMobile = useIsMobile();
+      const [menuOpen, setMenuOpen] = useState(false);
       const [activeFilter, setActiveFilter] = useState<FilterKey>("total");
       const [selectedAction, setSelectedAction] = useState<Empresa|null>(null);
       const [contatos, setContatos] = useState<Contato[]>([]);
@@ -299,8 +302,16 @@
             ))}
           </div>
 
+          {/* Backdrop mobile */}
+          {isMobile && menuOpen && (
+            <div onClick={()=>setMenuOpen(false)} style={{position:"fixed",inset:0,background:"rgba(10,31,51,0.45)",zIndex:999}}/>
+          )}
+
           {/* Sidebar */}
-          <div style={{width:220,flexShrink:0,height:"100vh",overflowY:"auto",position:"relative",zIndex:10,background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)",boxShadow:"4px 0 24px rgba(0,0,0,0.18)",display:"flex",flexDirection:"column",padding:"0 12px 20px"}}>
+          <div style={{width:220,flexShrink:0,height:"100vh",overflowY:"auto",zIndex:1000,background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)",boxShadow:"4px 0 24px rgba(0,0,0,0.18)",display:"flex",flexDirection:"column",padding:"0 12px 20px",
+            position: isMobile ? "fixed" : "relative", top:0, left:0,
+            transform: isMobile && !menuOpen ? "translateX(-100%)" : "translateX(0)",
+            transition:"transform 0.28s ease"}}>
             <div style={{padding:"22px 4px 24px",borderBottom:"1px solid rgba(255,255,255,0.08)",marginBottom:16}}>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
                 <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#2980b9,#1abc9c)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 12px rgba(41,128,185,0.4)"}}>
@@ -339,15 +350,22 @@
           <div style={{flex:1,height:"100vh",overflowY:"auto",position:"relative",zIndex:5}}>
 
             {/* Topbar */}
-            <div style={{position:"sticky",top:0,zIndex:20,padding:"14px 28px",background:"rgba(210,238,248,0.75)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,0.6)",display:"flex",alignItems:"center",gap:16}}>
-              <div style={{flex:1}}>
+            <div style={{position:"sticky",top:0,zIndex:20,padding:isMobile?"12px 14px":"14px 28px",background:"rgba(210,238,248,0.75)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,0.6)",display:"flex",alignItems:"center",gap:isMobile?10:16}}>
+              {isMobile && (
+                <button onClick={()=>setMenuOpen(true)} style={{width:36,height:36,borderRadius:10,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.75)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  <Menu style={{width:18,height:18,color:"#2980b9"}}/>
+                </button>
+              )}
+              <div style={{flex:1,minWidth:0}}>
                 <h1 style={{fontSize:18,fontWeight:800,color:"#0f2133",letterSpacing:"-0.02em"}}>Dashboard</h1>
-                <p style={{fontSize:12,color:"rgba(20,45,70,0.5)",marginTop:1}}>Bem-vindo de volta, {usuario?.nome?.split(" ")[0]||"..."}! 👋</p>
+                <p style={{fontSize:12,color:"rgba(20,45,70,0.5)",marginTop:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Bem-vindo de volta, {usuario?.nome?.split(" ")[0]||"..."}! 👋</p>
               </div>
+              {!isMobile && (
               <div style={{display:"flex",alignItems:"center",gap:8,background:"rgba(255,255,255,0.75)",border:"1px solid rgba(200,225,240,0.9)",borderRadius:10,padding:"0 14px",height:38,width:260}}>
                 <Search style={{width:14,height:14,color:"rgba(20,45,70,0.35)",flexShrink:0}}/>
                 <input value={searchValue} onChange={e=>setSearchValue(e.target.value)} placeholder="Buscar leads, empresas..." style={{flex:1,border:"none",background:"transparent",fontSize:13,color:"#1a2e40",outline:"none"}}/>
               </div>
+              )}
               <div style={{display:"flex",gap:8,alignItems:"center"}}>
                 <button onClick={()=>{fetchData();fetchNotificacoes();}} style={{width:38,height:38,borderRadius:10,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.75)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
                   <RefreshCw style={{width:15,height:15,color:"#2980b9"}}/>
@@ -452,7 +470,7 @@
               </div>
             </div>
 
-            <div style={{padding:"22px 28px 32px",display:"flex",flexDirection:"column",gap:18}}>
+            <div style={{padding:isMobile?"16px 14px 32px":"22px 28px 32px",display:"flex",flexDirection:"column",gap:18}}>
 
               {/* Banner rascunhos */}
               <AnimatePresence>
@@ -477,7 +495,7 @@
               </AnimatePresence>
 
               {/* Metric cards */}
-              <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}>
+              <div style={{display:"grid",gridTemplateColumns:isMobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:12}}>
                 {metricCards.map((m,i)=>(
                   <motion.div key={m.key} className="metric-card"
                     style={{borderColor:activeFilter===m.key?m.color:undefined,boxShadow:activeFilter===m.key?`0 0 0 3px ${m.color}22`:undefined,outline:m.key==="rascunho"&&m.value>0&&activeFilter!=="rascunho"?`1.5px dashed rgba(142,68,173,0.35)`:undefined}}
@@ -593,7 +611,7 @@
               </motion.div>
 
               {/* Bottom row */}
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16}}>
+              <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:16}}>
 
                 {/* Próximas Ações */}
                 <motion.div className="glass-card" style={{padding:"18px"}} initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.4,delay:0.45}}>
