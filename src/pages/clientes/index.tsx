@@ -148,6 +148,7 @@ export default function TodosClientes() {
   const [sortField, setSortField] = useState<"nome"|"score"|"ticket_medio_estimado"|"porte">("score");
   const [sortDir, setSortDir] = useState<"asc"|"desc">("desc");
   const [view, setView] = useState<"lista"|"mapa">("lista");
+  const [geocode, setGeocode] = useState<{rodando:boolean; feitas:number; restantes:number|null}|null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Empresa|null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -179,6 +180,25 @@ export default function TodosClientes() {
       setDeleteTarget(null);
     } catch(e) { alert(e instanceof Error?e.message:"Erro ao excluir empresa"); }
     finally { setDeleting(false); }
+  };
+
+  // Geocodifica empresas sem coordenada (lote a lote) e recarrega o mapa
+  const geocodificar = async () => {
+    if (geocode?.rodando) return;
+    setGeocode({ rodando: true, feitas: 0, restantes: null });
+    let feitas = 0;
+    try {
+      for (let i = 0; i < 200; i++) {
+        const res = await fetch(`${API}/empresas/geocodificar?limite=15`, { method: "POST", headers: headers() });
+        if (!res.ok) break;
+        const d = await res.json();
+        feitas += d.geocodificadas || 0;
+        setGeocode({ rodando: true, feitas, restantes: d.restantes ?? null });
+        if (!d.restantes || !d.processadas) break;
+      }
+    } catch {}
+    await fetchAll();
+    setGeocode({ rodando: false, feitas, restantes: 0 });
   };
 
   const toggleSort = (field: typeof sortField) => {
@@ -402,7 +422,7 @@ export default function TodosClientes() {
           {/* Mapa de proximidade (custo zero) */}
           {view === "mapa" ? (
             <motion.div className="glass-card" style={{padding:"18px 20px"}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.38}}>
-              <MapaProximidade empresas={filtered} />
+              <MapaProximidade empresas={filtered} onGeocodificar={geocodificar} geocode={geocode} />
             </motion.div>
           ) : (
           /* Table */
