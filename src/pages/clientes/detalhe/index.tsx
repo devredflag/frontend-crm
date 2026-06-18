@@ -7,7 +7,7 @@ import {
   ClipboardList, Calendar, ArrowLeft, Edit3,
   MapPin, Tag, Thermometer, TrendingUp, DollarSign,
   Phone, Mail, User, Clock, ChevronRight, MessageCircle, Link2,
-  ChevronDown, Check, X as XIcon,
+  ChevronDown, Check, X as XIcon, Star, RefreshCw,
 } from "lucide-react";
 
 import SelectRecipientsModal, {
@@ -29,6 +29,7 @@ const css = `
   @keyframes float5 { 0%,100%{transform:translate(0,0) scale(1)}45%{transform:translate(35px,-20px) scale(1.06)}80%{transform:translate(-15px,30px) scale(0.96)} }
   @keyframes gradientShift { 0%,100%{background-position:0% 50%}50%{background-position:100% 50%} }
   @keyframes shimmer { 0%{background-position:-200% 0}100%{background-position:200% 0} }
+  @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
   .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:10px; cursor:pointer; font-size:13.5px; font-weight:500; color:rgba(255,255,255,0.65); transition:all 0.18s; user-select:none; }
   .nav-item:hover { background:rgba(255,255,255,0.08); color:#fff; }
   .nav-item.active { background:rgba(255,255,255,0.14); color:#fff; font-weight:600; }
@@ -82,6 +83,11 @@ interface Empresa {
   ultima_interacao: string | null;
   proxima_acao: string;
   observacoes?: string;
+  // snapshot do Google Places (volátil) + quando foi capturado
+  google_rating?: number | null;
+  google_rating_count?: number | null;
+  business_status?: string | null;
+  google_synced_at?: string | null;
 }
 
 interface Usuario {
@@ -112,6 +118,26 @@ function avatarColor(name: string) {
 function formatDate(d: string | null) {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("pt-BR");
+}
+
+// Snapshot do Google é considerado velho depois disto
+const GOOGLE_STALE_DAYS = 30;
+function freshness(syncedAt?: string | null) {
+  if (!syncedAt) return null;
+  const days = Math.floor((Date.now() - new Date(syncedAt).getTime()) / 86_400_000);
+  let txt: string;
+  if (days <= 0) txt = "hoje";
+  else if (days === 1) txt = "ontem";
+  else if (days < 30) txt = `há ${days} dias`;
+  else { const m = Math.floor(days / 30); txt = `há ${m} ${m === 1 ? "mês" : "meses"}`; }
+  return { txt, stale: days > GOOGLE_STALE_DAYS };
+}
+function businessStatusLabel(s?: string | null) {
+  if (!s) return null;
+  if (s === "OPERATIONAL")         return "Em operação";
+  if (s === "CLOSED_TEMPORARILY")  return "Fechado temporariamente";
+  if (s === "CLOSED_PERMANENTLY")  return "Fechado permanentemente";
+  return s;
 }
 
 function SendButton({
@@ -147,6 +173,8 @@ export default function EmpresaDetalhe() {
   const [expandedContato, setExpandedContato] = useState<string | null>(null);
   const [editValor, setEditValor] = useState(false);
   const [valorDraft, setValorDraft] = useState("");
+  const [refreshingGoogle, setRefreshingGoogle] = useState(false);
+  const [googleRefreshErro, setGoogleRefreshErro] = useState<string | null>(null);
 
   // canal aberto no modal
   const [sendChannel, setSendChannel] = useState<SendChannel | null>(null);
@@ -270,6 +298,39 @@ export default function EmpresaDetalhe() {
       });
     } catch {
       setEmpresa(prev => prev ? { ...prev, ticket_medio_estimado: anterior } : prev);
+    }
+  };
+
+  // Re-busca o snapshot volátil do Google (rating/status) pelo place_id salvo.
+  // Backend esperado: GET /empresas/{id}/google-refresh → Place Details by ID
+  // (field mask rating,userRatingCount,businessStatus) e devolve a empresa atualizada.
+  const refreshGoogle = async () => {
+    if (!empresa || refreshingGoogle) return;
+    setRefreshingGoogle(true);
+    setGoogleRefreshErro(null);
+    try {
+      const res = await fetch(`${API}/empresas/${empresa.empresa_id}/google-refresh`, { headers: hdrs() });
+      if (res.status === 404 || res.status === 501) {
+        setGoogleRefreshErro("Atualização ainda não disponível no servidor.");
+        return;
+      }
+      if (res.status === 429) {
+        setGoogleRefreshErro("Limite da API do Google atingido. Tente mais tarde.");
+        return;
+      }
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setEmpresa(prev => prev ? {
+        ...prev,
+        google_rating:       data.google_rating       ?? prev.google_rating,
+        google_rating_count: data.google_rating_count ?? prev.google_rating_count,
+        business_status:     data.business_status     ?? prev.business_status,
+        google_synced_at:    data.google_synced_at     ?? new Date().toISOString(),
+      } : prev);
+    } catch {
+      setGoogleRefreshErro("Não foi possível atualizar agora.");
+    } finally {
+      setRefreshingGoogle(false);
     }
   };
 
@@ -483,6 +544,65 @@ export default function EmpresaDetalhe() {
                       <span style={{ fontSize:12, color:"#0f2133", fontWeight:600 }}>{value || "—"}</span>
                     </div>
                   ))}
+
+                  {/* Snapshot do Google Places (dado volátil cacheado, com idade) */}
+                  {(empresa.google_rating != null || empresa.business_status) && (() => {
+                    const fr = freshness(empresa.google_synced_at);
+                    const statusTxt = businessStatusLabel(empresa.business_status);
+                    return (
+                      <div style={{ marginTop:14, padding:"12px 14px", borderRadius:10, background:"rgba(251,188,4,0.06)", border:"1px solid rgba(251,188,4,0.22)" }}>
+                        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, marginBottom:8 }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, fontWeight:700, color:"rgba(20,45,70,0.55)" }}>
+                            <Star style={{ width:12, height:12, fill:"#fbbc04", color:"#fbbc04" }} /> Dados do Google
+                          </div>
+                          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                            {fr && (
+                              <span
+                                title={`Capturado em ${formatDate(empresa.google_synced_at ?? null)}`}
+                                style={{ fontSize:9, fontWeight:700, padding:"2px 8px", borderRadius:20, background: fr.stale ? "rgba(231,76,60,0.1)" : "rgba(39,174,96,0.1)", color: fr.stale ? "#e74c3c" : "#27ae60", border:`1px solid ${fr.stale ? "rgba(231,76,60,0.25)" : "rgba(39,174,96,0.25)"}` }}
+                              >
+                                {fr.stale ? `desatualizado · ${fr.txt}` : `atualizado ${fr.txt}`}
+                              </span>
+                            )}
+                            <button
+                              onClick={refreshGoogle}
+                              disabled={refreshingGoogle}
+                              title="Atualizar dados do Google"
+                              style={{ display:"flex", alignItems:"center", gap:4, height:24, padding:"0 9px", borderRadius:7, border:"1px solid rgba(41,128,185,0.3)", background:"rgba(41,128,185,0.07)", color:"#2980b9", fontSize:10, fontWeight:700, cursor: refreshingGoogle ? "wait" : "pointer", whiteSpace:"nowrap" }}
+                            >
+                              <RefreshCw style={{ width:11, height:11, animation: refreshingGoogle ? "spin 0.9s linear infinite" : "none" }} />
+                              {refreshingGoogle ? "Atualizando..." : "Atualizar"}
+                            </button>
+                          </div>
+                        </div>
+                        <div style={{ display:"flex", alignItems:"center", gap:16, flexWrap:"wrap" }}>
+                          {empresa.google_rating != null && (
+                            <span style={{ fontSize:13, fontWeight:800, color:"#d97706", display:"flex", alignItems:"center", gap:4 }}>
+                              <Star style={{ width:12, height:12, fill:"#fbbc04", color:"#fbbc04" }} />
+                              {empresa.google_rating.toFixed(1)}
+                              {empresa.google_rating_count != null && (
+                                <span style={{ fontSize:11, fontWeight:600, color:"rgba(20,45,70,0.45)" }}>
+                                  ({empresa.google_rating_count.toLocaleString("pt-BR")})
+                                </span>
+                              )}
+                            </span>
+                          )}
+                          {statusTxt && (
+                            <span style={{ fontSize:11, fontWeight:600, color:"rgba(20,45,70,0.6)" }}>{statusTxt}</span>
+                          )}
+                        </div>
+                        {googleRefreshErro ? (
+                          <div style={{ fontSize:10, color:"#c0392b", marginTop:8, lineHeight:1.5 }}>
+                            {googleRefreshErro}
+                          </div>
+                        ) : fr?.stale && (
+                          <div style={{ fontSize:10, color:"rgba(20,45,70,0.45)", marginTop:8, lineHeight:1.5 }}>
+                            Snapshot com mais de {GOOGLE_STALE_DAYS} dias — clique em <strong>Atualizar</strong> para re-buscar o rating e o status no Google.
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </motion.div>
 
                 {/* Relacionamento */}

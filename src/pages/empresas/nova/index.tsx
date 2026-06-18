@@ -483,6 +483,9 @@ export default function NovaEmpresa() {
   });
 
   // campos extras do Google Places (não editáveis no form)
+  // - place_id / lat / lng: âncoras estáveis → persistir é o certo (é a chave de re-busca)
+  // - rating / rating_count / business_status: snapshot volátil → persistimos COM a data
+  //   de captura, para a tela de detalhe mostrar a idade e sinalizar quando estiver velho
   const placesExtra = prefill ? {
     google_place_id: prefill.google_place_id,
     latitude: prefill.latitude,
@@ -490,6 +493,7 @@ export default function NovaEmpresa() {
     google_rating: prefill.google_rating,
     google_rating_count: prefill.google_rating_count,
     business_status: prefill.business_status,
+    google_synced_at: new Date().toISOString(),
   } : {};
 
   // ── setEmp marca o form como tocado ──────────────────────
