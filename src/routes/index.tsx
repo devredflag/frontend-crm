@@ -5,6 +5,9 @@ import Login from "../pages/login";
 import AtivarConta from "../pages/ativar";
 import Dashboard from "../pages/dashboard";
 import TodosClientes from "../pages/clientes";
+import BuscarEmpresas from "../pages/buscar";
+import Gerenciamento from "../pages/gerenciamento";
+import Calendario from "../pages/calendario";
 import EmpresaView from "../pages/clientes/detalhe";
 import EmpresaEdit from "../pages/clientes/detalhe/editar";
 import NovaEmpresa from "../pages/empresas/nova";
@@ -21,6 +24,9 @@ export default function AppRoutes() {
         <Route path="/ativar" element={<AtivarConta />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/clientes" element={<TodosClientes />} />
+        <Route path="/buscar" element={<BuscarEmpresas />} />
+        <Route path="/gerenciamento" element={<Gerenciamento />} />
+        <Route path="/calendario" element={<Calendario />} />
         <Route path="/clientes/:id" element={<EmpresaView />} />
         <Route path="/clientes/:id/editar" element={<EmpresaEdit />} />
         <Route path="/empresas/nova" element={<NovaEmpresa />} />
