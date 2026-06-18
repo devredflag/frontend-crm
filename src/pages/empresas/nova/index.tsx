@@ -8,8 +8,9 @@ import {
   MapPin, Briefcase, Hash, User, Thermometer,
   Target, Clock, Star, CheckSquare,
   FileText, Bell, Save, CheckCircle, XCircle, Loader,
-  AlertTriangle, ChevronUp,
+  AlertTriangle, ChevronUp, Menu,
 } from "lucide-react";
+import useIsMobile from "../../../hooks/useIsMobile";
 
 // ── Import do modal de alterações não salvas ──────────────────
 import UnsavedChangesModal, { UnsavedChangesAction } from "../../../components/UnsavedChangesModal";
@@ -449,6 +450,8 @@ export default function NovaEmpresa() {
   const prefill = (location.state as any)?.prefill || null;
 
   const [loading, setLoading] = useState(false);
+  const isMobile = useIsMobile();
+  const [menuOpen, setMenuOpen] = useState(false);
   const [segmentos, setSegmentos] = useState<string[]>(SEGMENTOS_PADRAO);
   const [contatos, setContatos] = useState(() =>
     prefill?.telefone
@@ -775,8 +778,16 @@ export default function NovaEmpresa() {
         ))}
       </div>
 
+      {/* Backdrop mobile */}
+      {isMobile && menuOpen && (
+        <div onClick={()=>setMenuOpen(false)} style={{position:"fixed",inset:0,background:"rgba(10,31,51,0.45)",zIndex:999}}/>
+      )}
+
       {/* Sidebar */}
-      <div style={{width:220,flexShrink:0,minHeight:"100vh",overflowY:"auto",position:"sticky",top:0,zIndex:10,background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)",boxShadow:"4px 0 24px rgba(0,0,0,0.18)",display:"flex",flexDirection:"column",padding:"0 12px 20px"}}>
+      <div style={{width:220,flexShrink:0,minHeight:"100vh",height:isMobile?"100vh":undefined,overflowY:"auto",zIndex:1000,background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)",boxShadow:"4px 0 24px rgba(0,0,0,0.18)",display:"flex",flexDirection:"column",padding:"0 12px 20px",
+        position: isMobile ? "fixed" : "sticky", top:0, left:0,
+        transform: isMobile && !menuOpen ? "translateX(-100%)" : "translateX(0)",
+        transition:"transform 0.28s ease"}}>
         <div style={{padding:"22px 4px 24px",borderBottom:"1px solid rgba(255,255,255,0.08)",marginBottom:16}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#2980b9,#1abc9c)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 12px rgba(41,128,185,0.4)"}}>
@@ -802,22 +813,27 @@ export default function NovaEmpresa() {
       <div style={{flex:1,minHeight: "100vh",overflowY:"auto",position:"relative",zIndex:1}}>
 
         {/* Top bar */}
-        <div style={{position:"sticky",top:0,zIndex:20,padding:"14px 28px",background:"rgba(210,238,248,0.75)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,0.6)",display:"flex",alignItems:"center",gap:16}}>
+        <div style={{position:"sticky",top:0,zIndex:20,padding:isMobile?"12px 14px":"14px 28px",background:"rgba(210,238,248,0.75)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,0.6)",display:"flex",alignItems:"center",gap:isMobile?10:16}}>
+          {isMobile && (
+            <button onClick={()=>setMenuOpen(true)} style={{width:36,height:36,borderRadius:10,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.75)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <Menu style={{width:18,height:18,color:"#2980b9"}}/>
+            </button>
+          )}
           {/* ── Botão Voltar protegido ── */}
-          <button className="btn-ghost" style={{height:38,padding:"0 14px",fontSize:13}} onClick={()=>handleNavigateAway("/dashboard")}>
-            <ArrowLeft style={{width:15,height:15}}/> Voltar
+          <button className="btn-ghost" title="Voltar" style={{height:38,padding:isMobile?"0 10px":"0 14px",fontSize:13,flexShrink:0}} onClick={()=>handleNavigateAway("/dashboard")}>
+            <ArrowLeft style={{width:15,height:15}}/>{!isMobile && " Voltar"}
           </button>
-          <div style={{flex:1}}>
-            <h1 style={{fontSize:18,fontWeight:800,color:"#0f2133",letterSpacing:"-0.02em"}}>Cadastrar Empresa</h1>
-            <p style={{fontSize:12,color:"rgba(20,45,70,0.5)",marginTop:1}}>Preencha os dados da empresa e adicione os contatos vinculados</p>
+          <div style={{flex:1,minWidth:0}}>
+            <h1 style={{fontSize:isMobile?16:18,fontWeight:800,color:"#0f2133",letterSpacing:"-0.02em"}}>Cadastrar Empresa</h1>
+            {!isMobile && <p style={{fontSize:12,color:"rgba(20,45,70,0.5)",marginTop:1}}>Preencha os dados da empresa e adicione os contatos vinculados</p>}
           </div>
-          <button className="btn-grad" style={{height:38,padding:"0 18px",fontSize:13,opacity:loading?0.7:1}} onClick={handleSubmit} disabled={loading}>
-            <Save style={{width:15,height:15}}/> {loading?"Salvando...":"Salvar Empresa"}
+          <button className="btn-grad" title="Salvar Empresa" style={{height:38,padding:isMobile?"0 12px":"0 18px",fontSize:13,opacity:loading?0.7:1,flexShrink:0,whiteSpace:"nowrap"}} onClick={handleSubmit} disabled={loading}>
+            <Save style={{width:15,height:15}}/> {loading?"Salvando...":(isMobile?"Salvar":"Salvar Empresa")}
           </button>
         </div>
 
         {/* Conteúdo */}
-        <div style={{padding:"24px 28px 48px"}}>
+        <div style={{padding:isMobile?"16px 14px 40px":"24px 28px 48px"}}>
 
           {/* Banner campos incompletos */}
           <AnimatePresence>
@@ -834,7 +850,7 @@ export default function NovaEmpresa() {
             )}
           </AnimatePresence>
 
-          <div style={{display:"grid",gridTemplateColumns:"1fr 380px",gap:20,alignItems:"start"}}>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 380px",gap:isMobile?14:20,alignItems:"start"}}>
 
             {/* Coluna esquerda */}
             <div style={{display:"flex",flexDirection:"column",gap:16}}>
