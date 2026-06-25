@@ -5,9 +5,10 @@ import {
   LayoutDashboard, Search, Building2, Users, ClipboardList,
   Calendar, BarChart3, ChevronDown, Plus, Filter,
   Eye, Edit3, Trash2, ArrowUpDown, RefreshCw,
-  Star, AlertTriangle, X, FileText, Map as MapIcon, List, Menu,
+  Star, AlertTriangle, X, FileText, Map as MapIcon, List, Menu, Navigation,
 } from "lucide-react";
 import MapaProximidade from "../../components/MapaProximidade";
+import ListaEmpresasProximas from "../../components/ListaEmpresasProximas";
 import useIsMobile from "../../hooks/useIsMobile";
 
 const css = `
@@ -53,6 +54,7 @@ interface Empresa {
   cidade: string; status: string; temperatura: string;
   ticket_medio_estimado: number | null; responsavel_principal: string;
   origem_lead: string; ultima_interacao: string | null; proxima_acao: string;
+  endereco?: string | null; endereco_completo?: string | null;
   latitude?: number | null; longitude?: number | null;
 }
 interface Usuario { nome: string; cargo: string; }
@@ -153,7 +155,7 @@ export default function TodosClientes() {
   const [filterRascunho, setFilterRascunho] = useState(false);
   const [sortField, setSortField] = useState<"nome"|"score"|"ticket_medio_estimado"|"porte">("score");
   const [sortDir, setSortDir] = useState<"asc"|"desc">("desc");
-  const [view, setView] = useState<"lista"|"mapa">("lista");
+  const [view, setView] = useState<"lista"|"mapa"|"proximas">("lista");
   const [geocode, setGeocode] = useState<{rodando:boolean; feitas:number; restantes:number|null}|null>(null);
   const isMobile = useIsMobile();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -337,6 +339,7 @@ export default function TodosClientes() {
             {([
               {k:"lista",icon:List,label:"Lista"},
               {k:"mapa", icon:MapIcon,label:"Mapa"},
+              {k:"proximas", icon:Navigation,label:"Próximas"},
             ] as const).map(o=>(
               <button key={o.k} onClick={()=>setView(o.k)}
                 style={{display:"flex",alignItems:"center",gap:5,height:30,padding:"0 12px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,
@@ -444,6 +447,11 @@ export default function TodosClientes() {
           {view === "mapa" ? (
             <motion.div className="glass-card" style={{padding:"18px 20px"}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.38}}>
               <MapaProximidade empresas={filtered} onGeocodificar={geocodificar} geocode={geocode} />
+            </motion.div>
+          ) : view === "proximas" ? (
+            /* Empresas próximas da minha localização atual (Geolocation + Waze) */
+            <motion.div className="glass-card" style={{padding:"18px 20px"}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.38}}>
+              <ListaEmpresasProximas empresas={filtered} />
             </motion.div>
           ) : (
           /* Table */
