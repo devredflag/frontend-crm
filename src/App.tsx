@@ -4,7 +4,9 @@ import Landing from "./pages/Landing";
 import Cadastro from "./pages/Cadastro";
 import AtivarConta from "./pages/ativar";
 import Login from "./pages/login";
+import Signup from "./pages/signup";
 import Dashboard from "./pages/dashboard";
+import Equipe from "./pages/equipe";
 import NovaEmpresa from "./pages/empresas/nova";
 import Clientes from "./pages/clientes";
 import EmpresaView from "./pages/clientes/detalhe";
@@ -24,7 +26,9 @@ function App() {
         <Route path="/cadastro" element={<Cadastro />} />
         <Route path="/ativar" element={<AtivarConta />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/equipe" element={<Equipe />} />
         <Route path="/empresas/nova" element={<NovaEmpresa />} />
         <Route path="/clientes" element={<Clientes />} />
         <Route path="/clientes/:id" element={<EmpresaView />} />
