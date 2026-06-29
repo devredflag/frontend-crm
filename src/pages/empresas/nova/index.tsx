@@ -453,11 +453,7 @@ export default function NovaEmpresa() {
   const isMobile = useIsMobile();
   const [menuOpen, setMenuOpen] = useState(false);
   const [segmentos, setSegmentos] = useState<string[]>(SEGMENTOS_PADRAO);
-  const [contatos, setContatos] = useState(() =>
-    prefill?.telefone
-      ? [{ ...contatoVazio(), celular: prefill.telefone, whatsapp: prefill.telefone }]
-      : [contatoVazio()]
-  );
+  const [contatos, setContatos] = useState(() => [contatoVazio()]);
 
   // ── States novos: proteção de navegação ──────────────────
   const [showUnsaved, setShowUnsaved] = useState(false);
@@ -479,7 +475,7 @@ export default function NovaEmpresa() {
     bairro: prefill?.bairro || "",
     regiao: "", observacoes: "",
     cnpj: "",
-    site: prefill?.site || "",
+    site: "",
     linkedin_empresa: "", responsavel_principal: "",
     status: "Lead", origem_lead: prefill ? "Google Maps" : "",
     ultima_interacao: todayInputValue(), proxima_acao: "", temperatura: "",
@@ -487,14 +483,12 @@ export default function NovaEmpresa() {
 
   // campos extras do Google Places (não editáveis no form)
   // - place_id / lat / lng: âncoras estáveis → persistir é o certo (é a chave de re-busca)
-  // - rating / rating_count / business_status: snapshot volátil → persistimos COM a data
-  //   de captura, para a tela de detalhe mostrar a idade e sinalizar quando estiver velho
+  // - business_status: snapshot volátil → persistimos COM a data de captura, para a tela
+  //   de detalhe mostrar a idade e sinalizar quando estiver velho
   const placesExtra = prefill ? {
     google_place_id: prefill.google_place_id,
     latitude: prefill.latitude,
     longitude: prefill.longitude,
-    google_rating: prefill.google_rating,
-    google_rating_count: prefill.google_rating_count,
     business_status: prefill.business_status,
     google_synced_at: new Date().toISOString(),
   } : {};

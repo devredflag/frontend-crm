@@ -6,8 +6,8 @@ import {
 } from "@vis.gl/react-google-maps";
 import {
   BarChart3, LayoutDashboard, Search, Building2, Users,
-  ClipboardList, Calendar, MapPin, Star, Phone, Globe,
-  ChevronRight, ChevronDown, X, ExternalLink, Plus,
+  ClipboardList, Calendar, MapPin, Globe,
+  ChevronRight, ChevronDown, X, Plus,
   Loader2, AlertCircle, CheckCircle2, Navigation2, Menu,
 } from "lucide-react";
 import useIsMobile from "../../hooks/useIsMobile";
@@ -60,28 +60,13 @@ interface PlaceResult {
   cep: string | null;
   lat: number | null;
   lng: number | null;
-  rating: number | null;
-  rating_count: number | null;
-  telefone: string | null;
-  site: string | null;
   business_status: string | null;
-  open_now: boolean | null;
   tipo: string | null;
   ja_cadastrada: boolean;
 }
 
 function initials(n: string) { return n?.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase()||"?"; }
 function avatarColor(n: string) { const c=["#2980b9","#1abc9c","#8e44ad","#e67e22","#27ae60","#e74c3c"]; return c[(n?.charCodeAt(0)||0)%c.length]; }
-
-function StarRating({ rating }: { rating: number }) {
-  return (
-    <div style={{ display:"flex", alignItems:"center", gap:2 }}>
-      {[1,2,3,4,5].map(i => (
-        <Star key={i} style={{ width:10, height:10, fill: i <= Math.round(rating) ? "#fbbc04" : "none", color: i <= Math.round(rating) ? "#fbbc04" : "rgba(20,45,70,0.2)" }} />
-      ))}
-    </div>
-  );
-}
 
 function PinNumerado({ numero, cadastrada }: { numero: number; cadastrada: boolean }) {
   const cor = cadastrada ? "#27ae60" : "#ea4335";
@@ -102,7 +87,7 @@ function ResultadoCard({
   place: PlaceResult; index: number; selected: boolean;
   onSelect: () => void; onCadastrar: () => void; salvando: boolean;
 }) {
-  const aberto = place.open_now;
+  const operacional = place.business_status === "OPERATIONAL";
   return (
     <div className={`result-card${selected ? " selected" : ""}`} onClick={onSelect}>
       <div style={{ display:"flex", gap:10 }}>
@@ -129,21 +114,11 @@ function ResultadoCard({
             <div style={{ fontSize:10, color:"rgba(20,45,70,0.5)", marginTop:1 }}>{place.tipo}</div>
           )}
 
-          {place.rating && (
-            <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:4 }}>
-              <span style={{ fontSize:11, fontWeight:800, color:"#d97706" }}>{place.rating.toFixed(1)}</span>
-              <StarRating rating={place.rating} />
-              {place.rating_count && (
-                <span style={{ fontSize:10, color:"rgba(20,45,70,0.4)" }}>({place.rating_count.toLocaleString("pt-BR")})</span>
-              )}
-            </div>
-          )}
-
           {place.business_status && (
             <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:3 }}>
-              <div style={{ width:6, height:6, borderRadius:"50%", background: aberto ? "#27ae60" : "#dc2626", flexShrink:0 }} />
-              <span style={{ fontSize:10, fontWeight:600, color: aberto ? "#27ae60" : "#dc2626" }}>
-                {aberto ? "Aberto" : "Fechado"}
+              <div style={{ width:6, height:6, borderRadius:"50%", background: operacional ? "#27ae60" : "#dc2626", flexShrink:0 }} />
+              <span style={{ fontSize:10, fontWeight:600, color: operacional ? "#27ae60" : "#dc2626" }}>
+                {operacional ? "Em operação" : "Fechado"}
               </span>
             </div>
           )}
@@ -154,19 +129,6 @@ function ResultadoCard({
               <span style={{ fontSize:10, color:"rgba(20,45,70,0.55)", lineHeight:1.4 }}>{place.endereco}</span>
             </div>
           )}
-
-          <div style={{ display:"flex", gap:5, marginTop:8, flexWrap:"wrap" }}>
-            {place.telefone && (
-              <a href={`tel:${place.telefone}`} onClick={e=>e.stopPropagation()} style={{ display:"flex", alignItems:"center", gap:3, padding:"3px 8px", borderRadius:6, border:"1px solid rgba(200,225,240,0.8)", background:"rgba(255,255,255,0.8)", fontSize:10, fontWeight:600, color:"rgba(20,45,70,0.65)", textDecoration:"none" }}>
-                <Phone style={{ width:9, height:9 }} />{place.telefone}
-              </a>
-            )}
-            {place.site && (
-              <a href={place.site.startsWith("http") ? place.site : `https://${place.site}`} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{ display:"flex", alignItems:"center", gap:3, padding:"3px 8px", borderRadius:6, border:"1px solid rgba(200,225,240,0.8)", background:"rgba(255,255,255,0.8)", fontSize:10, fontWeight:600, color:"#2980b9", textDecoration:"none" }}>
-                <ExternalLink style={{ width:9, height:9 }} /> Site
-              </a>
-            )}
-          </div>
 
           {!place.ja_cadastrada && (
             <button
@@ -195,9 +157,6 @@ export default function BuscarEmpresas() {
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [infoWindowId, setInfoWindowId] = useState<string | null>(null);
-  const [filtroAberto, setFiltroAberto] = useState(false);
-  const [filtroRating, setFiltroRating] = useState(false);
-  const [filtroSite, setFiltroSite] = useState(false);
   const [salvandoId, setSalvandoId] = useState<string | null>(null);
   const [totalRascunhos, setTotalRascunhos] = useState(0);
   const [toast, setToast] = useState<{ msg: string; tipo: "ok" | "err" } | null>(null);
@@ -281,25 +240,16 @@ export default function BuscarEmpresas() {
           cidade: place.cidade || "",
           bairro: place.bairro || "",
           cep: place.cep || "",
-          site: place.site || "",
           google_place_id: place.place_id,
           latitude: place.lat,
           longitude: place.lng,
-          google_rating: place.rating,
-          google_rating_count: place.rating_count,
           business_status: place.business_status,
-          telefone: place.telefone || "",
         },
       },
     });
   };
 
-  const resultadosFiltrados = results.filter(r => {
-    if (filtroAberto && r.open_now !== true) return false;
-    if (filtroRating && (!r.rating || r.rating < 4)) return false;
-    if (filtroSite && !r.site) return false;
-    return true;
-  });
+  const resultadosFiltrados = results;
 
   const selectedPlace = results.find(r => r.place_id === selectedId);
 
@@ -399,12 +349,6 @@ export default function BuscarEmpresas() {
                 )}
               </div>
 
-              {/* Filtros */}
-              <div style={{ display:"flex", gap:5, marginTop:8, flexWrap:"wrap" }}>
-                <button className={`chip-filter${filtroAberto?" active":""}`} onClick={() => setFiltroAberto(!filtroAberto)}>Aberto agora</button>
-                <button className={`chip-filter${filtroRating?" active":""}`} onClick={() => setFiltroRating(!filtroRating)}>★ 4.0+</button>
-                <button className={`chip-filter${filtroSite?" active":""}`} onClick={() => setFiltroSite(!filtroSite)}>Tem site</button>
-              </div>
             </div>
 
             {/* Lista */}
@@ -487,14 +431,6 @@ export default function BuscarEmpresas() {
                 </>
               )}
 
-              {!loading && results.length > 0 && resultadosFiltrados.length === 0 && (
-                <div style={{ textAlign:"center", padding:"24px 0", color:"rgba(20,45,70,0.4)" }}>
-                  <div style={{ fontSize:13, fontWeight:700 }}>Nenhum resultado com esses filtros</div>
-                  <button onClick={() => { setFiltroAberto(false); setFiltroRating(false); setFiltroSite(false); }} style={{ marginTop:8, padding:"5px 14px", borderRadius:8, border:"1px solid rgba(41,128,185,0.3)", background:"rgba(41,128,185,0.07)", color:"#2980b9", fontSize:11, fontWeight:700, cursor:"pointer" }}>
-                    Limpar filtros
-                  </button>
-                </div>
-              )}
             </div>
           </div>
 
@@ -552,12 +488,6 @@ export default function BuscarEmpresas() {
                     >
                       <div style={{ fontFamily:"Plus Jakarta Sans, sans-serif", maxWidth:220, padding:4 }}>
                         <div style={{ fontSize:13, fontWeight:700, color:"#0f2133", marginBottom:4 }}>{selectedPlace.nome}</div>
-                        {selectedPlace.rating && (
-                          <div style={{ display:"flex", alignItems:"center", gap:4, marginBottom:4 }}>
-                            <span style={{ fontSize:11, fontWeight:800, color:"#d97706" }}>{selectedPlace.rating.toFixed(1)}</span>
-                            <StarRating rating={selectedPlace.rating} />
-                          </div>
-                        )}
                         {selectedPlace.endereco && <div style={{ fontSize:11, color:"rgba(20,45,70,0.6)", marginBottom:6, lineHeight:1.4 }}>{selectedPlace.endereco}</div>}
                         {!selectedPlace.ja_cadastrada && (
                           <button
