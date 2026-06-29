@@ -308,7 +308,7 @@ export default function Login() {
           >
             Não tem uma conta?{" "}
             <a
-              href="/cadastro"
+              href="/signup"
               style={{ color: "rgba(41,128,185,0.75)", textDecoration: "underline", fontWeight: 600 }}
             >
               Criar conta

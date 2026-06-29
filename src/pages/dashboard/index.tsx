@@ -9,7 +9,7 @@
     MapPin, Phone, Mail, User, ArrowRight,
     Eye, X, CalendarCheck, Repeat, FileText, Edit3,
     Trash2, CheckCheck, AlertTriangle, Info,
-    CheckCircle2, Menu
+    CheckCircle2, Menu, Shield
   } from "lucide-react";
   import useIsMobile from "../../hooks/useIsMobile";
 
@@ -61,7 +61,7 @@
       contato_id: string; nome: string; funcao: string;
       email: string; celular: string; whatsapp: string; decisor: boolean;
     }
-    interface Usuario { nome: string; email: string; cargo: string; empresa_nome: string; }
+    interface Usuario { nome: string; email: string; cargo: string; empresa_nome: string; is_gerente?: boolean; }
     interface Notificacao {
       notificacao_id: string; tipo: string; titulo: string; mensagem: string;
       empresa_id: string | null; empresa_nome: string | null;
@@ -335,6 +335,11 @@
                   <item.icon style={{width:16,height:16}}/>{item.label}
                 </div>
               ))}
+              {usuario?.is_gerente && (
+                <div className="nav-item" onClick={()=>navigate("/equipe")}>
+                  <Shield style={{width:16,height:16}}/>Equipe
+                </div>
+              )}
             </nav>
             <div onClick={()=>navigate("/perfil")} style={{marginTop:16,padding:"12px",borderRadius:12,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.08)",display:"flex",alignItems:"center",gap:10,cursor:"pointer",transition:"background 0.18s"}} onMouseEnter={e=>(e.currentTarget.style.background="rgba(255,255,255,0.12)")} onMouseLeave={e=>(e.currentTarget.style.background="rgba(255,255,255,0.06)")}>
               <div style={{width:34,height:34,borderRadius:"50%",background:`linear-gradient(135deg,${corUsuario},${corUsuario}cc)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"#fff",flexShrink:0}}>{iniciaisUsuario}</div>

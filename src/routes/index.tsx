@@ -2,11 +2,13 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Landing from "../pages/Landing";
 import Cadastro from "../pages/Cadastro";
 import Login from "../pages/login";
+import Signup from "../pages/signup";
 import AtivarConta from "../pages/ativar";
 import Dashboard from "../pages/dashboard";
 import TodosClientes from "../pages/clientes";
 import BuscarEmpresas from "../pages/buscar";
 import Gerenciamento from "../pages/gerenciamento";
+import Equipe from "../pages/equipe";
 import Calendario from "../pages/calendario";
 import EmpresaView from "../pages/clientes/detalhe";
 import EmpresaEdit from "../pages/clientes/detalhe/editar";
@@ -21,11 +23,13 @@ export default function AppRoutes() {
         <Route path="/" element={<Landing />} />
         <Route path="/cadastro" element={<Cadastro />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
         <Route path="/ativar" element={<AtivarConta />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/clientes" element={<TodosClientes />} />
         <Route path="/buscar" element={<BuscarEmpresas />} />
         <Route path="/gerenciamento" element={<Gerenciamento />} />
+        <Route path="/equipe" element={<Equipe />} />
         <Route path="/calendario" element={<Calendario />} />
         <Route path="/clientes/:id" element={<EmpresaView />} />
         <Route path="/clientes/:id/editar" element={<EmpresaEdit />} />
