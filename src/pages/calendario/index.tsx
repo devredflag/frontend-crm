@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Search, Building2, Users, ClipboardList,
   Calendar, BarChart3, ChevronLeft, ChevronRight,
   Plus, X, Phone, Eye, Users2, FileText, Trash2, Clock,
-  Mail, CheckCircle2, Link2, ChevronDown, Menu,
+  Mail, CheckCircle2, Link2, ChevronDown, Menu, Shield,
 } from "lucide-react";
 import useIsMobile from "../../hooks/useIsMobile";
 
@@ -478,6 +478,11 @@ export default function Calendario() {
               <item.icon style={{width:16,height:16}}/>{item.label}
             </div>
           ))}
+          {(usuario as any)?.is_gerente && (
+            <div className="nav-item" onClick={()=>navigate("/equipe")}>
+              <Shield style={{width:16,height:16}}/>Equipe
+            </div>
+          )}
         </nav>
         <div onClick={()=>navigate("/perfil")} style={{marginTop:16,padding:"12px",borderRadius:12,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.08)",display:"flex",alignItems:"center",gap:10,cursor:"pointer"}}>
           <div style={{width:34,height:34,borderRadius:"50%",background:`linear-gradient(135deg,${avatarColor(usuario?.nome||"")},#1abc9c)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"#fff",flexShrink:0}}>

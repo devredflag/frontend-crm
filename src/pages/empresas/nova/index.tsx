@@ -8,7 +8,7 @@ import {
   MapPin, Briefcase, Hash, User, Thermometer,
   Target, Clock, Star, CheckSquare,
   FileText, Bell, Save, CheckCircle, XCircle, Loader,
-  AlertTriangle, ChevronUp, Menu,
+  AlertTriangle, ChevronUp, Menu, Shield,
 } from "lucide-react";
 import useIsMobile from "../../../hooks/useIsMobile";
 
@@ -452,6 +452,13 @@ export default function NovaEmpresa() {
   const [loading, setLoading] = useState(false);
   const isMobile = useIsMobile();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [ehGerente, setEhGerente] = useState(false);
+  useEffect(() => {
+    fetch(`${API}/me`, { headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` } })
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (d?.is_gerente) setEhGerente(true); })
+      .catch(() => {});
+  }, []);
   const [segmentos, setSegmentos] = useState<string[]>(SEGMENTOS_PADRAO);
   const [contatos, setContatos] = useState(() => [contatoVazio()]);
 
@@ -800,6 +807,11 @@ export default function NovaEmpresa() {
               <item.icon style={{width:16,height:16}}/>{item.label}
             </div>
           ))}
+          {ehGerente && (
+            <div className="nav-item" onClick={()=>handleNavigateAway("/equipe")} style={{cursor:"pointer"}}>
+              <Shield style={{width:16,height:16}}/>Equipe
+            </div>
+          )}
         </nav>
       </div>
 

@@ -7,7 +7,7 @@ import {
   ClipboardList, Calendar, ArrowLeft, Edit3,
   MapPin, Tag, Thermometer, TrendingUp, DollarSign,
   Phone, Mail, User, Clock, ChevronRight, MessageCircle, Link2,
-  ChevronDown, Check, X as XIcon, Star, RefreshCw, Menu,
+  ChevronDown, Check, X as XIcon, Star, RefreshCw, Menu, Shield,
 } from "lucide-react";
 import useIsMobile from "../../../hooks/useIsMobile";
 
@@ -398,6 +398,12 @@ export default function EmpresaDetalhe() {
               {item.label}
             </div>
           ))}
+          {(usuario as any)?.is_gerente && (
+            <div className="nav-item" onClick={() => navigate("/equipe")}>
+              <Shield style={{ width:16, height:16, flexShrink:0 }} />
+              Equipe
+            </div>
+          )}
         </nav>
         <div className="user-card" onClick={() => navigate("/perfil")}>
           <div style={{ width:34, height:34, borderRadius:"50%", background:`linear-gradient(135deg,${corUsuario},${corUsuario}cc)`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#fff", flexShrink:0 }}>

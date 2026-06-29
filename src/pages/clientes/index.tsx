@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Search, Building2, Users, ClipboardList,
   Calendar, BarChart3, ChevronDown, Plus, Filter,
   Eye, Edit3, Trash2, ArrowUpDown, RefreshCw,
-  Star, AlertTriangle, X, FileText, Map as MapIcon, List, Menu, Navigation,
+  Star, AlertTriangle, X, FileText, Map as MapIcon, List, Menu, Navigation, Shield,
 } from "lucide-react";
 import MapaProximidade from "../../components/MapaProximidade";
 import ListaEmpresasProximas from "../../components/ListaEmpresasProximas";
@@ -310,6 +310,11 @@ export default function TodosClientes() {
               <item.icon style={{width:16,height:16,flexShrink:0}}/>{item.label}
             </div>
           ))}
+          {(usuario as any)?.is_gerente && (
+            <div className="nav-item" onClick={()=>navigate("/equipe")}>
+              <Shield style={{width:16,height:16,flexShrink:0}}/>Equipe
+            </div>
+          )}
         </nav>
         <div onClick={()=>navigate("/perfil")} style={{marginTop:16,padding:"12px",borderRadius:12,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.08)",display:"flex",alignItems:"center",gap:10,cursor:"pointer",transition:"background 0.18s"}} onMouseEnter={e=>(e.currentTarget.style.background="rgba(255,255,255,0.12)")} onMouseLeave={e=>(e.currentTarget.style.background="rgba(255,255,255,0.06)")}>
           <div style={{width:34,height:34,borderRadius:"50%",background:`linear-gradient(135deg,${avatarColor(usuario?.nome||"")},#1abc9c)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"#fff",flexShrink:0}}>{initials(usuario?.nome||"?")}</div>

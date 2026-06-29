@@ -8,7 +8,7 @@ import {
   BarChart3, LayoutDashboard, Search, Building2, Users,
   ClipboardList, Calendar, MapPin, Globe,
   ChevronRight, ChevronDown, X, Plus,
-  Loader2, AlertCircle, CheckCircle2, Navigation2, Menu,
+  Loader2, AlertCircle, CheckCircle2, Navigation2, Menu, Shield,
 } from "lucide-react";
 import useIsMobile from "../../hooks/useIsMobile";
 
@@ -290,6 +290,11 @@ export default function BuscarEmpresas() {
               <item.icon style={{ width:16, height:16, flexShrink:0 }} />{item.label}
             </div>
           ))}
+          {(usuario as any)?.is_gerente && (
+            <div className="nav-item" onClick={() => navigate("/equipe")}>
+              <Shield style={{ width:16, height:16, flexShrink:0 }} />Equipe
+            </div>
+          )}
         </nav>
         {usuario && (
           <div onClick={() => navigate("/perfil")} style={{ marginTop:16, padding:"12px", borderRadius:12, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.08)", display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>

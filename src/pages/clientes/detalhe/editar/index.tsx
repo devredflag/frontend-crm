@@ -7,7 +7,7 @@ import {
   Plus, Trash2, Globe, Link2, Phone, Mail,
   MapPin, Briefcase, Hash, User, Thermometer,
   Target, Clock, FileText, Save, CheckCircle,
-  XCircle, Loader, AlertTriangle, Star, Menu,
+  XCircle, Loader, AlertTriangle, Star, Menu, Shield,
 } from "lucide-react";
 import useIsMobile from "../../../../hooks/useIsMobile";
 
@@ -523,6 +523,11 @@ export default function EmpresaEdit() {
               <item.icon style={{width:16,height:16}}/>{item.label}
             </div>
           ))}
+          {usuario?.is_gerente && (
+            <div className="nav-item" onClick={()=>navigate("/equipe")}>
+              <Shield style={{width:16,height:16}}/>Equipe
+            </div>
+          )}
         </nav>
         <div onClick={()=>navigate("/perfil")} style={{marginTop:16,padding:"12px",borderRadius:12,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.08)",display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onMouseEnter={e=>(e.currentTarget.style.background="rgba(255,255,255,0.12)")} onMouseLeave={e=>(e.currentTarget.style.background="rgba(255,255,255,0.06)")}>
           <div style={{width:34,height:34,borderRadius:"50%",background:`linear-gradient(135deg,${avatarColor(usuario?.nome||"")},#1abc9c)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"#fff",flexShrink:0}}>{initials(usuario?.nome||"?")}</div>
