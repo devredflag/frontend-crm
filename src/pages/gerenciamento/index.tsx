@@ -6,7 +6,7 @@ import {
   Calendar, BarChart3, Plus, RefreshCw, Eye,
   ChevronRight, MapPin, TrendingUp,
   Phone, Mail, MessageCircle, History, Save, X,
-  CalendarClock, Clock, Filter, Edit3, AlertCircle, Menu, Shield,
+  CalendarClock, Clock, Filter, Edit3, AlertCircle, Menu, Users2,
 } from "lucide-react";
 import useIsMobile from "../../hooks/useIsMobile";
 
@@ -464,7 +464,7 @@ export default function Gerenciamento() {
           ))}
           {usuario?.is_gerente && (
             <div className="nav-item" onClick={()=>navigate("/equipe")}>
-              <Shield style={{width:16,height:16,flexShrink:0}}/>Equipe
+              <Users2 style={{width:16,height:16,flexShrink:0}}/>Equipe
             </div>
           )}
         </nav>

@@ -5,7 +5,7 @@ import {
   ArrowLeft, User, Settings, Bell, Shield, Mail,
   MessageCircle, Smartphone, Monitor, Check, ChevronRight,
   Globe, ExternalLink, Info, Save, BarChart3,
-  LayoutDashboard, Building2, Users,
+  LayoutDashboard, Building2, Users, Users2,
   Search, ClipboardList, Calendar,
   AlertTriangle, CalendarCheck, Repeat, Trash2, FileText, Menu
 } from "lucide-react";
@@ -228,7 +228,7 @@ export default function Perfil() {
           ))}
           {(usuario as any)?.is_gerente && (
             <div className="nav-item" onClick={() => navigate("/equipe")}>
-              <Shield style={{ width:16, height:16 }}/>Equipe
+              <Users2 style={{ width:16, height:16 }}/>Equipe
             </div>
           )}
         </nav>

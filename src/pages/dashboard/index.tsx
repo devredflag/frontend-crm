@@ -9,7 +9,7 @@
     MapPin, Phone, Mail, User, ArrowRight,
     Eye, X, CalendarCheck, Repeat, FileText, Edit3,
     Trash2, CheckCheck, AlertTriangle, Info,
-    CheckCircle2, Menu, Shield
+    CheckCircle2, Menu, Users2
   } from "lucide-react";
   import useIsMobile from "../../hooks/useIsMobile";
 
@@ -337,7 +337,7 @@
               ))}
               {usuario?.is_gerente && (
                 <div className="nav-item" onClick={()=>navigate("/equipe")}>
-                  <Shield style={{width:16,height:16}}/>Equipe
+                  <Users2 style={{width:16,height:16}}/>Equipe
                 </div>
               )}
             </nav>
