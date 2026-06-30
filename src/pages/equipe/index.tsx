@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Search, Building2, Users, ClipboardList,
   Calendar, BarChart3, Plus, RefreshCw, Menu, Shield, UserPlus,
-  Mail, X, Crown, CheckCircle2, Ban, TrendingUp, Users2,
+  Mail, X, Crown, CheckCircle2, Ban, TrendingUp, UserRoundCog,
 } from "lucide-react";
 import useIsMobile from "../../hooks/useIsMobile";
 
@@ -62,7 +62,7 @@ const navItems = [
   { icon: Users, label: "Todos os clientes", path: "/clientes" },
   { icon: ClipboardList, label: "Gerenciamento de clientes", path: "/gerenciamento" },
   { icon: Calendar, label: "Calendario", path: "/calendario" },
-  { icon: Users2, label: "Equipe", path: "/equipe" },
+  { icon: UserRoundCog, label: "Equipe", path: "/equipe" },
 ];
 
 function initials(n: string) { return n?.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase() || "?"; }

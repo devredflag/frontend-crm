@@ -7,7 +7,7 @@ import {
   ClipboardList, Calendar, ArrowLeft, Edit3,
   MapPin, Tag, Thermometer, TrendingUp, DollarSign,
   Phone, Mail, User, Clock, ChevronRight, MessageCircle, Link2,
-  ChevronDown, Check, X as XIcon, Star, RefreshCw, Menu, Users2,
+  ChevronDown, Check, X as XIcon, Star, RefreshCw, Menu, UserRoundCog,
 } from "lucide-react";
 import useIsMobile from "../../../hooks/useIsMobile";
 
@@ -400,7 +400,7 @@ export default function EmpresaDetalhe() {
           ))}
           {(usuario as any)?.is_gerente && (
             <div className="nav-item" onClick={() => navigate("/equipe")}>
-              <Users2 style={{ width:16, height:16, flexShrink:0 }} />
+              <UserRoundCog style={{ width:16, height:16, flexShrink:0 }} />
               Equipe
             </div>
           )}

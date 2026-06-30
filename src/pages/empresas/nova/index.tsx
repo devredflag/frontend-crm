@@ -8,7 +8,7 @@ import {
   MapPin, Briefcase, Hash, User, Thermometer,
   Target, Clock, Star, CheckSquare,
   FileText, Bell, Save, CheckCircle, XCircle, Loader,
-  AlertTriangle, ChevronUp, Menu, Users2,
+  AlertTriangle, ChevronUp, Menu, UserRoundCog,
 } from "lucide-react";
 import useIsMobile from "../../../hooks/useIsMobile";
 
@@ -809,7 +809,7 @@ export default function NovaEmpresa() {
           ))}
           {ehGerente && (
             <div className="nav-item" onClick={()=>handleNavigateAway("/equipe")} style={{cursor:"pointer"}}>
-              <Users2 style={{width:16,height:16}}/>Equipe
+              <UserRoundCog style={{width:16,height:16}}/>Equipe
             </div>
           )}
         </nav>

@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Search, Building2, Users, ClipboardList,
   Calendar, BarChart3, ChevronDown, Plus, Filter,
   Eye, Edit3, Trash2, CheckSquare, ArrowUpDown, RefreshCw,
-  Star, Users2,
+  Star, UserRoundCog,
 } from "lucide-react";
 
 const css = `
@@ -254,7 +254,7 @@ export default function TodosClientes() {
           ))}
           {(usuario as any)?.is_gerente && (
             <div className="nav-item" onClick={() => navigate("/equipe")}>
-              <Users2 style={{ width:16, height:16, flexShrink:0 }} />
+              <UserRoundCog style={{ width:16, height:16, flexShrink:0 }} />
               Equipe
             </div>
           )}

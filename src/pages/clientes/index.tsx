@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Search, Building2, Users, ClipboardList,
   Calendar, BarChart3, ChevronDown, Plus, Filter,
   Eye, Edit3, Trash2, ArrowUpDown, RefreshCw,
-  Star, AlertTriangle, X, FileText, Map as MapIcon, List, Menu, Navigation, Users2,
+  Star, AlertTriangle, X, FileText, Map as MapIcon, List, Menu, Navigation, UserRoundCog,
 } from "lucide-react";
 import MapaProximidade from "../../components/MapaProximidade";
 import ListaEmpresasProximas from "../../components/ListaEmpresasProximas";
@@ -312,7 +312,7 @@ export default function TodosClientes() {
           ))}
           {(usuario as any)?.is_gerente && (
             <div className="nav-item" onClick={()=>navigate("/equipe")}>
-              <Users2 style={{width:16,height:16,flexShrink:0}}/>Equipe
+              <UserRoundCog style={{width:16,height:16,flexShrink:0}}/>Equipe
             </div>
           )}
         </nav>

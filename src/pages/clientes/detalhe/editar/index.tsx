@@ -7,7 +7,7 @@ import {
   Plus, Trash2, Globe, Link2, Phone, Mail,
   MapPin, Briefcase, Hash, User, Thermometer,
   Target, Clock, FileText, Save, CheckCircle,
-  XCircle, Loader, AlertTriangle, Star, Menu, Users2,
+  XCircle, Loader, AlertTriangle, Star, Menu, UserRoundCog,
 } from "lucide-react";
 import useIsMobile from "../../../../hooks/useIsMobile";
 
@@ -525,7 +525,7 @@ export default function EmpresaEdit() {
           ))}
           {usuario?.is_gerente && (
             <div className="nav-item" onClick={()=>navigate("/equipe")}>
-              <Users2 style={{width:16,height:16}}/>Equipe
+              <UserRoundCog style={{width:16,height:16}}/>Equipe
             </div>
           )}
         </nav>
