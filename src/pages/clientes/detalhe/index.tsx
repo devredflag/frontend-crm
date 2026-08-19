@@ -99,11 +99,6 @@ function statusColor(s: string) {
   if (s === "Em contato") return { bg:"rgba(41,128,185,0.12)",  text:"#1a5276",  border:"rgba(41,128,185,0.25)"  };
   return                         { bg:"rgba(149,165,166,0.15)", text:"#566573",  border:"rgba(149,165,166,0.3)"  };
 }
-function tempColor(t: string) {
-  if (t === "Quente") return { text:"#c0392b", bg:"rgba(192,57,43,0.1)",  icon:"🔥" };
-  if (t === "Morno")  return { text:"#d68910", bg:"rgba(214,137,16,0.1)", icon:"🌡️" };
-  return                     { text:"#2980b9", bg:"rgba(41,128,185,0.1)", icon:"❄️" };
-}
 function initials(name: string) {
   return name?.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase() || "?";
 }
@@ -276,7 +271,6 @@ export default function EmpresaDetalhe() {
   };
 
   const sc = empresa ? statusColor(empresa.status)      : statusColor("");
-  const tc = empresa ? tempColor(empresa.temperatura)   : tempColor("");
   const nomeUsuario  = usuario?.nome  || "...";
   const cargoUsuario = usuario?.cargo || "Administrador";
   const corUsuario   = usuario ? avatarColor(usuario.nome) : "#2980b9";

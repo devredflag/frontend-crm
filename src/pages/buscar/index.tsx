@@ -1,15 +1,14 @@
 import { getToken } from "../../services/auth";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   APIProvider, Map, AdvancedMarker, InfoWindow,
 } from "@vis.gl/react-google-maps";
 import {
   BarChart3, LayoutDashboard, Search, Building2, Users,
-  ClipboardList, Calendar, MapPin, Globe,
-  ChevronRight, ChevronDown, X, Plus,
-  Loader2, AlertCircle, CheckCircle2, Navigation2, Menu, UserRoundCog,
+  ClipboardList, Calendar, MapPin,
+  X, Plus,
+  Loader2, AlertCircle, Navigation2, Menu, UserRoundCog,
 } from "lucide-react";
 import useIsMobile from "../../hooks/useIsMobile";
 
@@ -86,7 +85,7 @@ function ResultadoCard({
   place, index, selected, onSelect, onCadastrar, salvando,
 }: {
   place: PlaceResult; index: number; selected: boolean;
-  onSelect: () => void; onCadastrar: () => void; salvando: boolean;
+  onSelect: () => void; onCadastrar: () => void; salvando?: boolean;
 }) {
   const operacional = place.business_status === "OPERATIONAL";
   return (
@@ -158,9 +157,7 @@ export default function BuscarEmpresas() {
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [infoWindowId, setInfoWindowId] = useState<string | null>(null);
-  const [salvandoId, setSalvandoId] = useState<string | null>(null);
   const [totalRascunhos, setTotalRascunhos] = useState(0);
-  const [toast, setToast] = useState<{ msg: string; tipo: "ok" | "err" } | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [mapCenter, setMapCenter] = useState({ lat: -15.7801, lng: -47.9292 });
   const [myLocation, setMyLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -189,11 +186,6 @@ export default function BuscarEmpresas() {
       }
     }
   }, []);
-
-  const showToast = (msg: string, tipo: "ok" | "err") => {
-    setToast({ msg, tipo });
-    setTimeout(() => setToast(null), 4000);
-  };
 
   const buscar = useCallback(async (q: string) => {
     if (!q.trim()) { setResults([]); return; }
@@ -431,7 +423,6 @@ export default function BuscarEmpresas() {
                       selected={selectedId === place.place_id}
                       onSelect={() => { setSelectedId(place.place_id); setInfoWindowId(place.place_id); setMapCenter({ lat: place.lat || mapCenter.lat, lng: place.lng || mapCenter.lng }); }}
                       onCadastrar={() => cadastrar(place)}
-                      salvando={salvandoId === place.place_id}
                     />
                   ))}
                 </>
@@ -516,20 +507,6 @@ export default function BuscarEmpresas() {
         </div>
       </div>
 
-      {/* Toast */}
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            initial={{ opacity:0, y:40 }}
-            animate={{ opacity:1, y:0 }}
-            exit={{ opacity:0, y:40 }}
-            style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", zIndex:200, display:"flex", alignItems:"center", gap:8, padding:"10px 20px", borderRadius:12, background: toast.tipo === "ok" ? "rgba(39,174,96,0.95)" : "rgba(220,38,38,0.95)", color:"#fff", fontSize:13, fontWeight:700, boxShadow:"0 8px 24px rgba(0,0,0,0.2)", backdropFilter:"blur(8px)" }}
-          >
-            {toast.tipo === "ok" ? <CheckCircle2 style={{ width:15, height:15 }} /> : <AlertCircle style={{ width:15, height:15 }} />}
-            {toast.msg}
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

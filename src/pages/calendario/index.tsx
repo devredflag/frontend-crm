@@ -253,6 +253,9 @@ export default function Calendario() {
   const [conectandoGoogle, setConectandoGoogle] = useState(false);
   const emailDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Carga inicial só na montagem: fetchAll/checkIntegrations são recriados a cada
+  // render — incluí-los nas deps refetcharia em loop.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchAll(); checkIntegrations(); }, []);
 
   useEffect(() => {
@@ -268,6 +271,9 @@ export default function Calendario() {
   useEffect(() => {
     if (form.empresa_id) fetchContatosEmpresa(form.empresa_id);
     else setContatos([]);
+    // Deve reagir só à troca de empresa. fetchContatosEmpresa é recriado a cada
+    // render e nas deps refetcharia os contatos em loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.empresa_id]);
 
   const authHeaders = () => ({ "Content-Type":"application/json", Authorization:`Bearer ${getToken()||""}` });

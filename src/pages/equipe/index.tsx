@@ -69,7 +69,6 @@ const navItems = [
 function initials(n: string) { return n?.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase() || "?"; }
 function avatarColor(n: string) { const c = ["#2980b9", "#1abc9c", "#8e44ad", "#e67e22", "#27ae60", "#e74c3c"]; return c[(n?.charCodeAt(0) || 0) % c.length]; }
 function money(v?: number | null) { return `R$ ${Number(v || 0).toLocaleString("pt-BR")}`; }
-function formatDate(v?: string | null) { return v ? new Date(v).toLocaleDateString("pt-BR") : "—"; }
 
 export default function Equipe() {
   const navigate = useNavigate();

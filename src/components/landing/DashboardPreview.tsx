@@ -4,7 +4,6 @@ import {
   Users,
   TrendingUp,
   MapPin,
-  ChevronRight,
   MoreHorizontal,
 } from "lucide-react";
 

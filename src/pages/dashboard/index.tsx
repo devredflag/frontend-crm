@@ -163,9 +163,12 @@ import { getToken } from "../../services/auth";
       const [showNotif, setShowNotif] = useState(false);
       const notifRef = useRef<HTMLDivElement>(null);
 
-      useEffect(() => { fetchData(); fetchNotificacoes(); 
+      useEffect(() => { fetchData(); fetchNotificacoes();
       const interval = setInterval(() => {fetchNotificacoes();}, 5000);
-      return () => clearInterval(interval);    
+      return () => clearInterval(interval);
+      // Carga inicial + polling montados uma vez: fetchData/fetchNotificacoes são
+      // recriados a cada render e recriariam o setInterval a cada ciclo.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       }, []);
 
       useEffect(() => {
@@ -202,12 +205,6 @@ import { getToken } from "../../services/auth";
           if(notifRes.ok) setNotificacoes(await notifRes.json());
           if(countRes.ok) { const d = await countRes.json(); setNaoLidas(d.total); }
         } catch {}
-      };
-
-      const marcarLida = async (id: string) => {
-        await fetch(`${API}/notificacoes/${id}/ler`, { method: "PUT", headers: jsonHeaders() });
-        setNotificacoes(prev => prev.map(n => n.notificacao_id===id ? {...n, lida:true} : n));
-        setNaoLidas(prev => Math.max(0, prev-1));
       };
 
       const marcarTodasLidas = async () => {

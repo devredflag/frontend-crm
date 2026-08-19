@@ -57,6 +57,9 @@ export default function OutlookCallback() {
         setMsg("Erro de conexão com o servidor.");
         setTimeout(() => navigate("/calendario"), 3000);
       });
+    // Troca do `code` do OAuth roda uma única vez na montagem: o código de
+    // autorização é de uso único e re-executar invalidaria a sessão recém-criada.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

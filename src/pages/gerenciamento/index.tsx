@@ -6,8 +6,8 @@ import {
   LayoutDashboard, Search, Building2, Users, ClipboardList,
   Calendar, BarChart3, Plus, RefreshCw, Eye,
   ChevronRight, MapPin, TrendingUp,
-  Phone, Mail, MessageCircle, History, Save, X,
-  CalendarClock, Clock, Filter, Edit3, AlertCircle, Menu, UserRoundCog,
+  X,
+  CalendarClock, Clock, Filter, AlertCircle, Menu, UserRoundCog,
 } from "lucide-react";
 import useIsMobile from "../../hooks/useIsMobile";
 
@@ -116,14 +116,6 @@ interface Empresa {
 
 interface Usuario { nome: string; cargo: string; is_gerente?: boolean; }
 
-interface HistoricoStatus {
-  historico_id: string;
-  status_anterior: string | null;
-  status_novo: string;
-  observacao: string | null;
-  alterado_em: string;
-}
-
 type ViewMode = "kanban" | "lista";
 type SortBy = "score" | "valor" | "proxima" | "parado" | "nome";
 
@@ -153,12 +145,6 @@ const TEMPS = [
   { key:"Frio",   icon:"❄️", color:"#2980b9", bg:"rgba(41,128,185,0.1)" },
 ];
 
-const PROXIMAS_ACOES = [
-  "Ligar","Enviar WhatsApp","Enviar email","Conectar no LinkedIn",
-  "Agendar reunião","Agendar visita","Enviar apresentação","Enviar proposta",
-  "Fazer follow-up","Solicitar documentos","Aguardar retorno",
-];
-
 function initials(n: string) { return n?.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase()||"?"; }
 function avatarColor(n: string) { const c=["#2980b9","#1abc9c","#8e44ad","#e67e22","#27ae60","#e74c3c"]; return c[(n?.charCodeAt(0)||0)%c.length]; }
 function porteInfo(p: string) {
@@ -181,20 +167,6 @@ function scoreColor(s: number) {
   if(s>=70) return { color:"#16a34a", bg:"rgba(22,163,74,0.12)" };
   if(s>=40) return { color:"#d97706", bg:"rgba(217,119,6,0.12)" };
   return { color:"#dc2626", bg:"rgba(220,38,38,0.1)" };
-}
-function formatMoney(v?: number | null) {
-  return v ? `R$ ${v.toLocaleString("pt-BR")}` : "Definir valor";
-}
-function parseMoney(v: string) {
-  const normalized = v.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-}
-function phoneDigits(v?: string | null) { return (v||"").replace(/\D/g, ""); }
-function whatsappUrl(v?: string | null) {
-  const d = phoneDigits(v);
-  if(!d) return "";
-  return `https://wa.me/${d.startsWith("55") ? d : `55${d}`}`;
 }
 function dateOnly(value?: string | null) {
   return value ? value.slice(0, 10) : "";
@@ -250,11 +222,6 @@ export default function Gerenciamento() {
   const [movingId, setMovingId] = useState<string|null>(null);
   const [draggedId, setDraggedId] = useState<string|null>(null);
   const [dragOverStatus, setDragOverStatus] = useState<string|null>(null);
-  const [editValorId, setEditValorId] = useState<string|null>(null);
-  const [valorDraft, setValorDraft] = useState("");
-  const [historyEmpresa, setHistoryEmpresa] = useState<Empresa|null>(null);
-  const [historyItems, setHistoryItems] = useState<HistoricoStatus[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
 
   // ✅ MUDANÇA 3: Painel de atrasadas
   const [showOverduePanel, setShowOverduePanel] = useState(false);
@@ -265,6 +232,9 @@ export default function Gerenciamento() {
     Authorization:`Bearer ${getToken()||""}`,
   });
 
+  // Carga inicial só na montagem: fetchAll é recriado a cada render — incluí-lo
+  // nas deps refetcharia em loop.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchAll(); }, []);
 
   const fetchAll = async () => {
@@ -311,55 +281,6 @@ export default function Gerenciamento() {
     setTimeout(()=>setMovingId(null),400);
   };
 
-  const updateTemp = async (id: string, temperatura: string, ev?: React.MouseEvent) => {
-    ev?.stopPropagation();
-    const anterior = empresas.find(e => e.empresa_id === id)?.temperatura;
-    updateLocal(id, { temperatura });
-    try {
-      await savePatch(id, { temperatura });
-    } catch {
-      updateLocal(id, { temperatura: anterior });
-    }
-  };
-
-  const saveValor = async (id: string, ev?: React.MouseEvent) => {
-    ev?.stopPropagation();
-    const valor = parseMoney(valorDraft);
-    const valorAnterior = empresas.find(e => e.empresa_id === id)?.ticket_medio_estimado;
-    updateLocal(id, { ticket_medio_estimado: valor });
-    setEditValorId(null);
-    try {
-      await savePatch(id, { ticket_medio_estimado: valor });
-    } catch (err) {
-      // Reverte localmente se a API falhar
-      updateLocal(id, { ticket_medio_estimado: valorAnterior });
-      alert("Erro ao salvar o valor. Verifique sua conexão e tente novamente.");
-      console.error("saveValor error:", err);
-    }
-  };
-
-  const updateNextAction = async (id: string, patch: Partial<Empresa>) => {
-    const anterior = empresas.find(e => e.empresa_id === id);
-    updateLocal(id, patch);
-    try {
-      await savePatch(id, patch);
-    } catch {
-      if (anterior) updateLocal(id, anterior);
-    }
-  };
-
-  const openHistory = async (emp: Empresa, ev: React.MouseEvent) => {
-    ev.stopPropagation();
-    setHistoryEmpresa(emp);
-    setHistoryItems([]);
-    setHistoryLoading(true);
-    try {
-      const res = await fetch(`${API}/empresas/${emp.empresa_id}/historico-status`,{headers:hdrs()});
-      if(res.ok) setHistoryItems(await res.json());
-    } catch {}
-    setHistoryLoading(false);
-  };
-
   const segmentos = uniqueOptions(empresas.map(e=>e.segmento));
   const cidades = uniqueOptions(empresas.map(e=>e.cidade));
   const origens = uniqueOptions(empresas.map(e=>e.origem_lead));
@@ -399,18 +320,6 @@ export default function Gerenciamento() {
       const db = dateOnly(b.data_proxima_acao) || "";
       return da.localeCompare(db);
     });
-
-  const renderQuickActions = (emp: Empresa) => {
-    const phone = emp.contato_celular || emp.contato_whatsapp;
-    return (
-      <div style={{display:"flex",gap:4}}>
-        {phone&&<a className="quick-btn" href={`tel:${phoneDigits(phone)}`} onClick={e=>e.stopPropagation()} title="Ligar"><Phone style={{width:12,height:12}}/></a>}
-        {emp.contato_whatsapp&&<a className="quick-btn" href={whatsappUrl(emp.contato_whatsapp)} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} title="WhatsApp"><MessageCircle style={{width:12,height:12}}/></a>}
-        {emp.contato_email&&<a className="quick-btn" href={`mailto:${emp.contato_email}`} onClick={e=>e.stopPropagation()} title="Email"><Mail style={{width:12,height:12}}/></a>}
-        <button className="quick-btn" onClick={e=>openHistory(emp,e)} title="Historico"><History style={{width:12,height:12}}/></button>
-      </div>
-    );
-  };
 
   return (
     <div style={{display:"flex",height:"100vh",overflow:"hidden",position:"relative"}}>
@@ -857,7 +766,6 @@ export default function Gerenciamento() {
                     <p style={{fontSize:11,marginTop:4}}>Tudo em dia!</p>
                   </div>
                 ):overdueEmpresas.map((emp,idx)=>{
-                  const next=nextActionInfo(emp);
                   const si=PIPELINE.find(p=>p.key===emp.status)||PIPELINE[0];
                   const daysLate = dateOnly(emp.data_proxima_acao)
                     ? Math.abs(Math.round((new Date(`${dateOnly(emp.data_proxima_acao)}T00:00:00`).getTime()-Date.now())/86400000))
@@ -923,40 +831,6 @@ export default function Gerenciamento() {
         )}
       </AnimatePresence>
 
-      {/* Painel histórico */}
-      <AnimatePresence>
-        {historyEmpresa&&(
-          <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} style={{position:"fixed",inset:0,zIndex:40,background:"rgba(10,31,51,0.32)",display:"flex",justifyContent:"flex-end"}} onClick={()=>setHistoryEmpresa(null)}>
-            <motion.div initial={{x:360}} animate={{x:0}} exit={{x:360}} transition={{duration:0.2}} style={{width:360,height:"100%",background:"rgba(255,255,255,0.96)",boxShadow:"-12px 0 34px rgba(10,31,51,0.18)",padding:22,overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18}}>
-                <div style={{width:34,height:34,borderRadius:10,background:"rgba(41,128,185,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                  <History style={{width:16,height:16,color:"#2980b9"}}/>
-                </div>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:14,fontWeight:900,color:"#0f2133"}}>Histórico do status</div>
-                  <div style={{fontSize:11,color:"rgba(20,45,70,0.5)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{historyEmpresa.nome}</div>
-                </div>
-                <button onClick={()=>setHistoryEmpresa(null)} className="quick-btn"><X style={{width:13,height:13}}/></button>
-              </div>
-              {historyLoading?(
-                <div className="skeleton" style={{height:90,borderRadius:12}}/>
-              ):historyItems.length===0?(
-                <div style={{padding:"30px 0",textAlign:"center",fontSize:12,fontWeight:700,color:"rgba(20,45,70,0.45)"}}>Sem movimentações registradas.</div>
-              ):(
-                <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                  {historyItems.map(item=>(
-                    <div key={item.historico_id} style={{border:"1px solid rgba(200,225,240,0.7)",borderRadius:12,padding:12,background:"rgba(255,255,255,0.75)"}}>
-                      <div style={{fontSize:12,fontWeight:800,color:"#0f2133"}}>{item.status_anterior || "Entrada"} → {item.status_novo}</div>
-                      <div style={{fontSize:10,color:"rgba(20,45,70,0.45)",marginTop:3}}>{formatDate(item.alterado_em)}</div>
-                      {item.observacao&&<div style={{fontSize:11,color:"rgba(20,45,70,0.65)",marginTop:8,fontWeight:600}}>{item.observacao}</div>}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

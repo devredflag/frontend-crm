@@ -42,7 +42,12 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16 md:h-20">
 
           {/* LOGO */}
-          <a href="#" className="flex items-center gap-2.5 group">
+          <button
+            type="button"
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            aria-label="Voltar ao topo"
+            className="flex items-center gap-2.5 group bg-transparent border-0 p-0 cursor-pointer"
+          >
             <div
               className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-110"
               style={{
@@ -57,7 +62,7 @@ export default function Navbar() {
               <span className="text-gray-800">Prospect</span>
               <span className="text-blue-600 font-extrabold">CRM</span>
             </span>
-          </a>
+          </button>
 
           {/* DESKTOP MENU */}
           <div className="hidden md:flex items-center gap-8">

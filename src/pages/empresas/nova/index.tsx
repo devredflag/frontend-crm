@@ -7,9 +7,9 @@ import {
   ClipboardList, BarChart3, ChevronDown, ArrowLeft,
   Plus, Trash2, Globe, Link2, Phone, Mail,
   MapPin, Briefcase, Hash, User, Thermometer,
-  Target, Clock, Star, CheckSquare,
-  FileText, Bell, Save, CheckCircle, XCircle, Loader,
-  AlertTriangle, ChevronUp, Menu, UserRoundCog,
+  Target, Clock, Star,
+  FileText, Save, CheckCircle, XCircle, Loader,
+  AlertTriangle, Menu, UserRoundCog,
 } from "lucide-react";
 import useIsMobile from "../../../hooks/useIsMobile";
 

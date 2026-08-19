@@ -8,7 +8,7 @@ import { getToken } from "../../../../services/auth";
     Plus, Trash2, Globe, Link2, Phone, Mail,
     MapPin, Briefcase, Hash, User, Thermometer,
     Target, Clock, FileText, Save, CheckCircle,
-    XCircle, Loader, AlertTriangle, Star,
+    XCircle, Loader, AlertTriangle,
   } from "lucide-react";
 
   const API = "https://backend-crm-production-157b.up.railway.app";
@@ -366,6 +366,10 @@ import { getToken } from "../../../../services/auth";
         setLoading(false);
       };
       load();
+      // Deve recarregar só quando muda a empresa da rota. `hdrs` e `navigate` são
+      // recriados a cada render e nas deps recarregariam o formulário em loop,
+      // descartando edições em andamento.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
     const handleContatoChange = (localId: number, field: string, value: any) => {

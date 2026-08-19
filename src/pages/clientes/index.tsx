@@ -166,6 +166,9 @@ export default function TodosClientes() {
   const token = () => getToken()||"";
   const headers = () => ({ Authorization:`Bearer ${token()}` });
 
+  // Carga inicial só na montagem: fetchAll é recriado a cada render — incluí-lo
+  // nas deps refetcharia em loop.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchAll(); }, []);
 
   const fetchAll = async () => {

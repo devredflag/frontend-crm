@@ -1,6 +1,6 @@
 import { getToken } from "../services/auth";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Bell, Mail, Calendar, Check, X, HelpCircle, Clock } from "lucide-react";
+import { Bell, Mail, Check, X, HelpCircle } from "lucide-react";
 import { openEmail, isNotifEnabled } from "../utils/commPrefs";
 
 const API = "https://backend-crm-production-157b.up.railway.app";
@@ -206,7 +206,6 @@ export default function EmpresaNotificationBell({ empresaId, empresaNome, onVerC
                     if (n.tipo === "email_interaction") {
                       const id          = n.meta?.conversation_id || "";
                       const senderEmail = n.meta?.sender_email || "";
-                      const subject     = n.meta?.subject || "";
                       const isGmail     = n.platform === "gmail";
                       if (id) {
                         const url = isGmail

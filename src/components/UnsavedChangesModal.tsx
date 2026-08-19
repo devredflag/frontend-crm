@@ -23,59 +23,6 @@ const gradientShift = `
   }
 `;
 
-// ── Botão gradiente ───────────────────────────────────────────
-function BtnGrad({
-  children,
-  onClick,
-  disabled,
-  style,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-  disabled?: boolean;
-  style?: React.CSSProperties;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        border: "none",
-        cursor: disabled ? "not-allowed" : "pointer",
-        borderRadius: 10,
-        color: "#fff",
-        fontFamily: "'Plus Jakarta Sans', sans-serif",
-        fontWeight: 700,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 7,
-        background:
-          "linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)",
-        backgroundSize: "200% 200%",
-        animation: disabled ? "none" : "gradientShift 4s ease infinite",
-        boxShadow: disabled
-          ? "none"
-          : "0 4px 14px rgba(41,128,185,0.35)",
-        opacity: disabled ? 0.45 : 1,
-        transition: "transform 0.15s, box-shadow 0.15s",
-        ...style,
-      }}
-      onMouseEnter={(e) => {
-        if (!disabled)
-          (e.currentTarget as HTMLButtonElement).style.transform =
-            "translateY(-1px)";
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.transform =
-          "translateY(0)";
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
 // ── Botão fantasma ────────────────────────────────────────────
 function BtnGhost({
   children,
