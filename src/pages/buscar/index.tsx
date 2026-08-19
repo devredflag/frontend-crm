@@ -1,3 +1,4 @@
+import { getToken } from "../../services/auth";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -166,7 +167,7 @@ export default function BuscarEmpresas() {
   const [quotaExcedida, setQuotaExcedida] = useState(false);
   const [quotaResetTime, setQuotaResetTime] = useState<Date | null>(null);
 
-  const hdrs = () => ({ "Content-Type":"application/json", Authorization:`Bearer ${localStorage.getItem("token")||""}` });
+  const hdrs = () => ({ "Content-Type":"application/json", Authorization:`Bearer ${getToken()||""}` });
 
   useEffect(() => {
     fetch(`${API}/me`, { headers: hdrs() }).then(r => r.ok && r.json()).then(d => d && setUsuario(d));

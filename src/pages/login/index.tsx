@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { LogIn } from "lucide-react";
 import MouseGlowBackground from "../../components/landing/MouseGlowBackground";
+import { login as authLogin } from "../../services/auth";
 
 const gradientKeyframes = `
   @keyframes gradientShift {
@@ -40,6 +41,9 @@ const labelStyle: React.CSSProperties = {
 export default function Login() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -56,40 +60,29 @@ export default function Login() {
   };
 
   const handleLogin = async (e: React.FormEvent) => {
-  e.preventDefault(); // evita recarregar a página
-  setLoading(true);
+    e.preventDefault(); // evita recarregar a página
+    setErro("");
+    setLoading(true);
 
-  try {
-    const res = await fetch("https://backend-crm-production-157b.up.railway.app/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email: email,   // variável do input
-        senha: senha    // variável do input
-      }),
-    });
+    try {
+      const res = await authLogin(email, senha, mfaRequired ? mfaCode : undefined);
 
-    const data = await res.json();
-    console.log("RESPOSTA:", data);
-
-    if (res.ok) {
-      // sucesso
-      localStorage.setItem("token", data.access_token);
-      navigate("/dashboard");
-    } else {
-      // erro vindo do backend
-      alert(data.detail || "Email ou senha inválidos");
+      if (res.ok) {
+        navigate("/dashboard");
+      } else if (res.mfaRequired) {
+        // Conta com MFA: pede o código do app autenticador.
+        setMfaRequired(true);
+        setErro("");
+      } else {
+        setErro(res.error);
+      }
+    } catch (error) {
+      console.error("ERRO:", error);
+      setErro("Erro ao conectar com o servidor.");
+    } finally {
+      setLoading(false);
     }
-
-  } catch (error) {
-    console.error("ERRO:", error);
-    alert("Erro ao conectar com o servidor");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <div
@@ -238,6 +231,45 @@ export default function Login() {
                 onBlur={onBlur}
               />
             </div>
+
+            {/* Código MFA (aparece só quando a conta tem 2FA ativado) */}
+            {mfaRequired && (
+              <div>
+                <label style={labelStyle}>Código de verificação (2FA)</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  placeholder="000000"
+                  value={mfaCode}
+                  onChange={(e) => setMfaCode(e.target.value)}
+                  required
+                  autoFocus
+                  style={{ ...inputBase, letterSpacing: "0.3em", textAlign: "center" }}
+                  onFocus={onFocus}
+                  onBlur={onBlur}
+                />
+                <p style={{ fontSize: 11, color: "rgba(20,45,70,0.5)", margin: "6px 2px 0" }}>
+                  Digite o código do seu app autenticador (ou um código de backup).
+                </p>
+              </div>
+            )}
+
+            {erro && (
+              <p
+                style={{
+                  fontSize: 13,
+                  color: "#c0392b",
+                  background: "rgba(231,76,60,0.08)",
+                  border: "1px solid rgba(231,76,60,0.25)",
+                  borderRadius: 10,
+                  padding: "10px 14px",
+                  margin: 0,
+                }}
+              >
+                {erro}
+              </p>
+            )}
 
             {/* Botão */}
             <motion.button

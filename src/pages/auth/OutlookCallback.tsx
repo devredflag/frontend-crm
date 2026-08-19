@@ -1,3 +1,4 @@
+import { getToken } from "../../services/auth";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -27,7 +28,7 @@ export default function OutlookCallback() {
       return;
     }
 
-    const token = localStorage.getItem("token");
+    const token = getToken();
     if (!token) {
       navigate("/login");
       return;

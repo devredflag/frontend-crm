@@ -1,3 +1,4 @@
+import { getToken } from "../../../services/auth";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -188,7 +189,7 @@ export default function EmpresaDetalhe() {
     const fetchAll = async () => {
       setLoading(true);
       try {
-        const token = localStorage.getItem("token");
+        const token = getToken();
         const headers = { Authorization: `Bearer ${token}` };
         const [empRes, contatosRes, meRes] = await Promise.all([
           fetch(`${API}/empresas/${id}`,          { headers }),
@@ -210,7 +211,7 @@ export default function EmpresaDetalhe() {
     // Atualiza atividades a cada 20s para capturar respostas de calendário
     const refreshAtividades = async () => {
       try {
-        const token = localStorage.getItem("token");
+        const token = getToken();
         const res = await fetch(`${API}/empresas/${id}/atividades`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -272,7 +273,7 @@ export default function EmpresaDetalhe() {
 
   const hdrs = () => ({
     "Content-Type": "application/json",
-    Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+    Authorization: `Bearer ${getToken() || ""}`,
   });
 
   const updateTemperatura = async (temperatura: string) => {

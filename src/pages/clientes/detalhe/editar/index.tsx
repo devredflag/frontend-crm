@@ -1,3 +1,4 @@
+import { getToken } from "../../../../services/auth";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -321,7 +322,7 @@ export default function EmpresaEdit() {
     setTimeout(() => setToasts(prev => prev.filter(x => x.id !== t.id)), 3500);
   };
 
-  const token = () => localStorage.getItem("token") || "";
+  const token = () => getToken() || "";
   const hdrs = () => ({ "Content-Type":"application/json", Authorization:`Bearer ${token()}` });
 
   useEffect(() => {

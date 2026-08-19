@@ -1,3 +1,4 @@
+import { getToken, setAccessToken } from "../../services/auth";
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -92,14 +93,14 @@ export default function Equipe() {
 
   const hdrs = () => ({
     "Content-Type": "application/json",
-    Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+    Authorization: `Bearer ${getToken() || ""}`,
   });
 
   const carregar = useCallback(async () => {
     setLoading(true);
     try {
       const meRes = await fetch(`${API}/me`, { headers: hdrs() });
-      if (meRes.status === 401) { localStorage.removeItem("token"); navigate("/login"); return; }
+      if (meRes.status === 401) { setAccessToken(null); navigate("/login"); return; }
       const meData: Me = await meRes.json();
       setMe(meData);
       if (!meData.is_gerente) { setNegado(true); setLoading(false); return; }

@@ -1,3 +1,4 @@
+import { getToken } from "../services/auth";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Bell, Mail, Calendar, Check, X, HelpCircle, Clock } from "lucide-react";
 import { openEmail, isNotifEnabled } from "../utils/commPrefs";
@@ -50,7 +51,7 @@ export default function EmpresaNotificationBell({ empresaId, empresaNome, onVerC
   const fetchNotifs = useCallback(async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = getToken();
       const res = await fetch(
         `${API}/notificacoes?empresa_id=${empresaId}`,
         { headers: { Authorization: `Bearer ${token}` } }
@@ -72,7 +73,7 @@ export default function EmpresaNotificationBell({ empresaId, empresaNome, onVerC
   }, [fetchNotifs]);
 
   async function markRead(id: string) {
-    const token = localStorage.getItem("token");
+    const token = getToken();
     await fetch(`${API}/notificacoes/${id}/ler`, {
       method: "PUT",
       headers: { Authorization: `Bearer ${token}` },

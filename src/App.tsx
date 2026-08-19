@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
+import { bootstrapAuth } from "./services/auth";
 import Landing from "./pages/Landing";
 import Cadastro from "./pages/Cadastro";
 import AtivarConta from "./pages/ativar";
@@ -19,6 +21,34 @@ import GoogleCallback from "./pages/auth/GoogleCallback";
 import BuscarEmpresas from "./pages/buscar";
 
 function App() {
+  // Ao carregar/recarregar a página, restaura a sessão a partir do cookie httpOnly
+  // (o access token vive só em memória). Só renderiza as rotas após essa tentativa,
+  // garantindo que páginas protegidas e callbacks OAuth já tenham o token.
+  const [pronto, setPronto] = useState(false);
+
+  useEffect(() => {
+    bootstrapAuth().finally(() => setPronto(true));
+  }, []);
+
+  if (!pronto) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "linear-gradient(145deg, #c8e8f5 0%, #cceee8 65%, #c5eae0 100%)",
+          color: "#2980b9",
+          fontSize: 14,
+          fontWeight: 600,
+        }}
+      >
+        Carregando...
+      </div>
+    );
+  }
+
   return (
     <Router>
       <Routes>

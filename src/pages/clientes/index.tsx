@@ -1,3 +1,4 @@
+import { getToken } from "../../services/auth";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -162,7 +163,7 @@ export default function TodosClientes() {
   const [deleteTarget, setDeleteTarget] = useState<Empresa|null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const token = () => localStorage.getItem("token")||"";
+  const token = () => getToken()||"";
   const headers = () => ({ Authorization:`Bearer ${token()}` });
 
   useEffect(() => { fetchAll(); }, []);
