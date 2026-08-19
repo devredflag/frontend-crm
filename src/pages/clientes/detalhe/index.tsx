@@ -1,3 +1,4 @@
+import { getToken } from "../../../services/auth";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -7,9 +8,9 @@ import {
   ClipboardList, Calendar, ArrowLeft, Edit3,
   MapPin, Tag, Thermometer, TrendingUp, DollarSign,
   Phone, Mail, User, Clock, ChevronRight, MessageCircle, Link2,
-  ChevronDown, Check, X as XIcon, Star, RefreshCw, Menu, UserRoundCog,
+  ChevronDown, Check, X as XIcon,
+  
 } from "lucide-react";
-import useIsMobile from "../../../hooks/useIsMobile";
 
 import SelectRecipientsModal, {
   SendChannel,
@@ -30,7 +31,6 @@ const css = `
   @keyframes float5 { 0%,100%{transform:translate(0,0) scale(1)}45%{transform:translate(35px,-20px) scale(1.06)}80%{transform:translate(-15px,30px) scale(0.96)} }
   @keyframes gradientShift { 0%,100%{background-position:0% 50%}50%{background-position:100% 50%} }
   @keyframes shimmer { 0%{background-position:-200% 0}100%{background-position:200% 0} }
-  @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
   .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:10px; cursor:pointer; font-size:13.5px; font-weight:500; color:rgba(255,255,255,0.65); transition:all 0.18s; user-select:none; }
   .nav-item:hover { background:rgba(255,255,255,0.08); color:#fff; }
   .nav-item.active { background:rgba(255,255,255,0.14); color:#fff; font-weight:600; }
@@ -84,11 +84,6 @@ interface Empresa {
   ultima_interacao: string | null;
   proxima_acao: string;
   observacoes?: string;
-  // snapshot do Google Places (volátil) + quando foi capturado
-  google_rating?: number | null;
-  google_rating_count?: number | null;
-  business_status?: string | null;
-  google_synced_at?: string | null;
 }
 
 interface Usuario {
@@ -121,26 +116,6 @@ function formatDate(d: string | null) {
   return new Date(d).toLocaleDateString("pt-BR");
 }
 
-// Snapshot do Google é considerado velho depois disto
-const GOOGLE_STALE_DAYS = 30;
-function freshness(syncedAt?: string | null) {
-  if (!syncedAt) return null;
-  const days = Math.floor((Date.now() - new Date(syncedAt).getTime()) / 86_400_000);
-  let txt: string;
-  if (days <= 0) txt = "hoje";
-  else if (days === 1) txt = "ontem";
-  else if (days < 30) txt = `há ${days} dias`;
-  else { const m = Math.floor(days / 30); txt = `há ${m} ${m === 1 ? "mês" : "meses"}`; }
-  return { txt, stale: days > GOOGLE_STALE_DAYS };
-}
-function businessStatusLabel(s?: string | null) {
-  if (!s) return null;
-  if (s === "OPERATIONAL")         return "Em operação";
-  if (s === "CLOSED_TEMPORARILY")  return "Fechado temporariamente";
-  if (s === "CLOSED_PERMANENTLY")  return "Fechado permanentemente";
-  return s;
-}
-
 function SendButton({
   color, bg, border, icon: Icon, label, onClick,
 }: {
@@ -170,14 +145,10 @@ export default function EmpresaDetalhe() {
   const [contatos, setContatos]   = useState<Contato[]>([]);
   const [atividades, setAtividades] = useState<any[]>([]);
   const [loading, setLoading]     = useState(true);
-  const isMobile = useIsMobile();
-  const [menuOpen, setMenuOpen] = useState(false);
   const [usuario, setUsuario]     = useState<Usuario | null>(null);
   const [expandedContato, setExpandedContato] = useState<string | null>(null);
   const [editValor, setEditValor] = useState(false);
   const [valorDraft, setValorDraft] = useState("");
-  const [refreshingGoogle, setRefreshingGoogle] = useState(false);
-  const [googleRefreshErro, setGoogleRefreshErro] = useState<string | null>(null);
 
   // canal aberto no modal
   const [sendChannel, setSendChannel] = useState<SendChannel | null>(null);
@@ -188,7 +159,7 @@ export default function EmpresaDetalhe() {
     const fetchAll = async () => {
       setLoading(true);
       try {
-        const token = localStorage.getItem("token");
+        const token = getToken();
         const headers = { Authorization: `Bearer ${token}` };
         const [empRes, contatosRes, meRes] = await Promise.all([
           fetch(`${API}/empresas/${id}`,          { headers }),
@@ -210,7 +181,7 @@ export default function EmpresaDetalhe() {
     // Atualiza atividades a cada 20s para capturar respostas de calendário
     const refreshAtividades = async () => {
       try {
-        const token = localStorage.getItem("token");
+        const token = getToken();
         const res = await fetch(`${API}/empresas/${id}/atividades`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -272,7 +243,7 @@ export default function EmpresaDetalhe() {
 
   const hdrs = () => ({
     "Content-Type": "application/json",
-    Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+    Authorization: `Bearer ${getToken() || ""}`,
   });
 
   const updateTemperatura = async (temperatura: string) => {
@@ -301,39 +272,6 @@ export default function EmpresaDetalhe() {
       });
     } catch {
       setEmpresa(prev => prev ? { ...prev, ticket_medio_estimado: anterior } : prev);
-    }
-  };
-
-  // Re-busca o snapshot volátil do Google (rating/status) pelo place_id salvo.
-  // Backend esperado: GET /empresas/{id}/google-refresh → Place Details by ID
-  // (field mask rating,userRatingCount,businessStatus) e devolve a empresa atualizada.
-  const refreshGoogle = async () => {
-    if (!empresa || refreshingGoogle) return;
-    setRefreshingGoogle(true);
-    setGoogleRefreshErro(null);
-    try {
-      const res = await fetch(`${API}/empresas/${empresa.empresa_id}/google-refresh`, { headers: hdrs() });
-      if (res.status === 404 || res.status === 501) {
-        setGoogleRefreshErro("Atualização ainda não disponível no servidor.");
-        return;
-      }
-      if (res.status === 429) {
-        setGoogleRefreshErro("Limite da API do Google atingido. Tente mais tarde.");
-        return;
-      }
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      setEmpresa(prev => prev ? {
-        ...prev,
-        google_rating:       data.google_rating       ?? prev.google_rating,
-        google_rating_count: data.google_rating_count ?? prev.google_rating_count,
-        business_status:     data.business_status     ?? prev.business_status,
-        google_synced_at:    data.google_synced_at     ?? new Date().toISOString(),
-      } : prev);
-    } catch {
-      setGoogleRefreshErro("Não foi possível atualizar agora.");
-    } finally {
-      setRefreshingGoogle(false);
     }
   };
 
@@ -373,13 +311,7 @@ export default function EmpresaDetalhe() {
       </div>
 
       {/* ── Sidebar ── */}
-      {isMobile && menuOpen && (
-        <div onClick={()=>setMenuOpen(false)} style={{ position:"fixed", inset:0, background:"rgba(10,31,51,0.45)", zIndex:999 }}/>
-      )}
-      <div style={{ width:220, flexShrink:0, height:"100vh", overflowY:"auto", zIndex:1000, background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)", boxShadow:"4px 0 24px rgba(0,0,0,0.18)", display:"flex", flexDirection:"column", padding:"0 12px 20px",
-        position: isMobile ? "fixed" : "relative", top:0, left:0,
-        transform: isMobile && !menuOpen ? "translateX(-100%)" : "translateX(0)",
-        transition:"transform 0.28s ease" }}>
+      <div style={{ width:220, flexShrink:0, height:"100vh", overflowY:"auto", position:"relative", zIndex:10, background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)", boxShadow:"4px 0 24px rgba(0,0,0,0.18)", display:"flex", flexDirection:"column", padding:"0 12px 20px" }}>
         <div style={{ padding:"22px 4px 24px", borderBottom:"1px solid rgba(255,255,255,0.08)", marginBottom:16 }}>
           <div style={{ display:"flex", alignItems:"center", gap:10 }}>
             <div style={{ width:36, height:36, borderRadius:10, background:"linear-gradient(135deg,#2980b9,#1abc9c)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 12px rgba(41,128,185,0.4)" }}>
@@ -398,12 +330,6 @@ export default function EmpresaDetalhe() {
               {item.label}
             </div>
           ))}
-          {(usuario as any)?.is_gerente && (
-            <div className="nav-item" onClick={() => navigate("/equipe")}>
-              <UserRoundCog style={{ width:16, height:16, flexShrink:0 }} />
-              Equipe
-            </div>
-          )}
         </nav>
         <div className="user-card" onClick={() => navigate("/perfil")}>
           <div style={{ width:34, height:34, borderRadius:"50%", background:`linear-gradient(135deg,${corUsuario},${corUsuario}cc)`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#fff", flexShrink:0 }}>
@@ -421,16 +347,11 @@ export default function EmpresaDetalhe() {
       <div style={{ flex:1, height:"100vh", overflowY:"auto", position:"relative", zIndex:5 }}>
 
         {/* Topbar */}
-        <div style={{ position:"sticky", top:0, zIndex:20, padding:isMobile?"12px 14px":"14px 28px", background:"rgba(210,238,248,0.75)", backdropFilter:"blur(20px)", borderBottom:"1px solid rgba(255,255,255,0.6)", display:"flex", alignItems:"center", gap:isMobile?8:14 }}>
-          {isMobile && (
-            <button onClick={()=>setMenuOpen(true)} style={{ width:36, height:36, borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.75)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-              <Menu style={{ width:18, height:18, color:"#2980b9" }}/>
-            </button>
-          )}
+        <div style={{ position:"sticky", top:0, zIndex:20, padding:"14px 28px", background:"rgba(210,238,248,0.75)", backdropFilter:"blur(20px)", borderBottom:"1px solid rgba(255,255,255,0.6)", display:"flex", alignItems:"center", gap:14 }}>
           <button onClick={() => navigate(backTo)} style={{ width:36, height:36, borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.75)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
             <ArrowLeft style={{ width:15, height:15, color:"#2980b9" }} />
           </button>
-          <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ flex:1 }}>
             <h1 style={{ fontSize:18, fontWeight:800, color:"#0f2133", letterSpacing:"-0.02em" }}>
               {loading ? "Carregando..." : empresa?.nome}
             </h1>
@@ -441,7 +362,7 @@ export default function EmpresaDetalhe() {
             </p>
           </div>
 
-          {!loading && !isMobile && contatos.length > 0 && (
+          {!loading && contatos.length > 0 && (
             <div style={{ display:"flex", gap:6 }}>
               <SendButton color="#2980b9" bg="rgba(41,128,185,0.08)" border="rgba(41,128,185,0.3)"  icon={Mail}          label="E-mail"   onClick={() => setSendChannel("email")} />
               <SendButton color="#27ae60" bg="rgba(39,174,96,0.08)"  border="rgba(39,174,96,0.3)"   icon={MessageCircle} label="WhatsApp" onClick={() => setSendChannel("whatsapp")} />
@@ -457,14 +378,14 @@ export default function EmpresaDetalhe() {
             />
           )}
 
-          <button onClick={() => navigate(`/clientes/${id}/editar`)} title="Editar" style={{ height:38, padding:isMobile?"0 12px":"0 16px", borderRadius:10, border:"none", cursor:"pointer", background:"linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)", backgroundSize:"200% 200%", animation:"gradientShift 4s ease infinite", color:"#fff", fontSize:13, fontWeight:700, display:"flex", alignItems:"center", gap:6, boxShadow:"0 4px 14px rgba(41,128,185,0.35)", flexShrink:0 }}>
-            <Edit3 style={{ width:14, height:14 }} />{!isMobile && " Editar"}
+          <button onClick={() => navigate(`/clientes/${id}/editar`)} style={{ height:38, padding:"0 16px", borderRadius:10, border:"none", cursor:"pointer", background:"linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)", backgroundSize:"200% 200%", animation:"gradientShift 4s ease infinite", color:"#fff", fontSize:13, fontWeight:700, display:"flex", alignItems:"center", gap:6, boxShadow:"0 4px 14px rgba(41,128,185,0.35)" }}>
+            <Edit3 style={{ width:14, height:14 }} /> Editar
           </button>
         </div>
 
-        <div style={{ padding:isMobile?"16px 14px 32px":"24px 28px 40px", display:"flex", flexDirection:"column", gap:18 }}>
+        <div style={{ padding:"24px 28px 40px", display:"flex", flexDirection:"column", gap:18 }}>
           {loading ? (
-            <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr", gap:18 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:18 }}>
               {[1,2,3,4].map(i => (
                 <div key={i} className="glass-card" style={{ padding:24 }}>
                   <div className="skeleton" style={{ height:20, width:"40%", marginBottom:16 }} />
@@ -544,7 +465,7 @@ export default function EmpresaDetalhe() {
                 </div>
               </motion.div>
 
-              <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr", gap:18 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:18 }}>
                 {/* Informações */}
                 <motion.div className="glass-card" style={{ padding:"22px 24px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.07 }}>
                   <div style={{ fontSize:13, fontWeight:700, color:"#0f2133", marginBottom:16, display:"flex", alignItems:"center", gap:7 }}>
@@ -564,65 +485,6 @@ export default function EmpresaDetalhe() {
                       <span style={{ fontSize:12, color:"#0f2133", fontWeight:600 }}>{value || "—"}</span>
                     </div>
                   ))}
-
-                  {/* Snapshot do Google Places (dado volátil cacheado, com idade) */}
-                  {(empresa.google_rating != null || empresa.business_status) && (() => {
-                    const fr = freshness(empresa.google_synced_at);
-                    const statusTxt = businessStatusLabel(empresa.business_status);
-                    return (
-                      <div style={{ marginTop:14, padding:"12px 14px", borderRadius:10, background:"rgba(251,188,4,0.06)", border:"1px solid rgba(251,188,4,0.22)" }}>
-                        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, marginBottom:8 }}>
-                          <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, fontWeight:700, color:"rgba(20,45,70,0.55)" }}>
-                            <Star style={{ width:12, height:12, fill:"#fbbc04", color:"#fbbc04" }} /> Dados do Google
-                          </div>
-                          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                            {fr && (
-                              <span
-                                title={`Capturado em ${formatDate(empresa.google_synced_at ?? null)}`}
-                                style={{ fontSize:9, fontWeight:700, padding:"2px 8px", borderRadius:20, background: fr.stale ? "rgba(231,76,60,0.1)" : "rgba(39,174,96,0.1)", color: fr.stale ? "#e74c3c" : "#27ae60", border:`1px solid ${fr.stale ? "rgba(231,76,60,0.25)" : "rgba(39,174,96,0.25)"}` }}
-                              >
-                                {fr.stale ? `desatualizado · ${fr.txt}` : `atualizado ${fr.txt}`}
-                              </span>
-                            )}
-                            <button
-                              onClick={refreshGoogle}
-                              disabled={refreshingGoogle}
-                              title="Atualizar dados do Google"
-                              style={{ display:"flex", alignItems:"center", gap:4, height:24, padding:"0 9px", borderRadius:7, border:"1px solid rgba(41,128,185,0.3)", background:"rgba(41,128,185,0.07)", color:"#2980b9", fontSize:10, fontWeight:700, cursor: refreshingGoogle ? "wait" : "pointer", whiteSpace:"nowrap" }}
-                            >
-                              <RefreshCw style={{ width:11, height:11, animation: refreshingGoogle ? "spin 0.9s linear infinite" : "none" }} />
-                              {refreshingGoogle ? "Atualizando..." : "Atualizar"}
-                            </button>
-                          </div>
-                        </div>
-                        <div style={{ display:"flex", alignItems:"center", gap:16, flexWrap:"wrap" }}>
-                          {empresa.google_rating != null && (
-                            <span style={{ fontSize:13, fontWeight:800, color:"#d97706", display:"flex", alignItems:"center", gap:4 }}>
-                              <Star style={{ width:12, height:12, fill:"#fbbc04", color:"#fbbc04" }} />
-                              {empresa.google_rating.toFixed(1)}
-                              {empresa.google_rating_count != null && (
-                                <span style={{ fontSize:11, fontWeight:600, color:"rgba(20,45,70,0.45)" }}>
-                                  ({empresa.google_rating_count.toLocaleString("pt-BR")})
-                                </span>
-                              )}
-                            </span>
-                          )}
-                          {statusTxt && (
-                            <span style={{ fontSize:11, fontWeight:600, color:"rgba(20,45,70,0.6)" }}>{statusTxt}</span>
-                          )}
-                        </div>
-                        {googleRefreshErro ? (
-                          <div style={{ fontSize:10, color:"#c0392b", marginTop:8, lineHeight:1.5 }}>
-                            {googleRefreshErro}
-                          </div>
-                        ) : fr?.stale && (
-                          <div style={{ fontSize:10, color:"rgba(20,45,70,0.45)", marginTop:8, lineHeight:1.5 }}>
-                            Snapshot com mais de {GOOGLE_STALE_DAYS} dias — clique em <strong>Atualizar</strong> para re-buscar o rating e o status no Google.
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
                 </motion.div>
 
                 {/* Relacionamento */}
@@ -651,7 +513,7 @@ export default function EmpresaDetalhe() {
               </div>
 
               {/* Contatos + Atividades */}
-              <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr", gap:18 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:18 }}>
 
                 {/* Card único de contatos */}
                 <motion.div className="glass-card" style={{ padding:"22px 24px", display:"flex", flexDirection:"column", maxHeight:420 }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.18 }}>
