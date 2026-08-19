@@ -1,3 +1,4 @@
+import { getToken } from "../../services/auth";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -109,13 +110,22 @@ export default function Perfil() {
   const [conectandoGmail, setConectandoGmail]   = useState(false);
   const [desconectando, setDesconectando]       = useState<"gmail"|"outlook"|null>(null);
 
+  // MFA / 2FA
+  const [mfaAtivado, setMfaAtivado]   = useState(false);
+  const [mfaSetup, setMfaSetup]       = useState<{ qr_code: string | null; secret: string } | null>(null);
+  const [mfaCode, setMfaCode]         = useState("");
+  const [mfaBackup, setMfaBackup]     = useState<string[] | null>(null);
+  const [mfaSenha, setMfaSenha]       = useState("");
+  const [mfaBusy, setMfaBusy]         = useState(false);
+  const [mfaErro, setMfaErro]         = useState("");
+
   useEffect(() => {
-    const token = localStorage.getItem("token") || "";
+    const token = getToken() || "";
     const h = { Authorization: `Bearer ${token}` };
 
     fetch(`${API}/me`, { headers: h })
       .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d) setUsuario(d); })
+      .then(d => { if (d) { setUsuario(d); setMfaAtivado(!!d.mfa_ativado); } })
       .catch(() => {})
       .finally(() => setLoading(false));
 
@@ -147,7 +157,7 @@ export default function Perfil() {
   const connectGmail = async () => {
     setConectandoGmail(true);
     try {
-      const token = localStorage.getItem("token") || "";
+      const token = getToken() || "";
       const res = await fetch(`${API}/auth/google/login`, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       if (data.auth_url) window.location.href = data.auth_url;
@@ -156,7 +166,7 @@ export default function Perfil() {
 
   const connectOutlook = async () => {
     try {
-      const token = localStorage.getItem("token") || "";
+      const token = getToken() || "";
       const res = await fetch(`${API}/auth/outlook/login`, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       if (data.auth_url) window.location.href = data.auth_url;
@@ -166,7 +176,7 @@ export default function Perfil() {
   const disconnect = async (prov: "gmail" | "outlook") => {
     setDesconectando(prov);
     try {
-      const token = localStorage.getItem("token") || "";
+      const token = getToken() || "";
       await fetch(`${API}/auth/${prov === "gmail" ? "google" : "outlook"}/disconnect`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
@@ -174,6 +184,52 @@ export default function Perfil() {
       if (prov === "gmail") { setGmailConectado(false); if (emailProvider === "gmail") setEmailProvider(null); }
       else { setOutlookConectado(false); if (emailProvider === "outlook") setEmailProvider(null); }
     } catch {} finally { setDesconectando(null); }
+  };
+
+  // ---- MFA / 2FA ----
+  const iniciarMfa = async () => {
+    setMfaErro(""); setMfaBusy(true); setMfaBackup(null);
+    try {
+      const res = await fetch(`${API}/mfa/setup`, { method: "POST", headers: { Authorization: `Bearer ${getToken()}` } });
+      const data = await res.json();
+      if (res.ok) setMfaSetup({ qr_code: data.qr_code, secret: data.secret });
+      else setMfaErro(data.detail || "Não foi possível iniciar o MFA.");
+    } catch { setMfaErro("Erro de conexão."); }
+    finally { setMfaBusy(false); }
+  };
+
+  const confirmarMfa = async () => {
+    setMfaErro(""); setMfaBusy(true);
+    try {
+      const res = await fetch(`${API}/mfa/ativar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ code: mfaCode.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMfaAtivado(true);
+        setMfaSetup(null);
+        setMfaCode("");
+        setMfaBackup(data.backup_codes || []);
+      } else setMfaErro(data.detail || "Código inválido.");
+    } catch { setMfaErro("Erro de conexão."); }
+    finally { setMfaBusy(false); }
+  };
+
+  const desativarMfa = async () => {
+    setMfaErro(""); setMfaBusy(true);
+    try {
+      const res = await fetch(`${API}/mfa/desativar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ senha: mfaSenha }),
+      });
+      const data = await res.json();
+      if (res.ok) { setMfaAtivado(false); setMfaSenha(""); setMfaBackup(null); }
+      else setMfaErro(data.detail || "Senha inválida.");
+    } catch { setMfaErro("Erro de conexão."); }
+    finally { setMfaBusy(false); }
   };
 
   const nomeUsuario  = usuario?.nome || "...";
@@ -715,10 +771,81 @@ export default function Perfil() {
               {/* ── ABA SEGURANÇA ── */}
               {activeTab === "seguranca" && (
                 <motion.div key="seguranca" initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-6 }} transition={{ duration:0.25 }}>
-                  <motion.div className="glass-card" style={{ padding:"28px 24px", textAlign:"center" }}>
-                    <Shield style={{ width:36, height:36, color:"rgba(41,128,185,0.3)", margin:"0 auto 12px" }}/>
-                    <div style={{ fontSize:15, fontWeight:700, color:"#0f2133", marginBottom:6 }}>Segurança da conta</div>
-                    <div style={{ fontSize:12, color:"rgba(20,45,70,0.4)" }}>Configurações de senha e autenticação estarão disponíveis em breve.</div>
+                  <motion.div className="glass-card" style={{ padding:"24px 22px" }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
+                      <Shield style={{ width:22, height:22, color:"#2980b9" }}/>
+                      <div style={{ fontSize:15, fontWeight:800, color:"#0f2133" }}>Autenticação em duas etapas (2FA)</div>
+                      <span style={{ marginLeft:"auto", fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:999,
+                        background: mfaAtivado ? "rgba(46,204,113,0.15)" : "rgba(231,76,60,0.12)",
+                        color: mfaAtivado ? "#27ae60" : "#c0392b" }}>
+                        {mfaAtivado ? "Ativado" : "Desativado"}
+                      </span>
+                    </div>
+                    <div style={{ fontSize:12, color:"rgba(20,45,70,0.55)", marginBottom:18, lineHeight:1.5 }}>
+                      Protege sua conta exigindo um código do app autenticador (Google Authenticator, Authy) além da senha.
+                    </div>
+
+                    {mfaErro && (
+                      <div style={{ fontSize:12.5, color:"#c0392b", background:"rgba(231,76,60,0.08)", border:"1px solid rgba(231,76,60,0.22)", borderRadius:10, padding:"9px 12px", marginBottom:14 }}>{mfaErro}</div>
+                    )}
+
+                    {/* Códigos de backup recém-gerados (mostrados uma única vez) */}
+                    {mfaBackup && (
+                      <div style={{ background:"rgba(41,128,185,0.06)", border:"1px solid rgba(41,128,185,0.2)", borderRadius:12, padding:"14px 16px", marginBottom:16 }}>
+                        <div style={{ fontSize:12.5, fontWeight:700, color:"#0f2133", marginBottom:8 }}>Guarde seus códigos de backup (mostrados só agora):</div>
+                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6, fontFamily:"monospace", fontSize:13 }}>
+                          {mfaBackup.map(c => <div key={c} style={{ padding:"4px 8px", background:"rgba(255,255,255,0.7)", borderRadius:6, textAlign:"center" }}>{c}</div>)}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Estado: desativado e sem setup em andamento */}
+                    {!mfaAtivado && !mfaSetup && (
+                      <button onClick={iniciarMfa} disabled={mfaBusy}
+                        style={{ height:46, padding:"0 20px", borderRadius:12, border:"none", cursor:mfaBusy?"not-allowed":"pointer",
+                          fontSize:14, fontWeight:700, color:"#fff", background:"linear-gradient(135deg, #2980b9, #1abc9c)" }}>
+                        {mfaBusy ? "Gerando..." : "Ativar 2FA"}
+                      </button>
+                    )}
+
+                    {/* Estado: setup em andamento (QR + confirmação) */}
+                    {!mfaAtivado && mfaSetup && (
+                      <div>
+                        <div style={{ fontSize:12.5, color:"rgba(20,45,70,0.7)", marginBottom:12 }}>
+                          1. Escaneie o QR no seu app autenticador:
+                        </div>
+                        {mfaSetup.qr_code
+                          ? <img src={mfaSetup.qr_code} alt="QR do MFA" style={{ width:180, height:180, borderRadius:12, border:"1px solid rgba(0,0,0,0.06)" }}/>
+                          : <div style={{ fontSize:12 }}>Chave manual: <code>{mfaSetup.secret}</code></div>}
+                        <div style={{ fontSize:12.5, color:"rgba(20,45,70,0.7)", margin:"14px 0 8px" }}>
+                          2. Digite o código gerado para confirmar:
+                        </div>
+                        <div style={{ display:"flex", gap:8 }}>
+                          <input value={mfaCode} onChange={e=>setMfaCode(e.target.value)} placeholder="000000" inputMode="numeric"
+                            style={{ height:44, width:140, padding:"0 14px", borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", fontSize:15, letterSpacing:"0.2em", textAlign:"center" }}/>
+                          <button onClick={confirmarMfa} disabled={mfaBusy || mfaCode.trim().length < 6}
+                            style={{ height:44, padding:"0 18px", borderRadius:10, border:"none", cursor:"pointer", fontSize:14, fontWeight:700, color:"#fff", background:"linear-gradient(135deg, #2980b9, #1abc9c)" }}>
+                            {mfaBusy ? "..." : "Confirmar"}
+                          </button>
+                          <button onClick={()=>{ setMfaSetup(null); setMfaCode(""); setMfaErro(""); }}
+                            style={{ height:44, padding:"0 16px", borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", cursor:"pointer", fontSize:13, fontWeight:600, background:"transparent", color:"rgba(20,45,70,0.6)" }}>
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Estado: ativado → desativar exige senha */}
+                    {mfaAtivado && (
+                      <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
+                        <input type="password" value={mfaSenha} onChange={e=>setMfaSenha(e.target.value)} placeholder="Sua senha para desativar"
+                          style={{ height:44, width:220, padding:"0 14px", borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", fontSize:14 }}/>
+                        <button onClick={desativarMfa} disabled={mfaBusy || !mfaSenha}
+                          style={{ height:44, padding:"0 18px", borderRadius:10, border:"1px solid rgba(231,76,60,0.4)", cursor:mfaBusy||!mfaSenha?"not-allowed":"pointer", fontSize:14, fontWeight:700, color:"#c0392b", background:"rgba(231,76,60,0.06)" }}>
+                          {mfaBusy ? "..." : "Desativar 2FA"}
+                        </button>
+                      </div>
+                    )}
                   </motion.div>
                 </motion.div>
               )}

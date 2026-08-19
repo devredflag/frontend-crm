@@ -1,3 +1,4 @@
+import { getToken } from "../../services/auth";
   import { useState, useEffect, useRef } from "react";
     import { useNavigate } from "react-router-dom";
     import { motion, AnimatePresence } from "framer-motion";
@@ -175,7 +176,7 @@
         return () => document.removeEventListener("mousedown", handler);
       }, []);
 
-      const token = () => localStorage.getItem("token") || "";
+      const token = () => getToken() || "";
       const headers = () => ({ Authorization: `Bearer ${token()}` });
       const jsonHeaders = () => ({ "Content-Type": "application/json", Authorization: `Bearer ${token()}` });
 

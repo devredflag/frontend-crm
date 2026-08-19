@@ -1,3 +1,4 @@
+import { getToken } from "../services/auth";
 // src/components/SelectRecipientsModal.tsx
 import { useState, useMemo, useEffect } from "react";
 import { getCommPrefs } from "../utils/commPrefs";
@@ -89,7 +90,7 @@ export default function SelectRecipientsModal({
     }
 
     setCheckingAuth(true);
-    const token = localStorage.getItem("token") || "";
+    const token = getToken() || "";
     const h = { Authorization: `Bearer ${token}` };
 
     // Preferência salva serve como pré-seleção, não pula a escolha

@@ -1,3 +1,4 @@
+import { getToken, setAccessToken } from "../../services/auth";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -261,7 +262,7 @@ export default function Gerenciamento() {
   // Token sempre fresco — garante que salva mesmo após re-login
   const hdrs = () => ({
     "Content-Type":"application/json",
-    Authorization:`Bearer ${localStorage.getItem("token")||""}`,
+    Authorization:`Bearer ${getToken()||""}`,
   });
 
   useEffect(() => { fetchAll(); }, []);
@@ -286,7 +287,7 @@ export default function Gerenciamento() {
   const savePatch = async (id: string, patch: Partial<Empresa>) => {
     const res = await fetch(`${API}/empresas/${id}`,{method:"PUT",headers:hdrs(),body:JSON.stringify(patch)});
     if(res.status === 401) {
-      localStorage.removeItem("token");
+      setAccessToken(null);
       navigate("/login");
       return;
     }

@@ -1,3 +1,4 @@
+import { getToken } from "../../../services/auth";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -454,7 +455,7 @@ export default function NovaEmpresa() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [ehGerente, setEhGerente] = useState(false);
   useEffect(() => {
-    fetch(`${API}/me`, { headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` } })
+    fetch(`${API}/me`, { headers: { Authorization: `Bearer ${getToken() || ""}` } })
       .then(r => (r.ok ? r.json() : null))
       .then(d => { if (d?.is_gerente) setEhGerente(true); })
       .catch(() => {});

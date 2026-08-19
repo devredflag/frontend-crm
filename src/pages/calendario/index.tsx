@@ -1,3 +1,4 @@
+import { getToken } from "../../services/auth";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -269,11 +270,11 @@ export default function Calendario() {
     else setContatos([]);
   }, [form.empresa_id]);
 
-  const authHeaders = () => ({ "Content-Type":"application/json", Authorization:`Bearer ${localStorage.getItem("token")||""}` });
+  const authHeaders = () => ({ "Content-Type":"application/json", Authorization:`Bearer ${getToken()||""}` });
 
   const fetchAll = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = getToken();
       if (!token) return;
       const h = authHeaders();
       const [evRes, empRes, meRes] = await Promise.all([
@@ -298,7 +299,7 @@ export default function Calendario() {
   };
 
   const checkIntegrations = async () => {
-    if (!localStorage.getItem("token")) return;
+    if (!getToken()) return;
     try {
       const h = authHeaders();
       const [outlookRes, googleRes] = await Promise.all([
