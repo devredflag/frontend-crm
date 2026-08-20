@@ -430,17 +430,26 @@ export default function Gerenciamento() {
               </button>
             )}
             <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:11,fontWeight:700,color:"rgba(20,45,70,0.45)",letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:3}}>Pipeline</div>
+              <div style={{fontSize:11,fontWeight:700,color:"rgba(20,45,70,0.45)",letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:3}}>Gerenciamento</div>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <h1 style={{fontSize:22,fontWeight:900,color:"#0f2133",letterSpacing:"-0.03em"}}>Pipeline de Vendas</h1>
-                <TrendingUp style={{width:18,height:18,color:"#27ae60"}}/>
+                <h1 style={{fontSize:22,fontWeight:900,color:"#0f2133",letterSpacing:"-0.03em"}}>
+                  {aba==="clientes"?"Pipeline de Vendas":"Orçamentos e vendas"}
+                </h1>
+                {aba==="clientes"
+                  ? <TrendingUp style={{width:18,height:18,color:"#27ae60"}}/>
+                  : <FileText style={{width:18,height:18,color:"#2980b9"}}/>}
               </div>
-              <p style={{fontSize:12,color:"rgba(20,45,70,0.5)",marginTop:2}}>Acompanhe suas oportunidades e mova os negócios adiante.</p>
+              <p style={{fontSize:12,color:"rgba(20,45,70,0.5)",marginTop:2}}>
+                {aba==="clientes"
+                  ? "Acompanhe suas oportunidades e mova os negócios adiante."
+                  : "Monte orçamentos, envie para o cliente e acompanhe o fechamento."}
+              </p>
             </div>
             <div style={{display:"flex",gap:8,alignItems:"center"}}>
               <button onClick={fetchAll} style={{width:38,height:38,borderRadius:10,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.75)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
                 <RefreshCw style={{width:15,height:15,color:"#2980b9"}}/>
               </button>
+              {aba==="clientes" && (<>
               <div style={{display:"flex",gap:3,background:"rgba(255,255,255,0.55)",borderRadius:10,padding:3,border:"1px solid rgba(200,225,240,0.6)"}}>
                 {(["kanban","lista","mapa","proximas"] as const).map(v=>(
                   <button key={v} onClick={()=>setView(v)} style={{padding:"5px 14px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:600,background:view===v?"#2980b9":"transparent",color:view===v?"#fff":"rgba(20,45,70,0.6)",transition:"all 0.18s"}}>
@@ -451,9 +460,12 @@ export default function Gerenciamento() {
               <button onClick={()=>navigate("/empresas/nova")} style={{height:38,padding:"0 16px",borderRadius:10,border:"none",cursor:"pointer",background:"linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)",backgroundSize:"200% 200%",animation:"gradientShift 4s ease infinite",color:"#fff",fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:6,boxShadow:"0 4px 14px rgba(41,128,185,0.35)"}}>
                 <Plus style={{width:15,height:15}}/> Nova oportunidade
               </button>
+              </>)}
             </div>
           </div>
 
+          {/* Busca, filtros e stats só valem para a carteira de clientes */}
+          {aba==="clientes" && (<>
           <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",marginBottom:10}}>
             <div style={{position:"relative",width:240}}>
               <Search style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",width:12,height:12,color:"rgba(20,45,70,0.35)"}}/>
@@ -531,6 +543,7 @@ export default function Gerenciamento() {
               <option value="nome">Nome</option>
             </select>
           </div>
+          </>)}
         </div>
 
         {/* Abas: Clientes x Vendas */}
