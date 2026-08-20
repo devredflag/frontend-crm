@@ -9,7 +9,7 @@ import {
   MapPin, Tag, Thermometer, TrendingUp, DollarSign,
   Phone, Mail, User, Clock, ChevronRight, MessageCircle, Link2,
   ChevronDown, Check, X as XIcon,
-  
+  FileText, Hash, Globe, Percent, NotebookPen,
 } from "lucide-react";
 
 import SelectRecipientsModal, {
@@ -84,6 +84,22 @@ interface Empresa {
   ultima_interacao: string | null;
   proxima_acao: string;
   observacoes?: string;
+  cnpj?: string;
+  site?: string;
+  data_proxima_acao?: string | null;
+  // vêm do LATERAL join do contato decisor em GET /empresas/{id}
+  contato_email?: string | null;
+  contato_celular?: string | null;
+}
+
+interface Orcamento {
+  orcamento_id: string;
+  titulo?: string | null;
+  status: string;
+  total: number | string | null;
+  criado_em?: string | null;
+  data_envio?: string | null;
+  data_decisao?: string | null;
 }
 
 interface Usuario {
@@ -110,6 +126,28 @@ function formatDate(d: string | null) {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("pt-BR");
 }
+
+// Mesmo vocabulário e mesmas cores do VendasPanel, para o orçamento não trocar
+// de cara quando o usuário vem de lá para cá.
+const STATUS_ORCAMENTO: Record<string, { label: string; color: string; bg: string }> = {
+  rascunho:      { label: "Rascunho",      color: "#566573", bg: "rgba(86,101,115,0.12)" },
+  enviado:       { label: "Enviado",       color: "#2980b9", bg: "rgba(41,128,185,0.12)" },
+  em_negociacao: { label: "Em negociação", color: "#d68910", bg: "rgba(214,137,16,0.13)" },
+  aprovado:      { label: "Aprovado",      color: "#1e8449", bg: "rgba(39,174,96,0.13)"  },
+  recusado:      { label: "Recusado",      color: "#c0392b", bg: "rgba(220,38,38,0.1)"   },
+};
+
+function brl(v: number) {
+  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+}
+
+const TABS = [
+  { key: "resumo",      label: "Resumo",      icon: FileText },
+  { key: "orcamentos",  label: "Orçamentos",  icon: DollarSign },
+  { key: "contatos",    label: "Contatos",    icon: Users },
+  { key: "observacoes", label: "Observações", icon: NotebookPen },
+  { key: "timeline",    label: "Timeline",    icon: Calendar },
+];
 
 function SendButton({
   color, bg, border, icon: Icon, label, onClick,
@@ -139,11 +177,23 @@ export default function EmpresaDetalhe() {
   const [empresa, setEmpresa]     = useState<Empresa | null>(null);
   const [contatos, setContatos]   = useState<Contato[]>([]);
   const [atividades, setAtividades] = useState<any[]>([]);
+  const [orcamentos, setOrcamentos] = useState<Orcamento[]>([]);
+  const [orcamentosErro, setOrcamentosErro] = useState(false);
   const [loading, setLoading]     = useState(true);
   const [usuario, setUsuario]     = useState<Usuario | null>(null);
   const [expandedContato, setExpandedContato] = useState<string | null>(null);
   const [editValor, setEditValor] = useState(false);
   const [valorDraft, setValorDraft] = useState("");
+
+  // Aba ativa espelhada na URL (?tab=), para dar link direto de fora — o sino de
+  // notificações e a tela de vendas apontam para abas específicas.
+  const tabParam = new URLSearchParams(location.search).get("tab") || "";
+  const tab = TABS.some(t => t.key === tabParam) ? tabParam : "resumo";
+  const setTab = (key: string) =>
+    navigate(`/clientes/${id}${key === "resumo" ? "" : `?tab=${key}`}`, {
+      replace: true,
+      state: location.state,
+    });
 
   // canal aberto no modal
   const [sendChannel, setSendChannel] = useState<SendChannel | null>(null);
@@ -168,6 +218,11 @@ export default function EmpresaDetalhe() {
           const aRes = await fetch(`${API}/empresas/${id}/atividades`, { headers });
           if (aRes.ok) setAtividades(await aRes.json());
         } catch {}
+        try {
+          const oRes = await fetch(`${API}/orcamentos?empresa_id=${id}`, { headers });
+          if (oRes.ok) { setOrcamentos(await oRes.json()); setOrcamentosErro(false); }
+          else setOrcamentosErro(true);
+        } catch { setOrcamentosErro(true); }
       } catch {}
       setLoading(false);
     };
@@ -270,6 +325,20 @@ export default function EmpresaDetalhe() {
     }
   };
 
+  // Métricas do card "Informações rápidas". Só o que tem fonte hoje: faturamento,
+  // budget e nº de vendas do mock dependem de vendas faturadas, que não existem.
+  // Mesmo critério do LATERAL join do backend em GET /empresas/{id}: decisor primeiro.
+  const contatoPrincipal = contatos.find(c => c.decisor) || contatos[0] || null;
+
+  const num = (v: number | string | null | undefined) => Number(v ?? 0) || 0;
+  const aprovados  = orcamentos.filter(o => o.status === "aprovado");
+  const recusados  = orcamentos.filter(o => o.status === "recusado");
+  const emAberto   = orcamentos.filter(o => o.status === "enviado" || o.status === "em_negociacao");
+  const decididos  = aprovados.length + recusados.length;
+  const conversao  = decididos ? Math.round((aprovados.length / decididos) * 100) : null;
+  const valorAprovado = aprovados.reduce((s, o) => s + num(o.total), 0);
+  const valorEmAberto = emAberto.reduce((s, o) => s + num(o.total), 0);
+
   const sc = empresa ? statusColor(empresa.status)      : statusColor("");
   const nomeUsuario  = usuario?.nome  || "...";
   const cargoUsuario = usuario?.cargo || "Administrador";
@@ -368,7 +437,7 @@ export default function EmpresaDetalhe() {
             <EmpresaNotificationBell
               empresaId={empresa.empresa_id}
               empresaNome={empresa.nome}
-              onVerComunicacoes={() => navigate(`/clientes/${id}?tab=comunicacoes`)}
+              onVerComunicacoes={() => navigate(`/clientes/${id}?tab=timeline`)}
             />
           )}
 
@@ -457,9 +526,51 @@ export default function EmpresaDetalhe() {
                     </div>
                   </div>
                 </div>
+
+                {/* Identificação — CNPJ, site e contato principal */}
+                <div style={{ marginTop:18, paddingTop:16, borderTop:"1px solid rgba(200,225,240,0.5)", display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))", gap:"8px 22px" }}>
+                  {[
+                    { icon: Hash,  label:"CNPJ",    value: empresa.cnpj },
+                    { icon: Globe, label:"Site",    value: empresa.site, href: empresa.site ? (empresa.site.startsWith("http") ? empresa.site : `https://${empresa.site}`) : undefined },
+                    { icon: User,  label:"Contato", value: contatoPrincipal ? `${contatoPrincipal.nome}${contatoPrincipal.funcao || contatoPrincipal.cargo ? ` — ${contatoPrincipal.funcao || contatoPrincipal.cargo}` : ""}` : undefined },
+                    { icon: Mail,  label:"E-mail",  value: contatoPrincipal?.email || empresa.contato_email || undefined },
+                    { icon: Phone, label:"Telefone", value: contatoPrincipal?.celular || contatoPrincipal?.telefone || empresa.contato_celular || undefined },
+                  ].map(({ icon: Icon, label, value, href }: any) => (
+                    <div key={label} style={{ display:"flex", alignItems:"center", gap:7, minWidth:0 }}>
+                      <Icon style={{ width:13, height:13, color:"rgba(41,128,185,0.75)", flexShrink:0 }} />
+                      <span style={{ fontSize:11, color:"rgba(20,45,70,0.45)", fontWeight:600, flexShrink:0 }}>{label}</span>
+                      {href && value ? (
+                        <a href={href} target="_blank" rel="noreferrer" style={{ fontSize:12, color:"#2980b9", fontWeight:600, textDecoration:"none", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{value}</a>
+                      ) : (
+                        <span style={{ fontSize:12, color: value ? "#0f2133" : "rgba(20,45,70,0.3)", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{value || "—"}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </motion.div>
 
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:18 }}>
+              {/* Abas */}
+              <div style={{ display:"flex", gap:4, overflowX:"auto", borderBottom:"1px solid rgba(200,225,240,0.7)" }}>
+                {TABS.map(t => {
+                  const on = tab === t.key;
+                  const badge = t.key === "orcamentos" && orcamentos.length ? orcamentos.length
+                              : t.key === "contatos"   && contatos.length   ? contatos.length
+                              : t.key === "timeline"   && atividades.length ? atividades.length
+                              : null;
+                  return (
+                    <button key={t.key} onClick={() => setTab(t.key)} style={{ display:"flex", alignItems:"center", gap:6, padding:"10px 14px", fontSize:13, fontWeight: on ? 700 : 600, color: on ? "#2980b9" : "rgba(20,45,70,0.5)", background:"none", border:"none", borderBottom:`2px solid ${on ? "#2980b9" : "transparent"}`, cursor:"pointer", whiteSpace:"nowrap", fontFamily:"'Plus Jakarta Sans',sans-serif", transition:"color 0.15s" }}>
+                      <t.icon style={{ width:14, height:14 }} />
+                      {t.label}
+                      {badge !== null && (
+                        <span style={{ fontSize:10, fontWeight:700, padding:"1px 6px", borderRadius:20, background: on ? "rgba(41,128,185,0.12)" : "rgba(149,165,166,0.15)", color: on ? "#2980b9" : "rgba(20,45,70,0.45)" }}>{badge}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {tab === "resumo" && (
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))", gap:18, alignItems:"start" }}>
                 {/* Informações */}
                 <motion.div className="glass-card" style={{ padding:"22px 24px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.07 }}>
                   <div style={{ fontSize:13, fontWeight:700, color:"#0f2133", marginBottom:16, display:"flex", alignItems:"center", gap:7 }}>
@@ -497,19 +608,114 @@ export default function EmpresaDetalhe() {
                       <span style={{ fontSize:12, color:"#0f2133", fontWeight:600 }}>{value || "—"}</span>
                     </div>
                   ))}
-                  {empresa.observacoes && (
-                    <div style={{ marginTop:14, padding:"12px 14px", borderRadius:10, background:"rgba(41,128,185,0.06)", border:"1px solid rgba(41,128,185,0.12)" }}>
-                      <div style={{ fontSize:11, fontWeight:700, color:"rgba(20,45,70,0.5)", marginBottom:5 }}>OBSERVAÇÕES</div>
-                      <p style={{ fontSize:12, color:"#0f2133", lineHeight:1.6 }}>{empresa.observacoes}</p>
+                </motion.div>
+
+                {/* Informações rápidas — só o que tem fonte hoje. Faturamento, budget e
+                    nº de vendas do mock dependem de vendas faturadas (fase 2). */}
+                <motion.div className="glass-card" style={{ padding:"22px 24px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.16 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#0f2133", marginBottom:16, display:"flex", alignItems:"center", gap:7 }}>
+                    <Percent style={{ width:15, height:15, color:"#1abc9c" }} /> Informações rápidas
+                  </div>
+                  {[
+                    { label:"Orçamentos",       value: orcamentos.length ? String(orcamentos.length) : "—" },
+                    { label:"Valor aprovado",   value: valorAprovado ? brl(valorAprovado) : "—" },
+                    { label:"Valor em aberto",  value: valorEmAberto ? brl(valorEmAberto) : "—" },
+                    { label:"Taxa de conversão", value: conversao !== null ? `${conversao}%` : "—",
+                      hint: conversao !== null ? `${aprovados.length} de ${decididos} decidido${decididos === 1 ? "" : "s"}` : "nenhum orçamento decidido" },
+                    { label:"Próximo contato",  value: formatDate(empresa.data_proxima_acao || null) },
+                  ].map(({ label, value, hint }: any) => (
+                    <div key={label} className="info-row" style={{ justifyContent:"space-between" }}>
+                      <span style={{ fontSize:12, color:"rgba(20,45,70,0.5)", fontWeight:600 }}>{label}</span>
+                      <span style={{ textAlign:"right" }}>
+                        <span style={{ fontSize:12, color:"#0f2133", fontWeight:700, fontVariantNumeric:"tabular-nums" }}>{value}</span>
+                        {hint && <span style={{ display:"block", fontSize:10, color:"rgba(20,45,70,0.4)" }}>{hint}</span>}
+                      </span>
+                    </div>
+                  ))}
+                </motion.div>
+              </div>
+              )}
+
+              {/* Observações */}
+              {tab === "observacoes" && (
+                <motion.div className="glass-card" style={{ padding:"22px 24px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.3 }}>
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+                    <div style={{ fontSize:13, fontWeight:700, color:"#0f2133", display:"flex", alignItems:"center", gap:7 }}>
+                      <NotebookPen style={{ width:15, height:15, color:"#2980b9" }} /> Observações
+                    </div>
+                    <button onClick={() => navigate(`/clientes/${id}/editar`)} style={{ height:30, padding:"0 12px", borderRadius:8, border:"1px solid rgba(41,128,185,0.3)", background:"rgba(41,128,185,0.06)", color:"#2980b9", fontSize:11.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"'Plus Jakarta Sans',sans-serif" }}>
+                      <Edit3 style={{ width:12, height:12 }} /> Editar
+                    </button>
+                  </div>
+                  {empresa.observacoes ? (
+                    <p style={{ fontSize:13, color:"#0f2133", lineHeight:1.7, whiteSpace:"pre-wrap" }}>{empresa.observacoes}</p>
+                  ) : (
+                    <div style={{ padding:"28px 0", textAlign:"center", fontSize:12, color:"rgba(20,45,70,0.4)" }}>Nenhuma observação registrada</div>
+                  )}
+                </motion.div>
+              )}
+
+              {/* Orçamentos */}
+              {tab === "orcamentos" && (
+                <motion.div className="glass-card" style={{ padding:"22px 24px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.3 }}>
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14, gap:12, flexWrap:"wrap" }}>
+                    <div style={{ fontSize:13, fontWeight:700, color:"#0f2133", display:"flex", alignItems:"center", gap:7 }}>
+                      <DollarSign style={{ width:15, height:15, color:"#27ae60" }} /> Orçamentos ({orcamentos.length})
+                    </div>
+                    <button onClick={() => navigate("/gerenciamento?tab=vendas")} style={{ height:30, padding:"0 12px", borderRadius:8, border:"1px solid rgba(41,128,185,0.3)", background:"rgba(41,128,185,0.06)", color:"#2980b9", fontSize:11.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"'Plus Jakarta Sans',sans-serif" }}>
+                      Gerenciar vendas <ChevronRight style={{ width:12, height:12 }} />
+                    </button>
+                  </div>
+
+                  {orcamentosErro ? (
+                    <div style={{ padding:"24px 0", textAlign:"center", fontSize:12, color:"rgba(192,57,43,0.75)", fontWeight:600 }}>
+                      Não foi possível carregar os orçamentos.
+                    </div>
+                  ) : orcamentos.length === 0 ? (
+                    <div style={{ padding:"28px 0", textAlign:"center" }}>
+                      <div style={{ width:44, height:44, borderRadius:"50%", background:"rgba(39,174,96,0.07)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 10px" }}>
+                        <DollarSign style={{ width:20, height:20, color:"rgba(39,174,96,0.35)" }} />
+                      </div>
+                      <div style={{ fontSize:12, color:"rgba(20,45,70,0.4)", fontWeight:600 }}>Nenhum orçamento para esta empresa</div>
+                      <div style={{ fontSize:11, color:"rgba(20,45,70,0.3)", marginTop:3 }}>Crie o primeiro em Gerenciamento → Vendas</div>
+                    </div>
+                  ) : (
+                    <div style={{ overflowX:"auto" }}>
+                      <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12.5 }}>
+                        <thead>
+                          <tr>
+                            {["Título", "Criado em", "Enviado em", "Status", "Total"].map((h, i) => (
+                              <th key={h} style={{ textAlign: i === 4 ? "right" : "left", padding:"8px 12px", fontSize:10.5, letterSpacing:"0.06em", textTransform:"uppercase", color:"rgba(20,45,70,0.45)", fontWeight:700, borderBottom:"1px solid rgba(200,225,240,0.7)", whiteSpace:"nowrap" }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {orcamentos.map(o => {
+                            const info = STATUS_ORCAMENTO[o.status] || STATUS_ORCAMENTO.rascunho;
+                            return (
+                              <tr key={o.orcamento_id}>
+                                <td style={{ padding:"10px 12px", borderBottom:"1px solid rgba(200,225,240,0.4)", color:"#0f2133", fontWeight:600 }}>{o.titulo || "Sem título"}</td>
+                                <td style={{ padding:"10px 12px", borderBottom:"1px solid rgba(200,225,240,0.4)", color:"rgba(20,45,70,0.6)", fontVariantNumeric:"tabular-nums", whiteSpace:"nowrap" }}>{formatDate(o.criado_em || null)}</td>
+                                <td style={{ padding:"10px 12px", borderBottom:"1px solid rgba(200,225,240,0.4)", color:"rgba(20,45,70,0.6)", fontVariantNumeric:"tabular-nums", whiteSpace:"nowrap" }}>{formatDate(o.data_envio || null)}</td>
+                                <td style={{ padding:"10px 12px", borderBottom:"1px solid rgba(200,225,240,0.4)" }}>
+                                  <span className="chip" style={{ background:info.bg, color:info.color }}>{info.label}</span>
+                                </td>
+                                <td style={{ padding:"10px 12px", borderBottom:"1px solid rgba(200,225,240,0.4)", textAlign:"right", color:"#0f2133", fontWeight:700, fontVariantNumeric:"tabular-nums", whiteSpace:"nowrap" }}>{brl(num(o.total))}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
                   )}
                 </motion.div>
-              </div>
+              )}
 
-              {/* Contatos + Atividades */}
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:18 }}>
+              {/* Contatos + Timeline */}
+              <div style={{ display:"grid", gridTemplateColumns:"1fr", gap:18 }}>
 
                 {/* Card único de contatos */}
+                {tab === "contatos" && (
                 <motion.div className="glass-card" style={{ padding:"22px 24px", display:"flex", flexDirection:"column", maxHeight:420 }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.18 }}>
                   <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
                     <div style={{ fontSize:13, fontWeight:700, color:"#0f2133", display:"flex", alignItems:"center", gap:7 }}>
@@ -602,8 +808,10 @@ export default function EmpresaDetalhe() {
                     </div>
                   )}
                 </motion.div>
+                )}
 
                 {/* Card de atividades */}
+                {tab === "timeline" && (
                 <motion.div className="glass-card" style={{ padding:"22px 24px", display:"flex", flexDirection:"column", maxHeight:420 }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.22 }}>
                   <div style={{ fontSize:13, fontWeight:700, color:"#0f2133", marginBottom:14, display:"flex", alignItems:"center", gap:7 }}>
                     <Calendar style={{ width:15, height:15, color:"#8e44ad" }} /> Atividades & Eventos
@@ -660,6 +868,7 @@ export default function EmpresaDetalhe() {
                     </div>
                   )}
                 </motion.div>
+                )}
               </div>
             </>
           ) : (
