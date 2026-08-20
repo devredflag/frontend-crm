@@ -154,7 +154,7 @@ const navItems = [
   { icon: Search,          label: "Buscar Empresas",           path: "/buscar",          active: false },
   { icon: Building2,       label: "Cadastrar Empresas",        path: "/empresas/nova",  active: true  },
   { icon: Users,           label: "Todos os clientes",         path: "/clientes",       active: false },
-  { icon: ClipboardList,   label: "Gerenciamento de clientes", path: "/gerenciamento",  active: false },
+  { icon: ClipboardList,   label: "Gerenciamento", path: "/gerenciamento",  active: false },
   { icon: Calendar,        label: "Calendário",                path: "/calendario",     active: false },
 ];
 

@@ -61,7 +61,7 @@ const navItems = [
   { icon: Search, label: "Buscar Empresas", path: "/buscar" },
   { icon: Building2, label: "Cadastrar Empresas", path: "/empresas/nova" },
   { icon: Users, label: "Todos os clientes", path: "/clientes" },
-  { icon: ClipboardList, label: "Gerenciamento de clientes", path: "/gerenciamento" },
+  { icon: ClipboardList, label: "Gerenciamento", path: "/gerenciamento" },
   { icon: Calendar, label: "Calendario", path: "/calendario" },
   { icon: UserRoundCog, label: "Equipe", path: "/equipe" },
 ];

@@ -62,7 +62,7 @@ const navItems = [
   { icon: Search,          label: "Buscar Empresas",           active: false },
   { icon: Building2,       label: "Cadastrar Empresas",        active: false },
   { icon: Users,           label: "Todos os clientes",         active: false },
-  { icon: ClipboardList,   label: "Gerenciamento de clientes", active: false },
+  { icon: ClipboardList,   label: "Gerenciamento", active: false },
   { icon: Calendar,        label: "Calendário",                active: false },
 ];
 
@@ -249,7 +249,7 @@ export default function TodosClientes() {
               if (item.label==="Buscar Empresas") navigate("/buscar");
               if (item.label==="Cadastrar Empresas") navigate("/empresas/nova");
               if (item.label==="Todos os clientes") navigate("/clientes");
-              if (item.label==="Gerenciamento de clientes") navigate("/gerenciamento");
+              if (item.label==="Gerenciamento") navigate("/gerenciamento");
               if (item.label==="Calendário") navigate("/calendario");
             }}>
               <item.icon style={{ width:16, height:16, flexShrink:0 }} />

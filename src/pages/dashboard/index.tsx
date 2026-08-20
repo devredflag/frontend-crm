@@ -12,6 +12,7 @@ import { getToken } from "../../services/auth";
     Trash2, CheckCheck, AlertTriangle, Info,
     CheckCircle2, Menu, UserRoundCog
   } from "lucide-react";
+  import VendasInsights from "../../components/VendasInsights";
   import useIsMobile from "../../hooks/useIsMobile";
 
     const css = `
@@ -74,7 +75,7 @@ import { getToken } from "../../services/auth";
       { icon: Search,          label: "Buscar Empresas",           active: false },
       { icon: Building2,       label: "Cadastrar Empresas",        active: false },
       { icon: Users,           label: "Todos os clientes",         active: false },
-      { icon: ClipboardList,   label: "Gerenciamento de clientes", active: false },
+      { icon: ClipboardList,   label: "Gerenciamento", active: false },
       { icon: Calendar,        label: "Calendário",                active: false },
     ];
 
@@ -151,6 +152,8 @@ import { getToken } from "../../services/auth";
       const isMobile = useIsMobile();
       const [menuOpen, setMenuOpen] = useState(false);
       const [activeFilter, setActiveFilter] = useState<FilterKey>("total");
+      // Dashboard dividido nas mesmas duas visões do Gerenciamento.
+      const [abaDash, setAbaDash] = useState<"clientes"|"vendas">("clientes");
       const [selectedAction, setSelectedAction] = useState<Empresa|null>(null);
       const [contatos, setContatos] = useState<Contato[]>([]);
       const [loadingContatos, setLoadingContatos] = useState(false);
@@ -328,7 +331,7 @@ import { getToken } from "../../services/auth";
                   if(item.label==="Todos os clientes")navigate("/clientes");
                   if(item.label==="Cadastrar Empresas")navigate("/empresas/nova");
                   if(item.label==="Calendário")navigate("/calendario");
-                  if(item.label==="Gerenciamento de clientes")navigate("/gerenciamento");
+                  if(item.label==="Gerenciamento")navigate("/gerenciamento");
                 }}>
                   <item.icon style={{width:16,height:16}}/>{item.label}
                 </div>
@@ -474,6 +477,28 @@ import { getToken } from "../../services/auth";
             </div>
 
             <div style={{padding:isMobile?"16px 14px 32px":"22px 28px 32px",display:"flex",flexDirection:"column",gap:18}}>
+
+              {/* Abas: visão de clientes x visão de vendas */}
+              <div style={{display:"flex",alignItems:"center",gap:8,borderBottom:"1px solid rgba(200,225,240,0.6)"}}>
+                {([
+                  {key:"clientes" as const, label:"Gerenciamento de clientes", icon:Users},
+                  {key:"vendas"   as const, label:"Gerenciamento de vendas",   icon:FileText},
+                ]).map(t=>{
+                  const ativo = abaDash===t.key;
+                  return (
+                    <button key={t.key} onClick={()=>setAbaDash(t.key)}
+                      style={{display:"flex",alignItems:"center",gap:7,padding:"9px 4px",marginRight:14,border:"none",background:"none",cursor:"pointer",
+                        fontSize:13,fontWeight:ativo?800:600,color:ativo?"#2980b9":"rgba(20,45,70,0.5)",
+                        borderBottom:ativo?"2.5px solid #2980b9":"2.5px solid transparent",marginBottom:-1}}>
+                      <t.icon style={{width:14,height:14}}/>
+                      {!isMobile && t.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {abaDash==="vendas" ? <VendasInsights /> : (
+              <>
 
               {/* Banner rascunhos */}
               <AnimatePresence>
@@ -778,7 +803,9 @@ import { getToken } from "../../services/auth";
                   )}
                 </motion.div>
               </div>
-            </div>  
+              </>
+              )}
+            </div>
           </div>
         </div>
       );

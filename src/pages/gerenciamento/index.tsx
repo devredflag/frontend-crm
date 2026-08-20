@@ -7,9 +7,12 @@ import {
   Calendar, BarChart3, Plus, RefreshCw, Eye,
   ChevronRight, MapPin, TrendingUp,
   X,
-  CalendarClock, Clock, Filter, AlertCircle, Menu, UserRoundCog,
+  CalendarClock, Clock, Filter, AlertCircle, Menu, UserRoundCog, FileText,
 } from "lucide-react";
 import useIsMobile from "../../hooks/useIsMobile";
+import VendasPanel from "./VendasPanel";
+import MapaProximidade from "../../components/MapaProximidade";
+import ListaEmpresasProximas from "../../components/ListaEmpresasProximas";
 
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
@@ -116,7 +119,7 @@ interface Empresa {
 
 interface Usuario { nome: string; cargo: string; is_gerente?: boolean; }
 
-type ViewMode = "kanban" | "lista";
+type ViewMode = "kanban" | "lista" | "mapa" | "proximas";
 type SortBy = "score" | "valor" | "proxima" | "parado" | "nome";
 
 const navItems = [
@@ -124,7 +127,7 @@ const navItems = [
   { icon: Search, label: "Buscar Empresas", active: false },
   { icon: Building2, label: "Cadastrar Empresas", active: false },
   { icon: Users, label: "Todos os clientes", active: false },
-  { icon: ClipboardList, label: "Gerenciamento de clientes", active: true },
+  { icon: ClipboardList, label: "Gerenciamento", active: true },
   { icon: Calendar, label: "Calendario", active: false },
 ];
 
@@ -226,6 +229,13 @@ export default function Gerenciamento() {
   // ✅ MUDANÇA 3: Painel de atrasadas
   const [showOverduePanel, setShowOverduePanel] = useState(false);
 
+  // Abas do Gerenciamento: carteira de clientes x orçamentos/vendas.
+  const [aba, setAba] = useState<"clientes"|"vendas">("clientes");
+  // Progresso da geocodificação em lote, usada pela visão de mapa.
+  const [geocode, setGeocode] = useState<{rodando:boolean;feitas:number;restantes:number|null}|null>(null);
+  // Separa quem ainda é lead novo de quem já virou cliente em andamento.
+  const [filtroLead, setFiltroLead] = useState<"todos"|"leads"|"clientes">("todos");
+
   // Token sempre fresco — garante que salva mesmo após re-login
   const hdrs = () => ({
     "Content-Type":"application/json",
@@ -248,6 +258,25 @@ export default function Gerenciamento() {
       if(m.ok) setUsuario(await m.json());
     } catch {}
     setLoading(false);
+  };
+
+  // Geocodifica empresas sem coordenada (em lotes) e recarrega o mapa.
+  const geocodificar = async () => {
+    if (geocode?.rodando) return;
+    setGeocode({ rodando: true, feitas: 0, restantes: null });
+    let feitas = 0;
+    try {
+      for (let i = 0; i < 200; i++) {
+        const res = await fetch(`${API}/empresas/geocodificar?limite=15`, { method: "POST", headers: hdrs() });
+        if (!res.ok) break;
+        const d = await res.json();
+        feitas += d.geocodificadas || 0;
+        setGeocode({ rodando: true, feitas, restantes: d.restantes ?? null });
+        if (!d.restantes || !d.processadas) break;
+      }
+    } catch {}
+    await fetchAll();
+    setGeocode({ rodando: false, feitas, restantes: 0 });
   };
 
   const updateLocal = (id: string, patch: Partial<Empresa>) => {
@@ -295,7 +324,9 @@ export default function Gerenciamento() {
         &&(filterSegmento==="Todos"||e.segmento===filterSegmento)
         &&(filterCidade==="Todas"||e.cidade===filterCidade)
         &&(filterOrigem==="Todas"||e.origem_lead===filterOrigem)
-        &&(filterAction==="Todas"||actionStatus===filterAction);
+        &&(filterAction==="Todas"||actionStatus===filterAction)
+        // Lead novo = ainda na 1a etapa do funil; cliente = já avançou dela.
+        &&(filtroLead==="todos"||(filtroLead==="leads"?e.status==="Lead":e.status!=="Lead"));
     })
     .sort((a,b)=>{
       if(sortBy==="nome") return a.nome.localeCompare(b.nome,"pt-BR");
@@ -366,7 +397,7 @@ export default function Gerenciamento() {
               if(item.label==="Buscar Empresas")navigate("/buscar");
               if(item.label==="Todos os clientes")navigate("/clientes");
               if(item.label==="Cadastrar Empresas")navigate("/empresas/nova");
-              if(item.label==="Gerenciamento de clientes")navigate("/gerenciamento");
+              if(item.label==="Gerenciamento")navigate("/gerenciamento");
               if(item.label==="Calendario")navigate("/calendario");
             }}>
               <item.icon style={{width:16,height:16,flexShrink:0}}/>{item.label}
@@ -411,9 +442,9 @@ export default function Gerenciamento() {
                 <RefreshCw style={{width:15,height:15,color:"#2980b9"}}/>
               </button>
               <div style={{display:"flex",gap:3,background:"rgba(255,255,255,0.55)",borderRadius:10,padding:3,border:"1px solid rgba(200,225,240,0.6)"}}>
-                {(["kanban","lista"] as const).map(v=>(
+                {(["kanban","lista","mapa","proximas"] as const).map(v=>(
                   <button key={v} onClick={()=>setView(v)} style={{padding:"5px 14px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:600,background:view===v?"#2980b9":"transparent",color:view===v?"#fff":"rgba(20,45,70,0.6)",transition:"all 0.18s"}}>
-                    {v==="kanban"?"Visão do funil":"Lista"}
+                    {v==="kanban"?"Visão do funil":v==="lista"?"Lista":v==="mapa"?"Mapa":"Próximas"}
                   </button>
                 ))}
               </div>
@@ -428,6 +459,19 @@ export default function Gerenciamento() {
               <Search style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",width:12,height:12,color:"rgba(20,45,70,0.35)"}}/>
               <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar empresa..." style={{width:"100%",height:34,paddingLeft:28,borderRadius:9,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.8)",fontSize:12,color:"#1a2e40",outline:"none"}}/>
             </div>
+            {/* Novos leads x clientes já em andamento — conversa com a aba de vendas */}
+            {([
+              {key:"todos"    as const, label:"Todos"},
+              {key:"leads"    as const, label:"Novos leads"},
+              {key:"clientes" as const, label:"Clientes"},
+            ]).map(f=>{
+              const active=filtroLead===f.key;
+              return(
+                <button key={f.key} onClick={()=>setFiltroLead(f.key)} style={{padding:"5px 12px",borderRadius:8,border:`1px solid ${active?"rgba(142,68,173,0.45)":"rgba(200,225,240,0.7)"}`,background:active?"rgba(142,68,173,0.1)":"rgba(255,255,255,0.6)",color:active?"#7d3c98":"rgba(20,45,70,0.55)",fontSize:11,fontWeight:700,cursor:"pointer",transition:"all 0.15s"}}>
+                  {f.label}
+                </button>
+              );
+            })}
             {["Todas","Quente","Morno","Frio"].map(t=>{
               const info=TEMPS.find(x=>x.key===t);
               const active=filterTemp===t;
@@ -489,6 +533,32 @@ export default function Gerenciamento() {
           </div>
         </div>
 
+        {/* Abas: Clientes x Vendas */}
+        <div style={{display:"flex",alignItems:"center",gap:8,padding:"0 24px",borderBottom:"1px solid rgba(200,225,240,0.5)",flexShrink:0}}>
+          {([
+            {key:"clientes" as const, label:"Gerenciamento de clientes", icon:Users},
+            {key:"vendas"   as const, label:"Gerenciamento de vendas",   icon:FileText},
+          ]).map(t=>{
+            const ativo = aba===t.key;
+            return (
+              <button
+                key={t.key}
+                onClick={()=>setAba(t.key)}
+                style={{display:"flex",alignItems:"center",gap:7,padding:"11px 4px",marginRight:14,border:"none",background:"none",cursor:"pointer",
+                  fontSize:13,fontWeight:ativo?800:600,color:ativo?"#2980b9":"rgba(20,45,70,0.5)",
+                  borderBottom:ativo?"2.5px solid #2980b9":"2.5px solid transparent",marginBottom:-1}}
+              >
+                <t.icon style={{width:14,height:14}}/>
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {aba==="vendas" ? (
+          <VendasPanel empresas={empresas.map(e=>({empresa_id:e.empresa_id,nome:e.nome}))} />
+        ) : (
+        <>
         {/* Board */}
         <div style={{flex:1,overflow:"auto",padding:"18px 24px"}}>
           {view==="kanban"&&(
@@ -675,6 +745,20 @@ export default function Gerenciamento() {
               })}
             </div>
           )}
+
+          {/* Mapa de proximidade das empresas da carteira */}
+          {view==="mapa"&&(
+            <div style={{background:"rgba(255,255,255,0.72)",backdropFilter:"blur(16px)",border:"1px solid rgba(255,255,255,0.9)",borderRadius:16,padding:"18px 20px"}}>
+              <MapaProximidade empresas={filtered} onGeocodificar={geocodificar} geocode={geocode} />
+            </div>
+          )}
+
+          {/* Empresas próximas da minha localização atual (Geolocation + Waze) */}
+          {view==="proximas"&&(
+            <div style={{background:"rgba(255,255,255,0.72)",backdropFilter:"blur(16px)",border:"1px solid rgba(255,255,255,0.9)",borderRadius:16,padding:"18px 20px"}}>
+              <ListaEmpresasProximas empresas={filtered} />
+            </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -720,6 +804,8 @@ export default function Gerenciamento() {
             </button>
           </div>
         </div>
+        </>
+        )}
       </div>
 
       {/* ✅ MUDANÇA 3: Painel lateral de ações atrasadas */}

@@ -141,7 +141,7 @@ import { getToken } from "../../../../services/auth";
     { icon: Search,          label: "Buscar Empresas",           path: null },
     { icon: Building2,       label: "Cadastrar Empresas",        path: "/empresas/nova" },
     { icon: Users,           label: "Todos os clientes",         path: "/clientes" },
-    { icon: ClipboardList,   label: "Gerenciamento de clientes", path: "/gerenciamento" },
+    { icon: ClipboardList,   label: "Gerenciamento", path: "/gerenciamento" },
     { icon: Calendar,        label: "Calendário",                path: "/calendario" },
   ];
 
