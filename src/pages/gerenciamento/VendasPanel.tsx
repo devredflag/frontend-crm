@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { getToken } from "../../services/auth";
 import useIsMobile from "../../hooks/useIsMobile";
+import { openEmail, openWhatsApp } from "../../utils/commPrefs";
 import {
   Plus, Send, Trash2, X, FileText, Package, Check, AlertCircle, Loader2,
   DollarSign, Wallet, Target, CalendarCheck, ArrowRight, Filter,
@@ -91,6 +92,15 @@ interface Insights {
 }
 interface EmpresaOpt { empresa_id: string; nome: string }
 
+// GET /orcamentos/{id}/previa-email — conteúdo pronto para envio manual.
+interface PreviaEmail {
+  destino: string | null;
+  telefone: string | null;
+  empresa_nome: string;
+  assunto: string;
+  texto: string;
+}
+
 function brl(v?: number | null) {
   return `R$ ${Number(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -121,6 +131,10 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
   const [editando, setEditando] = useState<Orcamento | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [enviandoId, setEnviandoId] = useState<string | null>(null);
+  // Quando o Resend recusa, o orçamento NÃO vira "enviado" (seria mentira: o
+  // cliente não recebeu). Guardamos o motivo e a prévia para o vendedor mandar
+  // por conta própria.
+  const [falhaEnvio, setFalhaEnvio] = useState<{ id: string; motivo: string; previa: PreviaEmail | null } | null>(null);
 
   const hdrs = () => ({
     "Content-Type": "application/json",
@@ -193,16 +207,38 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
   };
 
   const enviar = async (id: string) => {
-    setEnviandoId(id); setErro(null);
+    setEnviandoId(id); setErro(null); setFalhaEnvio(null);
     try {
       const res = await fetch(`${API}/orcamentos/${id}/enviar`, { method: "POST", headers: hdrs() });
-      if (res.ok) fetchTudo();
-      else {
-        const d = await res.json().catch(() => ({}));
-        setErro(d.detail || "Não foi possível enviar o orçamento.");
+      if (res.ok) { fetchTudo(); setEnviandoId(null); return; }
+      const d = await res.json().catch(() => ({}));
+      const motivo = typeof d.detail === "string" ? d.detail : "Não foi possível enviar o orçamento.";
+      // 502 = o email não saiu, mas o orçamento está íntegro. Oferecemos o
+      // caminho manual em vez de deixar o vendedor sem saída.
+      if (res.status === 502) {
+        let previa: PreviaEmail | null = null;
+        try {
+          const pRes = await fetch(`${API}/orcamentos/${id}/previa-email`, { headers: hdrs() });
+          if (pRes.ok) previa = await pRes.json();
+        } catch { /* sem prévia, mostramos só o motivo */ }
+        setFalhaEnvio({ id, motivo, previa });
+      } else {
+        setErro(motivo);
       }
     } catch { setErro("Erro de conexão ao enviar."); }
     setEnviandoId(null);
+  };
+
+  // Depois de enviar por fora, o vendedor marca o status na mão — o sistema não
+  // tem como saber que o email saiu por outro canal.
+  const marcarComoEnviado = async (id: string) => {
+    try {
+      const res = await fetch(`${API}/orcamentos/${id}/status`, {
+        method: "PUT", headers: hdrs(), body: JSON.stringify({ status: "enviado" }),
+      });
+      if (res.ok) { setFalhaEnvio(null); fetchTudo(); }
+      else setErro("Não foi possível atualizar o status.");
+    } catch { setErro("Erro de conexão ao atualizar o status."); }
   };
 
   const excluir = async (id: string) => {
@@ -287,6 +323,14 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
           );
         })}
       </div>
+
+      {falhaEnvio && (
+        <FalhaEnvioOrcamento
+          falha={falhaEnvio}
+          onFechar={() => setFalhaEnvio(null)}
+          onMarcarEnviado={() => marcarComoEnviado(falhaEnvio.id)}
+        />
+      )}
 
       {erro && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 10, background: "rgba(220,38,38,0.07)", border: "1px solid rgba(220,38,38,0.25)" }}>
@@ -1256,6 +1300,81 @@ function SeletorCatalogo({
             </button>
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+// ── Falha no envio automático do orçamento ────────────────────────────────
+// O orçamento continua como estava (não vira "enviado", porque o cliente não
+// recebeu). Aqui o vendedor vê o motivo e manda pelo próprio email/WhatsApp,
+// com o conteúdo já pronto.
+function FalhaEnvioOrcamento({
+  falha, onFechar, onMarcarEnviado,
+}: {
+  falha: { id: string; motivo: string; previa: PreviaEmail | null };
+  onFechar: () => void;
+  onMarcarEnviado: () => void;
+}) {
+  const [copiado, setCopiado] = useState(false);
+  const p = falha.previa;
+
+  const copiar = async () => {
+    if (!p) return;
+    try {
+      await navigator.clipboard.writeText(p.texto);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 1800);
+    } catch { /* sem clipboard: o texto fica visível para copiar à mão */ }
+  };
+
+  return (
+    <div style={{ padding: "13px 15px", borderRadius: 12, background: "rgba(217,119,6,0.07)", border: "1px solid rgba(217,119,6,0.3)" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 9 }}>
+        <AlertTriangle style={{ width: 16, height: 16, color: "#b45309", flexShrink: 0, marginTop: 1 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: "#b45309" }}>
+            O email automático não saiu — o orçamento continua intacto
+          </div>
+          <div style={{ fontSize: 12, color: "rgba(20,45,70,0.65)", marginTop: 4, lineHeight: 1.5 }}>
+            {falha.motivo}
+          </div>
+        </div>
+        <button onClick={onFechar} className="vp-icon-btn" aria-label="Fechar"
+          style={{ background: "none", color: "#b45309", width: 24, height: 24, flexShrink: 0 }}>
+          <X style={{ width: 13, height: 13 }} />
+        </button>
+      </div>
+
+      {p && (
+        <>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: "rgba(20,45,70,0.6)", margin: "12px 0 7px" }}>
+            Enviar você mesmo para {p.empresa_nome}:
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {p.destino && (
+              <button onClick={() => openEmail(p.destino!, undefined, p.assunto, p.texto)} className="vp-ghost" style={{ height: 34 }}>
+                <Send style={{ width: 12, height: 12 }} /> Abrir no meu email
+              </button>
+            )}
+            {p.telefone && (
+              <button onClick={() => openWhatsApp(p.telefone!)} className="vp-ghost" style={{ height: 34 }}>
+                <Send style={{ width: 12, height: 12 }} /> WhatsApp
+              </button>
+            )}
+            <button onClick={copiar} className="vp-ghost" style={{ height: 34 }}>
+              {copiado ? <><Check style={{ width: 12, height: 12 }} /> Copiado</> : "Copiar texto"}
+            </button>
+            <button onClick={onMarcarEnviado}
+              title="Use depois de enviar por fora — o sistema não tem como saber sozinho"
+              style={{ height: 34, padding: "0 14px", borderRadius: 9, border: "none", cursor: "pointer", background: "#b45309", color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 5 }}>
+              <Check style={{ width: 12, height: 12 }} /> Já enviei — marcar como enviado
+            </button>
+          </div>
+          <pre style={{ marginTop: 10, padding: "10px 12px", borderRadius: 9, background: "rgba(255,255,255,0.85)", border: "1px solid rgba(200,225,240,0.8)", fontSize: 11.5, lineHeight: 1.55, color: "#0f2133", whiteSpace: "pre-wrap", fontFamily: "inherit", maxHeight: 180, overflowY: "auto" }}>
+            {p.texto}
+          </pre>
+        </>
       )}
     </div>
   );

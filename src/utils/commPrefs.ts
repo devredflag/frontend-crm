@@ -22,19 +22,34 @@ export function getCommPrefs(): CommPrefs {
 // Referência global para reutilizar a aba de e-mail
 const mailTab: { ref: Window | null } = { ref: null };
 
-export function openEmail(email: string, forceProvider?: "gmail" | "outlook") {
+// `assunto` e `corpo` são opcionais e servem para abrir a janela de composição
+// já preenchida — usado quando o envio automático falha e o vendedor precisa
+// mandar o orçamento pelo próprio email. Chamadas antigas seguem funcionando.
+export function openEmail(
+  email: string,
+  forceProvider?: "gmail" | "outlook",
+  assunto?: string,
+  corpo?: string,
+) {
   const prefs = getCommPrefs();
   const provider = forceProvider || prefs.emailProvider || "outlook";
   const outlookMode = prefs.outlookMode || "web";
+  const su = assunto ? encodeURIComponent(assunto) : "";
+  const body = corpo ? encodeURIComponent(corpo) : "";
 
   let url = "";
   if (provider === "gmail") {
     url = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}`;
+    if (su) url += `&su=${su}`;
+    if (body) url += `&body=${body}`;
   } else if (outlookMode === "app") {
-    window.location.href = `mailto:${email}`;
+    const q = [su && `subject=${su}`, body && `body=${body}`].filter(Boolean).join("&");
+    window.location.href = `mailto:${email}${q ? `?${q}` : ""}`;
     return;
   } else {
     url = `https://outlook.live.com/mail/0/deeplink/compose?to=${encodeURIComponent(email)}`;
+    if (su) url += `&subject=${su}`;
+    if (body) url += `&body=${body}`;
   }
 
   if (mailTab.ref && !mailTab.ref.closed) {
