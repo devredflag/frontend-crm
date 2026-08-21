@@ -15,6 +15,7 @@ import useIsMobile from "../../../hooks/useIsMobile";
 
 // ── Import do modal de alterações não salvas ──────────────────
 import UnsavedChangesModal, { UnsavedChangesAction } from "../../../components/UnsavedChangesModal";
+import CardUsuario from "../../../components/CardUsuario";
 // Ajuste o caminho acima conforme onde você colocou o componente
 
 const API = "https://backend-crm-production-157b.up.railway.app";
@@ -457,7 +458,7 @@ export default function NovaEmpresa() {
   useEffect(() => {
     fetch(`${API}/me`, { headers: { Authorization: `Bearer ${getToken() || ""}` } })
       .then(r => (r.ok ? r.json() : null))
-      .then(d => { if (d?.is_gerente) setEhGerente(true); })
+      .then(d => { if (d?.is_gerente || d?.is_supervisor) setEhGerente(true); })
       .catch(() => {});
   }, []);
   const [segmentos, setSegmentos] = useState<string[]>(SEGMENTOS_PADRAO);
@@ -814,6 +815,7 @@ export default function NovaEmpresa() {
             </div>
           )}
         </nav>
+        <CardUsuario />
       </div>
 
       {/* Área principal */}

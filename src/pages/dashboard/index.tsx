@@ -1,11 +1,13 @@
 import { getToken } from "../../services/auth";
+import CardUsuario from "../../components/CardUsuario";
+import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGerenciamento";
   import { useState, useEffect, useRef } from "react";
     import { useNavigate } from "react-router-dom";
     import { motion, AnimatePresence } from "framer-motion";
     import {
     Users, Building2, MessageCircle, Send, Handshake,
     LayoutDashboard, Search, Bell, Calendar, Plus,
-    TrendingUp, ChevronDown, ChevronRight,
+    TrendingUp, ChevronRight,
     ClipboardList, BarChart3, RefreshCw,
     MapPin, Phone, Mail, User, ArrowRight,
     Eye, X, CalendarCheck, Repeat, FileText, Edit3,
@@ -279,14 +281,10 @@ import { getToken } from "../../services/auth";
       const previewList = filterMap[activeFilter];
       const activeCard  = metricCards.find(m=>m.key===activeFilter) || metricCards[0];
       const proximasAcoes = empresas.filter(e=>e.proxima_acao && e.status!=="Rascunho").slice(0,4);
-      const nomeUsuario = usuario?.nome||"...";
-      const cargoUsuario = usuario?.cargo||"Administrador";
-      const iniciaisUsuario = usuario ? initials(usuario.nome) : "?";
-      const corUsuario = usuario ? avatarColor(usuario.nome) : "#2980b9";
 
       return (
         <div style={{display:"flex",height:"100vh",overflow:"hidden",position:"relative"}}>
-          <style>{css}</style>
+          <style>{css + cssAbasGerenciamento}</style>
 
           {/* Background */}
           <div style={{position:"fixed",inset:0,zIndex:0,overflow:"hidden",pointerEvents:"none"}}>
@@ -336,20 +334,13 @@ import { getToken } from "../../services/auth";
                   <item.icon style={{width:16,height:16}}/>{item.label}
                 </div>
               ))}
-              {usuario?.is_gerente && (
+              {(usuario?.is_gerente || (usuario as any)?.is_supervisor) && (
                 <div className="nav-item" onClick={()=>navigate("/equipe")}>
                   <UserRoundCog style={{width:16,height:16}}/>Equipe
                 </div>
               )}
             </nav>
-            <div onClick={()=>navigate("/perfil")} style={{marginTop:16,padding:"12px",borderRadius:12,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.08)",display:"flex",alignItems:"center",gap:10,cursor:"pointer",transition:"background 0.18s"}} onMouseEnter={e=>(e.currentTarget.style.background="rgba(255,255,255,0.12)")} onMouseLeave={e=>(e.currentTarget.style.background="rgba(255,255,255,0.06)")}>
-              <div style={{width:34,height:34,borderRadius:"50%",background:`linear-gradient(135deg,${corUsuario},${corUsuario}cc)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"#fff",flexShrink:0}}>{iniciaisUsuario}</div>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:12,fontWeight:600,color:"#fff",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{nomeUsuario}</div>
-                <div style={{fontSize:10,color:"rgba(255,255,255,0.45)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{cargoUsuario}</div>
-              </div>
-              <ChevronDown style={{width:13,height:13,color:"rgba(255,255,255,0.4)",flexShrink:0}}/>
-            </div>
+            <CardUsuario />
           </div>
 
           {/* Main */}
@@ -478,24 +469,8 @@ import { getToken } from "../../services/auth";
 
             <div style={{padding:isMobile?"16px 14px 32px":"22px 28px 32px",display:"flex",flexDirection:"column",gap:18}}>
 
-              {/* Abas: visão de clientes x visão de vendas */}
-              <div style={{display:"flex",alignItems:"center",gap:8,borderBottom:"1px solid rgba(200,225,240,0.6)"}}>
-                {([
-                  {key:"clientes" as const, label:"Gerenciamento de clientes", icon:Users},
-                  {key:"vendas"   as const, label:"Gerenciamento de vendas",   icon:FileText},
-                ]).map(t=>{
-                  const ativo = abaDash===t.key;
-                  return (
-                    <button key={t.key} onClick={()=>setAbaDash(t.key)}
-                      style={{display:"flex",alignItems:"center",gap:7,padding:"9px 4px",marginRight:14,border:"none",background:"none",cursor:"pointer",
-                        fontSize:13,fontWeight:ativo?800:600,color:ativo?"#2980b9":"rgba(20,45,70,0.5)",
-                        borderBottom:ativo?"2.5px solid #2980b9":"2.5px solid transparent",marginBottom:-1}}>
-                      <t.icon style={{width:14,height:14}}/>
-                      {!isMobile && t.label}
-                    </button>
-                  );
-                })}
-              </div>
+              {/* Abas: visao de clientes x visao de vendas */}
+              <AbasGerenciamento aba={abaDash} onChange={setAbaDash} compacto />
 
               {abaDash==="vendas" ? <VendasInsights /> : (
               <>

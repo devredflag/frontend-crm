@@ -1,6 +1,6 @@
 import { getToken } from "../../services/auth";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   APIProvider, Map, AdvancedMarker, InfoWindow,
 } from "@vis.gl/react-google-maps";
@@ -11,6 +11,7 @@ import {
   Loader2, AlertCircle, Navigation2, Menu, UserRoundCog,
 } from "lucide-react";
 import useIsMobile from "../../hooks/useIsMobile";
+import CardUsuario from "../../components/CardUsuario";
 
 const API = "https://backend-crm-production-157b.up.railway.app";
 const MAPS_KEY = "AIzaSyBYLYOGC9tpf2uTjPPalfzvq06H_gV0dwM";
@@ -148,6 +149,12 @@ function ResultadoCard({
 
 export default function BuscarEmpresas() {
   const navigate = useNavigate();
+  const location = useLocation();
+  // Quando a busca é aberta a partir de uma empresa ("Prospectar novas aqui"),
+  // o centro do mapa vem dela — o usuário não redigita cidade nem endereço.
+  const origem = (location.state as any)?.origem as
+    | { lat: number; lng: number; nome?: string; cidade?: string; empresa_id?: string }
+    | undefined;
   const isMobile = useIsMobile();
   const [menuOpen, setMenuOpen] = useState(false);
   const [usuario, setUsuario] = useState<{ nome: string; cargo: string } | null>(null);
@@ -159,7 +166,9 @@ export default function BuscarEmpresas() {
   const [infoWindowId, setInfoWindowId] = useState<string | null>(null);
   const [totalRascunhos, setTotalRascunhos] = useState(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [mapCenter, setMapCenter] = useState({ lat: -15.7801, lng: -47.9292 });
+  const [mapCenter, setMapCenter] = useState(
+    origem ? { lat: origem.lat, lng: origem.lng } : { lat: -15.7801, lng: -47.9292 }
+  );
   const [myLocation, setMyLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [quotaExcedida, setQuotaExcedida] = useState(false);
   const [quotaResetTime, setQuotaResetTime] = useState<Date | null>(null);
@@ -171,7 +180,9 @@ export default function BuscarEmpresas() {
     fetch(`${API}/empresas/rascunhos`, { headers: hdrs() }).then(r => r.ok && r.json()).then(d => Array.isArray(d) && setTotalRascunhos(d.length));
     navigator.geolocation?.getCurrentPosition(pos => {
       const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-      setMapCenter(loc);
+      // Com origem definida por uma empresa, o GPS só alimenta "minha posição";
+      // o centro da busca continua sendo a empresa de referência.
+      if (!origem) setMapCenter(loc);
       setMyLocation(loc);
     });
     // Verifica quota travada
@@ -185,6 +196,8 @@ export default function BuscarEmpresas() {
         localStorage.removeItem("places_quota_until");
       }
     }
+    // Só na montagem: `origem` vem do state da rota e não muda enquanto a tela vive.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const buscar = useCallback(async (q: string) => {
@@ -283,21 +296,13 @@ export default function BuscarEmpresas() {
               <item.icon style={{ width:16, height:16, flexShrink:0 }} />{item.label}
             </div>
           ))}
-          {(usuario as any)?.is_gerente && (
+          {((usuario as any)?.is_gerente || (usuario as any)?.is_supervisor) && (
             <div className="nav-item" onClick={() => navigate("/equipe")}>
               <UserRoundCog style={{ width:16, height:16, flexShrink:0 }} />Equipe
             </div>
           )}
         </nav>
-        {usuario && (
-          <div onClick={() => navigate("/perfil")} style={{ marginTop:16, padding:"12px", borderRadius:12, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.08)", display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
-            <div style={{ width:34, height:34, borderRadius:"50%", background:`linear-gradient(135deg,${avatarColor(usuario.nome)},#1abc9c)`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#fff", flexShrink:0 }}>{initials(usuario.nome)}</div>
-            <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ fontSize:12, fontWeight:600, color:"#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{usuario.nome}</div>
-              <div style={{ fontSize:10, color:"rgba(255,255,255,0.45)" }}>{usuario.cargo || "Administrador"}</div>
-            </div>
-          </div>
-        )}
+        <CardUsuario />
       </div>
 
       {/* Main */}
@@ -314,6 +319,18 @@ export default function BuscarEmpresas() {
             <div style={{ fontSize:11, fontWeight:700, color:"rgba(20,45,70,0.45)", letterSpacing:"0.08em", textTransform:"uppercase" }}>Prospecção</div>
             <h1 style={{ fontSize:20, fontWeight:900, color:"#0f2133", letterSpacing:"-0.02em" }}>Buscar Empresas</h1>
           </div>
+          {/* Veio de uma empresa: mostra qual é a referência e o caminho de volta */}
+          {origem && (
+            <button
+              onClick={() => origem.empresa_id && navigate(`/clientes/${origem.empresa_id}?tab=proximas`)}
+              title="Voltar para a empresa de referência"
+              style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:20, border:"1.5px solid rgba(41,128,185,0.4)", background:"rgba(41,128,185,0.1)", color:"#2980b9", fontSize:12, fontWeight:700, cursor:"pointer", maxWidth:280, fontFamily:"inherit" }}>
+              <Navigation2 style={{ width:13, height:13, flexShrink:0 }} />
+              <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                Perto de {origem.nome || "empresa selecionada"}
+              </span>
+            </button>
+          )}
           {totalRascunhos > 0 && (
             <button onClick={() => navigate("/gerenciamento")} style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:20, border:"1.5px solid rgba(142,68,173,0.4)", background:"rgba(142,68,173,0.1)", color:"#7d3c98", fontSize:12, fontWeight:700, cursor:"pointer" }}>
               <ClipboardList style={{ width:13, height:13 }} />

@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft, User, Settings, Bell, Shield, Mail,
+  ArrowLeft, User, Bell, Shield, Mail,
   MessageCircle, Smartphone, Monitor, Check, ChevronRight,
   Globe, ExternalLink, Info, Save, BarChart3,
   LayoutDashboard, Building2, Users, UserRoundCog,
@@ -11,6 +11,7 @@ import {
   AlertTriangle, CalendarCheck, Repeat, Trash2, FileText, Menu
 } from "lucide-react";
 import useIsMobile from "../../hooks/useIsMobile";
+import CardUsuario from "../../components/CardUsuario";
 
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
@@ -282,20 +283,13 @@ export default function Perfil() {
               <item.icon style={{ width:16, height:16 }}/>{item.label}
             </div>
           ))}
-          {(usuario as any)?.is_gerente && (
+          {((usuario as any)?.is_gerente || (usuario as any)?.is_supervisor) && (
             <div className="nav-item" onClick={() => navigate("/equipe")}>
               <UserRoundCog style={{ width:16, height:16 }}/>Equipe
             </div>
           )}
         </nav>
-        <div style={{ marginTop:16, padding:"12px", borderRadius:12, background:"rgba(255,255,255,0.12)", border:"1px solid rgba(255,255,255,0.15)", display:"flex", alignItems:"center", gap:10 }}>
-          <div style={{ width:34, height:34, borderRadius:"50%", background:`linear-gradient(135deg,${corUsuario},${corUsuario}cc)`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#fff", flexShrink:0, animation:"pulse-ring 2.5s ease infinite" }}>{iniciaisUsu}</div>
-          <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontSize:12, fontWeight:600, color:"#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{nomeUsuario}</div>
-            <div style={{ fontSize:10, color:"rgba(255,255,255,0.55)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{cargoUsuario}</div>
-          </div>
-          <Settings style={{ width:13, height:13, color:"rgba(255,255,255,0.6)", flexShrink:0 }}/>
-        </div>
+        <CardUsuario />
       </div>
 
       {/* Main */}

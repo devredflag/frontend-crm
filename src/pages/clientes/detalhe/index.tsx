@@ -18,6 +18,8 @@ import SelectRecipientsModal, {
   EmailProvider,
 } from "../../../components/SelectRecipientsModal";
 import EmpresaNotificationBell from "../../../components/EmpresaNotificationBell";
+import CardUsuario from "../../../components/CardUsuario";
+import EmpresasProximasDaEmpresa from "../../../components/EmpresasProximasDaEmpresa";
 
 const API = "https://backend-crm-production-157b.up.railway.app";
 
@@ -90,6 +92,9 @@ interface Empresa {
   // vêm do LATERAL join do contato decisor em GET /empresas/{id}
   contato_email?: string | null;
   contato_celular?: string | null;
+  // usados pela aba "Próximas" — a busca parte da coordenada desta empresa
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 interface Orcamento {
@@ -100,13 +105,6 @@ interface Orcamento {
   criado_em?: string | null;
   data_envio?: string | null;
   data_decisao?: string | null;
-}
-
-interface Usuario {
-  nome: string;
-  email: string;
-  cargo: string;
-  empresa_nome: string;
 }
 
 function statusColor(s: string) {
@@ -145,6 +143,7 @@ const TABS = [
   { key: "resumo",      label: "Resumo",      icon: FileText },
   { key: "orcamentos",  label: "Orçamentos",  icon: DollarSign },
   { key: "contatos",    label: "Contatos",    icon: Users },
+  { key: "proximas",    label: "Próximas",    icon: MapPin },
   { key: "observacoes", label: "Observações", icon: NotebookPen },
   { key: "timeline",    label: "Timeline",    icon: Calendar },
 ];
@@ -180,7 +179,6 @@ export default function EmpresaDetalhe() {
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>([]);
   const [orcamentosErro, setOrcamentosErro] = useState(false);
   const [loading, setLoading]     = useState(true);
-  const [usuario, setUsuario]     = useState<Usuario | null>(null);
   const [expandedContato, setExpandedContato] = useState<string | null>(null);
   const [editValor, setEditValor] = useState(false);
   const [valorDraft, setValorDraft] = useState("");
@@ -206,14 +204,12 @@ export default function EmpresaDetalhe() {
       try {
         const token = getToken();
         const headers = { Authorization: `Bearer ${token}` };
-        const [empRes, contatosRes, meRes] = await Promise.all([
+        const [empRes, contatosRes] = await Promise.all([
           fetch(`${API}/empresas/${id}`,          { headers }),
           fetch(`${API}/empresas/${id}/contatos`, { headers }),
-          fetch(`${API}/me`,                      { headers }),
         ]);
         if (empRes.ok)      setEmpresa(await empRes.json());
         if (contatosRes.ok) setContatos(await contatosRes.json());
-        if (meRes.ok)       setUsuario(await meRes.json());
         try {
           const aRes = await fetch(`${API}/empresas/${id}/atividades`, { headers });
           if (aRes.ok) setAtividades(await aRes.json());
@@ -340,10 +336,6 @@ export default function EmpresaDetalhe() {
   const valorEmAberto = emAberto.reduce((s, o) => s + num(o.total), 0);
 
   const sc = empresa ? statusColor(empresa.status)      : statusColor("");
-  const nomeUsuario  = usuario?.nome  || "...";
-  const cargoUsuario = usuario?.cargo || "Administrador";
-  const corUsuario   = usuario ? avatarColor(usuario.nome) : "#2980b9";
-  const iniciaisUsu  = usuario ? initials(usuario.nome)    : "?";
 
   return (
     <div style={{ display:"flex", height:"100vh", overflow:"hidden", position:"relative" }}>
@@ -394,16 +386,7 @@ export default function EmpresaDetalhe() {
             </div>
           ))}
         </nav>
-        <div className="user-card" onClick={() => navigate("/perfil")}>
-          <div style={{ width:34, height:34, borderRadius:"50%", background:`linear-gradient(135deg,${corUsuario},${corUsuario}cc)`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#fff", flexShrink:0 }}>
-            {iniciaisUsu}
-          </div>
-          <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontSize:12, fontWeight:600, color:"#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{nomeUsuario}</div>
-            <div style={{ fontSize:10, color:"rgba(255,255,255,0.45)" }}>{cargoUsuario}</div>
-          </div>
-          <ChevronDown style={{ width:13, height:13, color:"rgba(255,255,255,0.4)", flexShrink:0 }} />
-        </div>
+        <CardUsuario />
       </div>
 
       {/* ── Main ── */}
@@ -807,6 +790,21 @@ export default function EmpresaDetalhe() {
                       </AnimatePresence>
                     </div>
                   )}
+                </motion.div>
+                )}
+
+                {/* Empresas próximas desta empresa — parte da coordenada dela,
+                    sem obrigar o usuário a voltar para a busca e redigitar cidade */}
+                {tab === "proximas" && (
+                <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.1 }}>
+                  <EmpresasProximasDaEmpresa
+                    empresaId={empresa.empresa_id}
+                    nome={empresa.nome}
+                    latitude={empresa.latitude}
+                    longitude={empresa.longitude}
+                    cidade={empresa.cidade}
+                    segmento={empresa.segmento}
+                  />
                 </motion.div>
                 )}
 

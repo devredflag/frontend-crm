@@ -1,4 +1,5 @@
 import { getToken } from "../../../../services/auth";
+import CardUsuario from "../../../../components/CardUsuario";
   import { useEffect, useMemo, useRef, useState } from "react";
   import { useParams, useNavigate } from "react-router-dom";
   import { motion, AnimatePresence } from "framer-motion";
@@ -294,7 +295,6 @@ import { getToken } from "../../../../services/auth";
     const [contatos, setContatos] = useState<any[]>([]);
     const [deletedContatoIds, setDeletedContatoIds] = useState<string[]>([]);
     const [toasts, setToasts] = useState<Toast[]>([]);
-    const [usuario, setUsuario] = useState<any>(null);
 
     const [form, setForm] = useState({
       nome:"", segmento:"", porte:"", cidade:"", endereco:"",
@@ -325,9 +325,8 @@ import { getToken } from "../../../../services/auth";
     useEffect(() => {
       const load = async () => {
         try {
-          const [empRes, meRes, segRes] = await Promise.all([
+          const [empRes, segRes] = await Promise.all([
             fetch(`${API}/empresas/${id}`, { headers: hdrs() }),
-            fetch(`${API}/me`, { headers: hdrs() }),
             fetch(`${API}/segmentos`),
           ]);
           if(!empRes.ok) { navigate("/clientes"); return; }
@@ -344,7 +343,6 @@ import { getToken } from "../../../../services/auth";
             ultima_interacao: dateOnly(emp.ultima_interacao),
             data_proxima_acao: dateOnly(emp.data_proxima_acao),
           });
-          if(meRes.ok) setUsuario(await meRes.json());
           if(segRes.ok) {
             const segData = await segRes.json();
             const arr = Array.isArray(segData) ? segData : segData.segmentos||[];
@@ -457,8 +455,6 @@ import { getToken } from "../../../../services/auth";
       }
     };
 
-    const initials = (n: string) => n?.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase()||"?";
-    const avatarColor = (n: string) => { const c=["#2980b9","#1abc9c","#8e44ad","#e67e22","#27ae60","#e74c3c"]; return c[(n?.charCodeAt(0)||0)%c.length]; };
 
     if(loading) return (
       <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(145deg,#c8e8f5,#c5eae0)"}}>
@@ -520,13 +516,7 @@ import { getToken } from "../../../../services/auth";
               </div>
             ))}
           </nav>
-          <div onClick={()=>navigate("/perfil")} style={{marginTop:16,padding:"12px",borderRadius:12,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.08)",display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onMouseEnter={e=>(e.currentTarget.style.background="rgba(255,255,255,0.12)")} onMouseLeave={e=>(e.currentTarget.style.background="rgba(255,255,255,0.06)")}>
-            <div style={{width:34,height:34,borderRadius:"50%",background:`linear-gradient(135deg,${avatarColor(usuario?.nome||"")},#1abc9c)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"#fff",flexShrink:0}}>{initials(usuario?.nome||"?")}</div>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:12,fontWeight:600,color:"#fff",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{usuario?.nome||"..."}</div>
-              <div style={{fontSize:10,color:"rgba(255,255,255,0.45)"}}>{usuario?.cargo||"Administrador"}</div>
-            </div>
-          </div>
+          <CardUsuario />
         </div>
 
         {/* Área principal */}

@@ -13,6 +13,8 @@ import useIsMobile from "../../hooks/useIsMobile";
 import VendasPanel from "./VendasPanel";
 import MapaProximidade from "../../components/MapaProximidade";
 import ListaEmpresasProximas from "../../components/ListaEmpresasProximas";
+import CardUsuario from "../../components/CardUsuario";
+import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGerenciamento";
 
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
@@ -354,7 +356,7 @@ export default function Gerenciamento() {
 
   return (
     <div style={{display:"flex",height:"100vh",overflow:"hidden",position:"relative"}}>
-      <style>{css}</style>
+      <style>{css + cssAbasGerenciamento}</style>
 
       {/* Background */}
       <div style={{position:"fixed",inset:0,zIndex:0,overflow:"hidden",pointerEvents:"none"}}>
@@ -403,19 +405,13 @@ export default function Gerenciamento() {
               <item.icon style={{width:16,height:16,flexShrink:0}}/>{item.label}
             </div>
           ))}
-          {usuario?.is_gerente && (
+          {(usuario?.is_gerente || (usuario as any)?.is_supervisor) && (
             <div className="nav-item" onClick={()=>navigate("/equipe")}>
               <UserRoundCog style={{width:16,height:16,flexShrink:0}}/>Equipe
             </div>
           )}
         </nav>
-        <div onClick={()=>navigate("/perfil")} style={{marginTop:16,padding:"12px",borderRadius:12,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.08)",display:"flex",alignItems:"center",gap:10,cursor:"pointer",transition:"background 0.18s"}} onMouseEnter={e=>(e.currentTarget.style.background="rgba(255,255,255,0.12)")} onMouseLeave={e=>(e.currentTarget.style.background="rgba(255,255,255,0.06)")}>
-          <div style={{width:34,height:34,borderRadius:"50%",background:`linear-gradient(135deg,${avatarColor(usuario?.nome||"")},#1abc9c)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"#fff",flexShrink:0}}>{initials(usuario?.nome||"?")}</div>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:12,fontWeight:600,color:"#fff",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{usuario?.nome||"..."}</div>
-            <div style={{fontSize:10,color:"rgba(255,255,255,0.45)"}}>{usuario?.cargo||"Administrador"}</div>
-          </div>
-        </div>
+        <CardUsuario />
       </div>
 
       {/* Main content */}
@@ -546,26 +542,9 @@ export default function Gerenciamento() {
           </>)}
         </div>
 
-        {/* Abas: Clientes x Vendas */}
-        <div style={{display:"flex",alignItems:"center",gap:8,padding:"0 24px",borderBottom:"1px solid rgba(200,225,240,0.5)",flexShrink:0}}>
-          {([
-            {key:"clientes" as const, label:"Gerenciamento de clientes", icon:Users},
-            {key:"vendas"   as const, label:"Gerenciamento de vendas",   icon:FileText},
-          ]).map(t=>{
-            const ativo = aba===t.key;
-            return (
-              <button
-                key={t.key}
-                onClick={()=>setAba(t.key)}
-                style={{display:"flex",alignItems:"center",gap:7,padding:"11px 4px",marginRight:14,border:"none",background:"none",cursor:"pointer",
-                  fontSize:13,fontWeight:ativo?800:600,color:ativo?"#2980b9":"rgba(20,45,70,0.5)",
-                  borderBottom:ativo?"2.5px solid #2980b9":"2.5px solid transparent",marginBottom:-1}}
-              >
-                <t.icon style={{width:14,height:14}}/>
-                {t.label}
-              </button>
-            );
-          })}
+        {/* Abas: Clientes x Vendas — as duas areas navegaveis da tela */}
+        <div style={{padding:isMobile?"12px 14px":"14px 24px",flexShrink:0,borderBottom:"1px solid rgba(200,225,240,0.5)"}}>
+          <AbasGerenciamento aba={aba} onChange={setAba} />
         </div>
 
         {aba==="vendas" ? (

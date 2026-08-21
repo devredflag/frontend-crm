@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { getToken } from "../../services/auth";
 import useIsMobile from "../../hooks/useIsMobile";
 import {
   Plus, Send, Trash2, X, FileText, Package, Check, AlertCircle, Loader2,
   DollarSign, Wallet, Target, CalendarCheck, ArrowRight, Filter,
+  ChevronDown, Download, Upload, FileSpreadsheet, AlertTriangle, Hash,
 } from "lucide-react";
 
 const API = "https://backend-crm-production-157b.up.railway.app";
@@ -42,13 +43,22 @@ const css = `
   .vp-bar:hover { background:#1abc9c; }
   .vp-facts > div { display:flex; justify-content:space-between; gap:10px; padding:7px 0; font-size:12.5px; border-bottom:1px solid rgba(200,225,240,0.45); }
   .vp-facts > div:last-child { border-bottom:0; }
+  .vp-catalogo-btn:hover:not(:disabled) { border-color:rgba(41,128,185,0.6) !important; box-shadow:0 4px 14px rgba(41,128,185,0.20) !important; transform:translateY(-1px); }
+  .vp-catalogo-btn:focus-visible { outline:2px solid #2980b9; outline-offset:2px; }
+  .vp-catalogo-item:hover { background:rgba(41,128,185,0.07); }
+  .vp-catalogo-item:focus-visible { outline:2px solid #2980b9; outline-offset:-2px; }
+  .vp-catalogo-item:last-child { border-bottom:0; }
+  .vp-avulso:focus-visible { outline:2px solid #2980b9; outline-offset:2px; }
+  .vp-import-row:nth-child(even) { background:rgba(41,128,185,0.035); }
 `;
 
 interface Equipamento {
   equipamento_id: string;
+  codigo: string | null;      // SKU — identifica o item numa reimportação
   nome: string;
   descricao: string | null;
   preco_base: number;
+  quantidade: number;         // saldo em estoque
   ativo: boolean;
 }
 interface Item {
@@ -523,8 +533,34 @@ function CatalogoEquipamentos({
   onErro: (m: string) => void;
 }) {
   const [nome, setNome] = useState("");
+  const [codigo, setCodigo] = useState("");
   const [preco, setPreco] = useState("");
+  const [quantidade, setQuantidade] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const [importando, setImportando] = useState(false);
+  const [baixando, setBaixando] = useState(false);
+
+  // O modelo vem do backend (gerado a partir dos campos reais do catálogo) e
+  // exige o header de autenticação — por isso não é um <a href> simples.
+  const baixarModelo = async () => {
+    setBaixando(true);
+    try {
+      const res = await fetch(`${API}/equipamentos/modelo-importacao`, {
+        headers: { Authorization: hdrs().Authorization },
+      });
+      if (!res.ok) { onErro("Não foi possível gerar o modelo de importação."); return; }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "modelo-catalogo-prospectageo.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch { onErro("Erro de conexão ao baixar o modelo."); }
+    setBaixando(false);
+  };
 
   const adicionar = async () => {
     if (!nome.trim()) return;
@@ -532,10 +568,18 @@ function CatalogoEquipamentos({
     try {
       const res = await fetch(`${API}/equipamentos`, {
         method: "POST", headers: hdrs(),
-        body: JSON.stringify({ nome: nome.trim(), preco_base: Number(preco.replace(",", ".")) || 0 }),
+        body: JSON.stringify({
+          nome: nome.trim(),
+          codigo: codigo.trim() || null,
+          preco_base: Number(preco.replace(",", ".")) || 0,
+          quantidade: Number(quantidade) || 0,
+        }),
       });
-      if (res.ok) { setNome(""); setPreco(""); onMudou(); }
-      else onErro("Não foi possível cadastrar o equipamento.");
+      if (res.ok) { setNome(""); setCodigo(""); setPreco(""); setQuantidade(""); onMudou(); }
+      else {
+        const d = await res.json().catch(() => ({}));
+        onErro(typeof d.detail === "string" ? d.detail : "Não foi possível cadastrar o equipamento.");
+      }
     } catch { onErro("Erro de conexão ao cadastrar."); }
     setSalvando(false);
   };
@@ -551,16 +595,35 @@ function CatalogoEquipamentos({
 
   return (
     <section className="vp-card" style={{ overflow: "hidden" }}>
-      <div style={{ padding: "15px 18px", borderBottom: "1px solid rgba(200,225,240,0.7)" }}>
-        <h3 style={{ fontSize: 14.5, fontWeight: 800, color: "#0f2133", letterSpacing: "-0.01em" }}>Catálogo de equipamentos</h3>
-        <p style={{ fontSize: 12, color: "rgba(20,45,70,0.5)", marginTop: 2 }}>Itens reutilizáveis na montagem dos orçamentos.</p>
+      <div style={{ padding: "15px 18px", borderBottom: "1px solid rgba(200,225,240,0.7)", display: "flex", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <h3 style={{ fontSize: 14.5, fontWeight: 800, color: "#0f2133", letterSpacing: "-0.01em" }}>Catálogo de equipamentos</h3>
+          <p style={{ fontSize: 12, color: "rgba(20,45,70,0.5)", marginTop: 2 }}>Itens reutilizáveis na montagem dos orçamentos.</p>
+        </div>
+        {/* Estoque/catálogo em Excel: baixar o modelo oficial e importar de volta */}
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button onClick={baixarModelo} disabled={baixando} className="vp-ghost" style={{ height: 36, padding: "0 12px" }}>
+            {baixando
+              ? <Loader2 style={{ width: 13, height: 13, animation: "spin 1s linear infinite" }} />
+              : <Download style={{ width: 13, height: 13 }} />}
+            Baixar modelo
+          </button>
+          <button onClick={() => setImportando(true)}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 9, border: "1.5px solid rgba(41,128,185,0.35)", background: "linear-gradient(135deg,rgba(41,128,185,0.12),rgba(26,188,156,0.10))", color: "#15547f", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+            <Upload style={{ width: 13, height: 13 }} /> Importar Excel
+          </button>
+        </div>
       </div>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", padding: "14px 18px", borderBottom: "1px solid rgba(200,225,240,0.7)" }}>
+        <input value={codigo} onChange={e => setCodigo(e.target.value)} onKeyDown={e => e.key === "Enter" && adicionar()}
+          placeholder="Código / SKU" aria-label="Código ou SKU do equipamento" style={{ ...inputStyle, width: 130 }} />
         <input value={nome} onChange={e => setNome(e.target.value)} onKeyDown={e => e.key === "Enter" && adicionar()}
-          placeholder="Nome do equipamento" style={{ ...inputStyle, flex: 1, minWidth: 200 }} />
+          placeholder="Nome do equipamento" aria-label="Nome do equipamento" style={{ ...inputStyle, flex: 1, minWidth: 180 }} />
+        <input value={quantidade} onChange={e => setQuantidade(e.target.value.replace(/[^\d]/g, ""))} onKeyDown={e => e.key === "Enter" && adicionar()}
+          placeholder="Qtd." aria-label="Quantidade em estoque" className="vp-num" style={{ ...inputStyle, width: 84, textAlign: "center" }} />
         <input value={preco} onChange={e => setPreco(e.target.value.replace(/[^\d.,]/g, ""))} onKeyDown={e => e.key === "Enter" && adicionar()}
-          placeholder="Preço base" className="vp-num" style={{ ...inputStyle, width: 140 }} />
+          placeholder="Preço base" aria-label="Preço base" className="vp-num" style={{ ...inputStyle, width: 130 }} />
         <button onClick={adicionar} disabled={salvando || !nome.trim()}
           style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 18px", height: 40, borderRadius: 10, border: "none", color: "#fff", fontSize: 12.5, fontWeight: 700, fontFamily: "inherit", background: "linear-gradient(135deg,#2980b9,#1abc9c)", cursor: salvando || !nome.trim() ? "not-allowed" : "pointer", opacity: salvando || !nome.trim() ? 0.5 : 1 }}>
           <Plus style={{ width: 14, height: 14 }} /> Cadastrar
@@ -577,11 +640,14 @@ function CatalogoEquipamentos({
         <div style={{ overflowX: "auto" }}>
           <table className="vp-table">
             <thead>
-              <tr><th>Equipamento</th><th>Descrição</th><th className="r">Preço base</th><th className="r">Ações</th></tr>
+              <tr><th>Código</th><th>Equipamento</th><th>Descrição</th><th className="r">Estoque</th><th className="r">Preço base</th><th className="r">Ações</th></tr>
             </thead>
             <tbody>
               {equipamentos.map(e => (
                 <tr key={e.equipamento_id}>
+                  <td className="vp-num" style={{ color: e.codigo ? "rgba(20,45,70,0.7)" : "rgba(20,45,70,0.3)", fontWeight: 700, whiteSpace: "nowrap" }}>
+                    {e.codigo || "—"}
+                  </td>
                   <td style={{ fontWeight: 700 }}>
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                       <Package style={{ width: 14, height: 14, color: "#2980b9", flexShrink: 0 }} />
@@ -589,6 +655,9 @@ function CatalogoEquipamentos({
                     </span>
                   </td>
                   <td style={{ color: "rgba(20,45,70,0.6)" }}>{e.descricao || "—"}</td>
+                  <td className="vp-num r" style={{ fontWeight: 700, color: e.quantidade > 0 ? "#1e8449" : "rgba(20,45,70,0.35)" }}>
+                    {e.quantidade ?? 0}
+                  </td>
                   <td className="vp-num r" style={{ fontWeight: 800, whiteSpace: "nowrap" }}>{brl(e.preco_base)}</td>
                   <td className="r">
                     <button onClick={() => desativar(e.equipamento_id)} className="vp-icon-btn"
@@ -603,7 +672,259 @@ function CatalogoEquipamentos({
           </table>
         </div>
       )}
+
+      {importando && (
+        <ImportarCatalogo
+          hdrs={hdrs}
+          onFechar={() => setImportando(false)}
+          onImportado={() => { setImportando(false); onMudou(); }}
+        />
+      )}
     </section>
+  );
+}
+
+// ── Importação de catálogo/estoque por Excel ──────────────────
+// Dois passos com o MESMO arquivo: o primeiro POST valida e devolve a prévia
+// (nada é gravado), o segundo confirma. O mapeamento das colunas é feito no
+// backend pelo NOME do cabeçalho — reordenar colunas no Excel não embaralha os
+// dados. Aqui só mostramos o que o servidor entendeu antes de gravar.
+interface LinhaPrevia {
+  linha: number;
+  codigo: string | null;
+  nome: string;
+  descricao: string | null;
+  quantidade: number;
+  preco_base: number;
+  acao: "criar" | "atualizar";
+}
+interface Previa {
+  colunas_reconhecidas: Record<string, number>;
+  linha_cabecalho: number;
+  total_linhas: number;
+  validos: LinhaPrevia[];
+  erros: string[];
+  resumo: { validos: number; com_erro: number; criar: number; atualizar: number };
+}
+
+function ImportarCatalogo({
+  hdrs, onFechar, onImportado,
+}: {
+  hdrs: () => Record<string, string>;
+  onFechar: () => void;
+  onImportado: () => void;
+}) {
+  const [arquivo, setArquivo] = useState<File | null>(null);
+  const [previa, setPrevia] = useState<Previa | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+  const [sucesso, setSucesso] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const enviar = async (f: File, confirmar: boolean) => {
+    setOcupado(true);
+    setErro(null);
+    try {
+      const fd = new FormData();
+      fd.append("arquivo", f);
+      // Só o Authorization: o Content-Type do multipart é montado pelo browser.
+      const res = await fetch(`${API}/equipamentos/importar?confirmar=${confirmar}`, {
+        method: "POST",
+        headers: { Authorization: hdrs().Authorization },
+        body: fd,
+      });
+      const dados = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        // Traduz o erro técnico do backend em algo acionável, sem "Erro 500".
+        setErro(typeof dados.detail === "string"
+          ? dados.detail
+          : "Não foi possível ler a planilha. Confira se é um arquivo .xlsx válido.");
+        if (confirmar) setPrevia(p => p);
+        return;
+      }
+      if (confirmar) {
+        setSucesso(`Importação concluída: ${dados.criados} item(ns) criado(s) e ${dados.atualizados} atualizado(s).`);
+        setTimeout(onImportado, 1400);
+      } else {
+        setPrevia(dados as Previa);
+      }
+    } catch {
+      setErro("Erro de conexão ao enviar a planilha.");
+    }
+    setOcupado(false);
+  };
+
+  const escolher = (f: File | null) => {
+    setPrevia(null); setErro(null); setSucesso(null); setArquivo(f);
+    if (f) enviar(f, false);
+  };
+
+  const podeGravar = !!previa && previa.resumo.com_erro === 0 && previa.resumo.validos > 0;
+
+  return (
+    <div onClick={onFechar}
+      style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(10,31,51,0.42)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div onClick={e => e.stopPropagation()}
+        style={{ width: "100%", maxWidth: 720, maxHeight: "90vh", overflowY: "auto", background: "rgba(255,255,255,0.98)", borderRadius: 18, padding: 24, boxShadow: "0 24px 64px rgba(10,31,51,0.32)" }}>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+          <div style={{ width: 34, height: 34, borderRadius: 10, background: "rgba(39,174,96,0.14)", display: "grid", placeItems: "center" }}>
+            <FileSpreadsheet style={{ width: 17, height: 17, color: "#1e8449" }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 16, fontWeight: 900, color: "#0f2133" }}>Importar catálogo do Excel</div>
+            <div style={{ fontSize: 11.5, color: "rgba(20,45,70,0.55)", marginTop: 1 }}>
+              As colunas são reconhecidas pelo nome do cabeçalho — pode reordená-las à vontade.
+            </div>
+          </div>
+          <button onClick={onFechar} className="vp-icon-btn" aria-label="Fechar"
+            style={{ width: 30, height: 30, background: "rgba(200,225,240,0.4)", color: "rgba(20,45,70,0.6)" }}>
+            <X style={{ width: 15, height: 15 }} />
+          </button>
+        </div>
+
+        {/* Passo 1 — escolher o arquivo */}
+        <button
+          onClick={() => inputRef.current?.click()}
+          disabled={ocupado}
+          style={{
+            width: "100%", padding: "22px 16px", borderRadius: 12, cursor: ocupado ? "wait" : "pointer",
+            border: "1.5px dashed rgba(41,128,185,0.45)", background: "rgba(41,128,185,0.05)",
+            fontFamily: "inherit", textAlign: "center",
+          }}
+        >
+          <Upload style={{ width: 20, height: 20, color: "#2980b9" }} />
+          <div style={{ fontSize: 13, fontWeight: 800, color: "#15547f", marginTop: 6 }}>
+            {arquivo ? arquivo.name : "Escolher planilha (.xlsx)"}
+          </div>
+          <div style={{ fontSize: 11, color: "rgba(20,45,70,0.5)", marginTop: 2 }}>
+            {arquivo ? "Clique para trocar o arquivo" : "Use o modelo de importação para garantir os nomes das colunas"}
+          </div>
+        </button>
+        <input ref={inputRef} type="file" accept=".xlsx,.xlsm" style={{ display: "none" }}
+          onChange={e => escolher(e.target.files?.[0] || null)} />
+
+        {ocupado && !sucesso && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14, fontSize: 12.5, fontWeight: 700, color: "rgba(20,45,70,0.6)" }}>
+            <Loader2 style={{ width: 14, height: 14, animation: "spin 1s linear infinite" }} />
+            Lendo e validando a planilha…
+          </div>
+        )}
+
+        {erro && (
+          <div style={{ display: "flex", gap: 8, marginTop: 14, padding: "11px 13px", borderRadius: 10, background: "rgba(220,38,38,0.07)", border: "1px solid rgba(220,38,38,0.2)" }}>
+            <AlertTriangle style={{ width: 15, height: 15, color: "#c0392b", flexShrink: 0, marginTop: 1 }} />
+            <span style={{ fontSize: 12.5, fontWeight: 600, color: "#a93226", lineHeight: 1.45 }}>{erro}</span>
+          </div>
+        )}
+
+        {sucesso && (
+          <div style={{ display: "flex", gap: 8, marginTop: 14, padding: "11px 13px", borderRadius: 10, background: "rgba(39,174,96,0.09)", border: "1px solid rgba(39,174,96,0.25)" }}>
+            <Check style={{ width: 15, height: 15, color: "#1e8449", flexShrink: 0, marginTop: 1 }} />
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: "#1e8449" }}>{sucesso}</span>
+          </div>
+        )}
+
+        {/* Passo 2 — prévia do que será gravado */}
+        {previa && !sucesso && (
+          <div style={{ marginTop: 16 }}>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+              {[
+                { rotulo: "Linhas lidas", valor: previa.total_linhas, cor: "#566573" },
+                { rotulo: "Válidas", valor: previa.resumo.validos, cor: "#1e8449" },
+                { rotulo: "Com erro", valor: previa.resumo.com_erro, cor: previa.resumo.com_erro ? "#c0392b" : "#566573" },
+                { rotulo: "Novos", valor: previa.resumo.criar, cor: "#2980b9" },
+                { rotulo: "Atualizados", valor: previa.resumo.atualizar, cor: "#d68910" },
+              ].map(c => (
+                <div key={c.rotulo} style={{ flex: "1 1 96px", padding: "9px 11px", borderRadius: 10, background: "rgba(255,255,255,0.8)", border: "1px solid rgba(200,225,240,0.8)" }}>
+                  <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: "0.05em", textTransform: "uppercase", color: "rgba(20,45,70,0.45)" }}>{c.rotulo}</div>
+                  <div className="vp-num" style={{ fontSize: 18, fontWeight: 900, color: c.cor }}>{c.valor}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Prova de que o servidor casou cada coluna pelo cabeçalho */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 12, fontSize: 11, color: "rgba(20,45,70,0.55)" }}>
+              <Hash style={{ width: 12, height: 12 }} />
+              <span style={{ fontWeight: 700 }}>Colunas reconhecidas:</span>
+              {Object.keys(previa.colunas_reconhecidas).map(nome => (
+                <span key={nome} style={{ padding: "2px 8px", borderRadius: 20, background: "rgba(41,128,185,0.1)", color: "#2980b9", fontWeight: 700 }}>{nome}</span>
+              ))}
+            </div>
+
+            {previa.erros.length > 0 && (
+              <div style={{ marginBottom: 12, padding: "11px 13px", borderRadius: 10, background: "rgba(220,38,38,0.06)", border: "1px solid rgba(220,38,38,0.2)" }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#a93226", marginBottom: 6 }}>
+                  {previa.resumo.com_erro} problema(s) — corrija na planilha e envie de novo:
+                </div>
+                <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 3 }}>
+                  {previa.erros.map((e, i) => (
+                    <li key={i} style={{ fontSize: 12, color: "#a93226", lineHeight: 1.45 }}>{e}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {previa.validos.length > 0 && (
+              <div style={{ maxHeight: 240, overflowY: "auto", borderRadius: 10, border: "1px solid rgba(200,225,240,0.8)" }}>
+                <table className="vp-table">
+                  <thead>
+                    <tr><th>Linha</th><th>Código</th><th>Nome</th><th className="r">Qtd</th><th className="r">Preço</th><th>Ação</th></tr>
+                  </thead>
+                  <tbody>
+                    {previa.validos.map(l => (
+                      <tr key={l.linha} className="vp-import-row">
+                        <td className="vp-num" style={{ color: "rgba(20,45,70,0.45)" }}>{l.linha}</td>
+                        <td className="vp-num">{l.codigo || "—"}</td>
+                        <td style={{ fontWeight: 700 }}>{l.nome}</td>
+                        <td className="vp-num r">{l.quantidade}</td>
+                        <td className="vp-num r" style={{ whiteSpace: "nowrap" }}>{brl(l.preco_base)}</td>
+                        <td>
+                          <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 8px", borderRadius: 20,
+                            background: l.acao === "criar" ? "rgba(41,128,185,0.12)" : "rgba(214,137,16,0.14)",
+                            color: l.acao === "criar" ? "#2980b9" : "#a9700c" }}>
+                            {l.acao === "criar" ? "novo" : "atualiza"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {previa.resumo.validos === 0 && previa.resumo.com_erro === 0 && (
+              <div style={{ padding: "26px 14px", textAlign: "center", fontSize: 12.5, fontWeight: 700, color: "rgba(20,45,70,0.45)" }}>
+                A planilha não tem nenhuma linha preenchida.
+              </div>
+            )}
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 18, paddingTop: 14, borderTop: "1px solid rgba(200,225,240,0.7)" }}>
+          <button onClick={onFechar} className="vp-ghost" style={{ height: 40, padding: "0 16px", fontSize: 13 }}>
+            {sucesso ? "Fechar" : "Cancelar"}
+          </button>
+          <button
+            onClick={() => arquivo && enviar(arquivo, true)}
+            disabled={!podeGravar || ocupado || !!sucesso}
+            title={previa && previa.resumo.com_erro > 0 ? "Corrija os erros antes de importar" : undefined}
+            style={{
+              display: "flex", alignItems: "center", gap: 6, height: 40, padding: "0 20px", borderRadius: 10,
+              border: "none", color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: "inherit",
+              background: "linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)", backgroundSize: "200% 200%",
+              animation: "gradientShift 4s ease infinite",
+              cursor: podeGravar && !ocupado && !sucesso ? "pointer" : "not-allowed",
+              opacity: podeGravar && !ocupado && !sucesso ? 1 : 0.5,
+            }}>
+            {ocupado
+              ? <Loader2 style={{ width: 14, height: 14, animation: "spin 1s linear infinite" }} />
+              : <Check style={{ width: 14, height: 14 }} />}
+            Confirmar importação
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -704,27 +1025,62 @@ function EditorOrcamento({
           </div>
 
           <div>
-            <span style={label}>Itens</span>
-            <div style={{ display: "flex", gap: 8, marginTop: 5, marginBottom: 10, flexWrap: "wrap" }}>
-              <select value="" onChange={e => e.target.value && addDoCatalogo(e.target.value)} aria-label="Adicionar item do catálogo"
-                style={{ ...field, marginTop: 0, flex: 1, minWidth: 180, height: 38, fontSize: 12, cursor: "pointer" }}>
-                <option value="">+ Adicionar do catálogo…</option>
-                {equipamentos.map(eq => <option key={eq.equipamento_id} value={eq.equipamento_id}>{eq.nome} — {brl(eq.preco_base)}</option>)}
-              </select>
-              <button onClick={() => setItens(prev => [...prev, { equipamento_id: null, descricao: "", quantidade: 1, preco_unitario: 0 }])}
-                className="vp-ghost" style={{ height: 38, padding: "0 14px" }}>
-                <Plus style={{ width: 13, height: 13 }} /> Item avulso
-              </button>
+            {/* ITENS — o caminho principal é pegar do catálogo; item avulso é a
+                alternativa. Antes os dois pareciam a mesma coisa e o usuário
+                achava que precisava digitar tudo à mão. */}
+            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
+              <span style={label}>Itens do orçamento</span>
+              {itens.length > 0 && (
+                <span style={{ fontSize: 10, fontWeight: 800, color: "#2980b9", background: "rgba(41,128,185,0.1)", padding: "2px 8px", borderRadius: 20 }}>
+                  {itens.length}
+                </span>
+              )}
+            </div>
+
+            <div style={{ display: "flex", gap: 10, marginBottom: 12, flexWrap: "wrap", alignItems: "stretch" }}>
+              <SeletorCatalogo equipamentos={equipamentos} onEscolher={addDoCatalogo} />
+              <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 4 }}>
+                <button
+                  onClick={() => setItens(prev => [...prev, { equipamento_id: null, descricao: "", quantidade: 1, preco_unitario: 0 }])}
+                  className="vp-ghost vp-avulso" style={{ height: 38, padding: "0 14px", whiteSpace: "nowrap" }}>
+                  <Plus style={{ width: 13, height: 13 }} /> Item avulso
+                </button>
+                <span style={{ fontSize: 9.5, fontWeight: 600, color: "rgba(20,45,70,0.4)", textAlign: "center" }}>
+                  fora do catálogo
+                </span>
+              </div>
             </div>
 
             {itens.length === 0 ? (
-              <div style={{ padding: "20px 0", textAlign: "center", fontSize: 12, color: "rgba(20,45,70,0.42)", fontWeight: 600 }}>
-                Nenhum item ainda.
+              <div style={{ padding: "18px 12px", textAlign: "center", borderRadius: 10, border: "1.5px dashed rgba(200,225,240,0.95)", background: "rgba(255,255,255,0.5)" }}>
+                <Package style={{ width: 22, height: 22, color: "rgba(41,128,185,0.45)" }} />
+                <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(20,45,70,0.55)", marginTop: 6 }}>
+                  Nenhum item ainda.
+                </p>
+                <p style={{ fontSize: 11, color: "rgba(20,45,70,0.42)", marginTop: 2 }}>
+                  {equipamentos.length > 0
+                    ? "Comece por “Adicionar do catálogo” — os preços já vêm preenchidos."
+                    : "Cadastre equipamentos no catálogo para reaproveitá-los aqui."}
+                </p>
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {itens.map((it, idx) => (
                   <div key={idx} style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    {/* Origem do item: do catálogo (ícone cheio) ou avulso (contorno) */}
+                    <span
+                      aria-hidden
+                      title={it.equipamento_id ? "Item do catálogo" : "Item avulso"}
+                      style={{
+                        width: 24, height: 24, borderRadius: 7, flexShrink: 0, display: "grid", placeItems: "center",
+                        background: it.equipamento_id ? "rgba(41,128,185,0.12)" : "transparent",
+                        border: it.equipamento_id ? "none" : "1.5px dashed rgba(200,225,240,0.95)",
+                      }}
+                    >
+                      {it.equipamento_id
+                        ? <Package style={{ width: 12, height: 12, color: "#2980b9" }} />
+                        : <Plus style={{ width: 11, height: 11, color: "rgba(20,45,70,0.35)" }} />}
+                    </span>
                     <input value={it.descricao} onChange={e => mudarItem(idx, { descricao: e.target.value })}
                       placeholder="Descrição" aria-label="Descrição do item"
                       style={{ ...field, marginTop: 0, flex: 1, minWidth: 0, height: 36, fontSize: 12 }} />
@@ -768,6 +1124,139 @@ function EditorOrcamento({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── Seletor de catálogo ───────────────────────────────────────
+// Ação PRINCIPAL da área de itens. Era um <select> nativo que se confundia com
+// os outros campos do formulário; virou um botão em destaque que abre uma lista
+// com busca, mostrando nome, descrição e preço de cada item de forma legível
+// (o <select> nativo só permite uma linha de texto por opção).
+function SeletorCatalogo({
+  equipamentos, onEscolher,
+}: {
+  equipamentos: Equipamento[];
+  onEscolher: (equipamentoId: string) => void;
+}) {
+  const [aberto, setAberto] = useState(false);
+  const [busca, setBusca] = useState("");
+  const caixa = useRef<HTMLDivElement>(null);
+
+  // Fecha ao clicar fora ou apertar Esc.
+  useEffect(() => {
+    if (!aberto) return;
+    const fora = (e: MouseEvent) => {
+      if (caixa.current && !caixa.current.contains(e.target as Node)) setAberto(false);
+    };
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setAberto(false); };
+    document.addEventListener("mousedown", fora);
+    document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("mousedown", fora); document.removeEventListener("keydown", esc); };
+  }, [aberto]);
+
+  const filtrados = useMemo(() => {
+    const q = busca.trim().toLowerCase();
+    if (!q) return equipamentos;
+    return equipamentos.filter(e =>
+      e.nome.toLowerCase().includes(q) ||
+      (e.descricao || "").toLowerCase().includes(q) ||
+      (e.codigo || "").toLowerCase().includes(q)
+    );
+  }, [equipamentos, busca]);
+
+  const vazio = equipamentos.length === 0;
+
+  return (
+    <div ref={caixa} style={{ position: "relative", flex: 1, minWidth: 230 }}>
+      <button
+        type="button"
+        onClick={() => { if (!vazio) { setAberto(a => !a); setBusca(""); } }}
+        disabled={vazio}
+        aria-haspopup="listbox"
+        aria-expanded={aberto}
+        className="vp-catalogo-btn"
+        style={{
+          width: "100%", display: "flex", alignItems: "center", gap: 10,
+          height: 52, padding: "0 14px", borderRadius: 12, cursor: vazio ? "not-allowed" : "pointer",
+          fontFamily: "inherit", textAlign: "left", opacity: vazio ? 0.6 : 1,
+          border: `1.5px solid ${aberto ? "rgba(41,128,185,0.65)" : "rgba(41,128,185,0.35)"}`,
+          background: "linear-gradient(135deg, rgba(41,128,185,0.12), rgba(26,188,156,0.10))",
+          boxShadow: aberto ? "0 0 0 3px rgba(41,128,185,0.14)" : "0 2px 8px rgba(41,128,185,0.10)",
+          transition: "all 0.16s ease",
+        }}
+      >
+        <span aria-hidden style={{
+          width: 32, height: 32, borderRadius: 9, flexShrink: 0, display: "grid", placeItems: "center",
+          background: "linear-gradient(135deg,#2980b9,#1abc9c)", boxShadow: "0 3px 10px rgba(41,128,185,0.35)",
+        }}>
+          <Package style={{ width: 16, height: 16, color: "#fff" }} />
+        </span>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ display: "block", fontSize: 13, fontWeight: 800, color: "#15547f", letterSpacing: "-0.01em" }}>
+            Adicionar do catálogo
+          </span>
+          <span style={{ display: "block", fontSize: 10.5, fontWeight: 600, color: "rgba(21,84,127,0.62)", marginTop: 1 }}>
+            {vazio
+              ? "Nenhum equipamento cadastrado ainda"
+              : `${equipamentos.length} ${equipamentos.length === 1 ? "item disponível" : "itens disponíveis"} — preço já preenchido`}
+          </span>
+        </span>
+        <ChevronDown style={{ width: 15, height: 15, color: "#2980b9", flexShrink: 0, transform: aberto ? "rotate(180deg)" : "none", transition: "transform 0.16s" }} />
+      </button>
+
+      {aberto && (
+        <div role="listbox" aria-label="Itens do catálogo" style={{
+          position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 20,
+          maxHeight: 300, overflowY: "auto", borderRadius: 12, background: "#fff",
+          border: "1px solid rgba(200,225,240,0.95)", boxShadow: "0 14px 40px rgba(10,31,51,0.22)",
+        }}>
+          <div style={{ position: "sticky", top: 0, background: "#fff", padding: 8, borderBottom: "1px solid rgba(200,225,240,0.7)" }}>
+            <input
+              autoFocus value={busca} onChange={e => setBusca(e.target.value)}
+              placeholder="Buscar no catálogo…" aria-label="Buscar no catálogo"
+              style={{
+                width: "100%", height: 34, padding: "0 12px", borderRadius: 8, fontSize: 12,
+                border: "1.5px solid rgba(200,225,240,0.9)", outline: "none", fontFamily: "inherit", color: "#0f2133",
+              }}
+            />
+          </div>
+          {filtrados.length === 0 ? (
+            <div style={{ padding: "22px 14px", textAlign: "center", fontSize: 12, fontWeight: 600, color: "rgba(20,45,70,0.45)" }}>
+              Nenhum item encontrado para “{busca}”.
+            </div>
+          ) : filtrados.map(eq => (
+            <button
+              key={eq.equipamento_id} role="option" aria-selected={false} type="button"
+              onClick={() => { onEscolher(eq.equipamento_id); setAberto(false); }}
+              className="vp-catalogo-item"
+              style={{
+                width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
+                border: "none", borderBottom: "1px solid rgba(200,225,240,0.45)", background: "none",
+                cursor: "pointer", textAlign: "left", fontFamily: "inherit",
+              }}
+            >
+              <Package style={{ width: 14, height: 14, color: "#2980b9", flexShrink: 0 }} />
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "block", fontSize: 12.5, fontWeight: 700, color: "#0f2133", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {eq.nome}
+                  {eq.codigo && (
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(20,45,70,0.4)", marginLeft: 6 }}>{eq.codigo}</span>
+                  )}
+                </span>
+                {eq.descricao && (
+                  <span style={{ display: "block", fontSize: 11, color: "rgba(20,45,70,0.55)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {eq.descricao}
+                  </span>
+                )}
+              </span>
+              <span className="vp-num" style={{ fontSize: 12.5, fontWeight: 800, color: "#1e8449", whiteSpace: "nowrap", flexShrink: 0 }}>
+                {brl(eq.preco_base)}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

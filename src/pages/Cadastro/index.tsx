@@ -2,6 +2,7 @@ import { getToken } from "../../services/auth";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import CardUsuario from "../../components/CardUsuario";
 import {
   LayoutDashboard, Search, Building2, Users, ClipboardList,
   Calendar, BarChart3, ChevronDown, Plus, Filter,
@@ -256,22 +257,14 @@ export default function TodosClientes() {
               {item.label}
             </div>
           ))}
-          {(usuario as any)?.is_gerente && (
+          {((usuario as any)?.is_gerente || (usuario as any)?.is_supervisor) && (
             <div className="nav-item" onClick={() => navigate("/equipe")}>
               <UserRoundCog style={{ width:16, height:16, flexShrink:0 }} />
               Equipe
             </div>
           )}
         </nav>
-        <div onClick={() => navigate("/perfil")} style={{ marginTop:16, padding:"12px", borderRadius:12, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.08)", display:"flex", alignItems:"center", gap:10, cursor:"pointer", transition:"background 0.18s" }} onMouseEnter={e=>(e.currentTarget.style.background="rgba(255,255,255,0.12)")} onMouseLeave={e=>(e.currentTarget.style.background="rgba(255,255,255,0.06)")}>
-          <div style={{ width:34, height:34, borderRadius:"50%", background:`linear-gradient(135deg,${avatarColor(usuario?.nome||"")},#1abc9c)`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#fff", flexShrink:0 }}>
-            {initials(usuario?.nome||"?")}
-          </div>
-          <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontSize:12, fontWeight:600, color:"#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{usuario?.nome||"..."}</div>
-            <div style={{ fontSize:10, color:"rgba(255,255,255,0.45)" }}>{usuario?.cargo||"Administrador"}</div>
-          </div>
-        </div>
+        <CardUsuario />
       </div>
 
       {/* Main */}
