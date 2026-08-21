@@ -134,6 +134,12 @@ export default function Equipe() {
   const [saving, setSaving] = useState(false);
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
+  // Quando o Resend recusa o envio, o backend devolve o link de ativação para
+  // o gerente repassar por WhatsApp/pessoalmente. O usuário JÁ foi criado.
+  const [linkAtivacao, setLinkAtivacao] = useState("");
+  const [motivoEmail, setMotivoEmail] = useState("");
+  const [copiado, setCopiado] = useState(false);
+  const [reenviandoId, setReenviandoId] = useState("");
 
   const hdrs = () => ({
     "Content-Type": "application/json",
@@ -184,10 +190,18 @@ export default function Equipe() {
         }),
       });
       if (res.ok) {
-        setSucesso("Convite enviado! O usuário vai receber um email para ativar a conta.");
+        const dados = await res.json().catch(() => ({}));
         setNome(""); setEmail(""); setTelefone(""); setRole("vendedor"); setSupervisorId("");
         await carregar();
-        setTimeout(() => { setShowInvite(false); setSucesso(""); }, 1600);
+        if (dados.email_enviado === false) {
+          // Cadastro deu certo, email não. Mantém o modal aberto com o link.
+          setSucesso("Usuário criado — mas o email não saiu.");
+          setMotivoEmail(dados.motivo || "");
+          setLinkAtivacao(dados.link_ativacao || "");
+        } else {
+          setSucesso("Convite enviado! O usuário vai receber um email para ativar a conta.");
+          setTimeout(() => { setShowInvite(false); setSucesso(""); }, 1600);
+        }
       } else {
         const j = await res.json().catch(() => ({}));
         setErro(typeof j.detail === "string" ? j.detail : "Não foi possível criar o usuário.");
@@ -248,6 +262,38 @@ export default function Equipe() {
       ? `${u.nome} agora responde a ${nomeSup}.`
       : `${u.nome} ficou sem supervisor. O usuário continua ativo e pode ser reatribuído.`);
     await carregar();
+  };
+
+  // Reenvia o convite de quem ainda nao ativou — gera token novo no backend.
+  const reenviarConvite = async (u: UsuarioRow) => {
+    setAviso(""); setLinkAtivacao(""); setMotivoEmail("");
+    setReenviandoId(u.usuario_id);
+    try {
+      const res = await fetch(`${API}/usuarios/${u.usuario_id}/reenviar-convite`, {
+        method: "POST", headers: hdrs(),
+      });
+      const dados = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setAviso(typeof dados.detail === "string" ? dados.detail : "Não foi possível reenviar o convite.");
+      } else if (dados.email_enviado === false) {
+        setAviso(`O email para ${u.email} não saiu. Copie o link de ativação e envie por outro canal.`);
+        setMotivoEmail(dados.motivo || "");
+        setLinkAtivacao(dados.link_ativacao || "");
+      } else {
+        setAviso(dados.msg || "Convite reenviado.");
+      }
+    } catch {
+      setAviso("Erro de conexão ao reenviar o convite.");
+    }
+    setReenviandoId("");
+  };
+
+  const copiarLink = async () => {
+    try {
+      await navigator.clipboard.writeText(linkAtivacao);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 1800);
+    } catch { /* navegador sem clipboard: o link fica visível para copiar à mão */ }
   };
 
   const metricaDe = (id: string) => dash?.vendedores.find(v => v.usuario_id === id);
@@ -344,7 +390,7 @@ export default function Equipe() {
           {/* Convidar usuario e prerrogativa do gerente — a API tambem recusa
               a chamada de quem nao for gerente, nao e so o botao escondido. */}
           {ehGerente && (
-            <button onClick={() => { setShowInvite(true); setErro(""); setSucesso(""); }} style={{ height: 38, padding: "0 16px", borderRadius: 10, border: "none", cursor: "pointer", background: "linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)", backgroundSize: "200% 200%", animation: "gradientShift 4s ease infinite", color: "#fff", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, boxShadow: "0 4px 14px rgba(41,128,185,0.35)" }}>
+            <button onClick={() => { setShowInvite(true); setErro(""); setSucesso(""); setLinkAtivacao(""); setMotivoEmail(""); }} style={{ height: 38, padding: "0 16px", borderRadius: 10, border: "none", cursor: "pointer", background: "linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)", backgroundSize: "200% 200%", animation: "gradientShift 4s ease infinite", color: "#fff", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, boxShadow: "0 4px 14px rgba(41,128,185,0.35)" }}>
               <UserPlus style={{ width: 15, height: 15 }} /> Adicionar usuário
             </button>
           )}
@@ -371,10 +417,16 @@ export default function Equipe() {
             <div className="card" style={{ padding: "11px 14px", marginBottom: 16, display: "flex", alignItems: "center", gap: 9, border: "1px solid rgba(41,128,185,0.28)", background: "rgba(41,128,185,0.07)" }}>
               <CheckCircle2 style={{ width: 15, height: 15, color: "#2980b9", flexShrink: 0 }} />
               <span style={{ fontSize: 12.5, fontWeight: 600, color: "#15547f", flex: 1 }}>{aviso}</span>
-              <button onClick={() => setAviso("")} aria-label="Fechar aviso"
+              <button onClick={() => { setAviso(""); setLinkAtivacao(""); setMotivoEmail(""); }} aria-label="Fechar aviso"
                 style={{ border: "none", background: "none", cursor: "pointer", color: "rgba(20,45,70,0.45)", display: "flex" }}>
                 <X style={{ width: 14, height: 14 }} />
               </button>
+            </div>
+          )}
+
+          {!showInvite && linkAtivacao && (
+            <div style={{ marginBottom: 16 }}>
+              <LinkAtivacao link={linkAtivacao} motivo={motivoEmail} copiado={copiado} onCopiar={copiarLink} />
             </div>
           )}
 
@@ -570,10 +622,21 @@ export default function Equipe() {
                           ) : !ehGerente ? (
                             <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(20,45,70,0.3)" }}>—</span>
                           ) : (
-                            <button onClick={() => toggleAtivo(u)}
-                              style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(200,225,240,0.8)", background: u.ativo ? "rgba(220,38,38,0.06)" : "rgba(39,174,96,0.08)", color: u.ativo ? "#dc2626" : "#1e8449", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                              {u.ativo ? "Desativar" : "Reativar"}
-                            </button>
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                              <button onClick={() => toggleAtivo(u)}
+                                style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(200,225,240,0.8)", background: u.ativo ? "rgba(220,38,38,0.06)" : "rgba(39,174,96,0.08)", color: u.ativo ? "#dc2626" : "#1e8449", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                                {u.ativo ? "Desativar" : "Reativar"}
+                              </button>
+                              {/* Quem nunca ativou pode nao ter recebido o email */}
+                              {!u.ativo && (
+                                <button onClick={() => reenviarConvite(u)} disabled={reenviandoId === u.usuario_id}
+                                  title="Gerar um convite novo e reenviar por email"
+                                  style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(41,128,185,0.35)", background: "rgba(41,128,185,0.08)", color: "#2980b9", fontSize: 11, fontWeight: 700, cursor: reenviandoId === u.usuario_id ? "wait" : "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                                  <Mail style={{ width: 11, height: 11 }} />
+                                  {reenviandoId === u.usuario_id ? "Enviando..." : "Reenviar"}
+                                </button>
+                              )}
+                            </div>
                           )}
                         </div>
                       </motion.div>
@@ -671,7 +734,12 @@ export default function Equipe() {
                 )}
 
                 {erro && <div style={{ fontSize: 12, fontWeight: 600, color: "#dc2626", background: "rgba(220,38,38,0.08)", padding: "8px 12px", borderRadius: 9 }}>{erro}</div>}
-                {sucesso && <div style={{ fontSize: 12, fontWeight: 600, color: "#1e8449", background: "rgba(39,174,96,0.1)", padding: "8px 12px", borderRadius: 9 }}>{sucesso}</div>}
+                {sucesso && (
+                  <div style={{ fontSize: 12, fontWeight: 600, color: linkAtivacao ? "#b45309" : "#1e8449", background: linkAtivacao ? "rgba(217,119,6,0.1)" : "rgba(39,174,96,0.1)", padding: "8px 12px", borderRadius: 9 }}>
+                    {sucesso}
+                  </div>
+                )}
+                {linkAtivacao && <LinkAtivacao link={linkAtivacao} motivo={motivoEmail} copiado={copiado} onCopiar={copiarLink} />}
 
                 <button onClick={convidar} disabled={saving}
                   style={{ height: 44, borderRadius: 11, border: "none", cursor: saving ? "default" : "pointer", background: "linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)", backgroundSize: "200% 200%", animation: "gradientShift 4s ease infinite", color: "#fff", fontSize: 14, fontWeight: 700, opacity: saving ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 4 }}>
@@ -682,6 +750,36 @@ export default function Equipe() {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+// Mostrado quando o convite por email nao sai: o usuario JA foi criado, entao o
+// que falta e fazer o link chegar nele por outro canal.
+function LinkAtivacao({
+  link, motivo, copiado, onCopiar,
+}: {
+  link: string; motivo: string; copiado: boolean; onCopiar: () => void;
+}) {
+  return (
+    <div style={{ padding: "12px 14px", borderRadius: 10, background: "rgba(217,119,6,0.07)", border: "1px solid rgba(217,119,6,0.28)" }}>
+      <div style={{ fontSize: 11.5, fontWeight: 700, color: "#b45309", marginBottom: 6 }}>
+        Envie este link de ativação para a pessoa:
+      </div>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <input readOnly value={link} onFocus={e => e.currentTarget.select()}
+          aria-label="Link de ativação"
+          style={{ flex: 1, minWidth: 180, height: 34, padding: "0 10px", borderRadius: 8, border: "1px solid rgba(217,119,6,0.3)", background: "#fff", fontSize: 11.5, color: "#0f2133", outline: "none" }} />
+        <button onClick={onCopiar}
+          style={{ height: 34, padding: "0 14px", borderRadius: 8, border: "none", cursor: "pointer", background: copiado ? "#1e8449" : "#b45309", color: "#fff", fontSize: 11.5, fontWeight: 700, fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5 }}>
+          {copiado ? <><CheckCircle2 style={{ width: 12, height: 12 }} /> Copiado</> : "Copiar"}
+        </button>
+      </div>
+      {motivo && (
+        <div style={{ fontSize: 11, color: "rgba(20,45,70,0.6)", marginTop: 8, lineHeight: 1.5 }}>
+          <strong>Por que o email não saiu:</strong> {motivo}
+        </div>
+      )}
     </div>
   );
 }
