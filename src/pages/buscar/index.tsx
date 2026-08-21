@@ -169,6 +169,7 @@ export default function BuscarEmpresas() {
   const [mapCenter, setMapCenter] = useState(
     origem ? { lat: origem.lat, lng: origem.lng } : { lat: -15.7801, lng: -47.9292 }
   );
+  const [mapZoom, setMapZoom] = useState(11);
   const [myLocation, setMyLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [quotaExcedida, setQuotaExcedida] = useState(false);
   const [quotaResetTime, setQuotaResetTime] = useState<Date | null>(null);
@@ -224,7 +225,7 @@ export default function BuscarEmpresas() {
       const data = await res.json();
       setResults(data);
       const primeiro = data.find((p: PlaceResult) => p.lat && p.lng);
-      if (primeiro) setMapCenter({ lat: primeiro.lat!, lng: primeiro.lng! });
+      if (primeiro) { setMapCenter({ lat: primeiro.lat!, lng: primeiro.lng! }); setMapZoom(13); }
     } catch {
       setError("Não foi possível conectar ao Google Places. Verifique a chave de API.");
     }
@@ -471,11 +472,11 @@ export default function BuscarEmpresas() {
                 <Map
                   mapId={MAPS_ID}
                   center={mapCenter}
-                  zoom={results.length > 0 ? 13 : 11}
+                  zoom={mapZoom}
                   style={{ width:"100%", height:"100%" }}
                   gestureHandling="greedy"
                   disableDefaultUI={false}
-                  onCameraChanged={(e) => setMapCenter(e.detail.center)}
+                  onCameraChanged={(e) => { setMapCenter(e.detail.center); setMapZoom(e.detail.zoom); }}
                 >
                   {resultadosFiltrados.map((place, i) => (
                     place.lat && place.lng ? (
