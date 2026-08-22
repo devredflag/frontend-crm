@@ -51,10 +51,10 @@ export default function AbasGerenciamento({
         gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
         gap: 10,
         padding: 6,
-        borderRadius: 8,
-        background: "#ffffff",
-        border: "1px solid #E3E6E9",
-        boxShadow:"none",
+        borderRadius: 16,
+        background: "rgba(255,255,255,0.45)",
+        border: "1px solid rgba(200,225,240,0.75)",
+        boxShadow: "inset 0 1px 2px rgba(10,31,51,0.04)",
       }}
     >
       {ABAS.map(t => {
@@ -75,20 +75,20 @@ export default function AbasGerenciamento({
               width: "100%",
               minHeight: compacto ? 52 : 62,
               padding: compacto ? "10px 14px" : "12px 16px",
-              borderRadius: 8,
+              borderRadius: 12,
               cursor: "pointer",
               textAlign: "left",
               fontFamily: "inherit",
               overflow: "hidden",
               transition: "all 0.18s ease",
               border: ativo
-                ? "1.5px solid #2563EB"
-                : "1.5px solid #E3E6E9",
+                ? "1.5px solid rgba(41,128,185,0.55)"
+                : "1.5px solid rgba(200,225,240,0.9)",
               background: ativo
-                ? "#2563EB"
-                : "#ffffff",
+                ? "linear-gradient(135deg, rgba(41,128,185,0.14), rgba(26,188,156,0.12))"
+                : "rgba(255,255,255,0.72)",
               boxShadow: ativo
-                ? "0 6px 18px #EFF4FE"
+                ? "0 6px 18px rgba(41,128,185,0.18)"
                 : "0 1px 2px rgba(10,31,51,0.04)",
             }}
           >
@@ -98,14 +98,14 @@ export default function AbasGerenciamento({
               style={{
                 width: compacto ? 32 : 38,
                 height: compacto ? 32 : 38,
-                borderRadius: 8,
+                borderRadius: 10,
                 flexShrink: 0,
                 display: "grid",
                 placeItems: "center",
                 background: ativo
-                  ? "#2563EB"
-                  : "#2563EB",
-                boxShadow: ativo ? "0 4px 12px #2563EB" : "none",
+                  ? "linear-gradient(135deg,#2980b9,#1abc9c)"
+                  : "rgba(41,128,185,0.10)",
+                boxShadow: ativo ? "0 4px 12px rgba(41,128,185,0.35)" : "none",
                 transition: "all 0.18s ease",
               }}
             >
@@ -113,7 +113,7 @@ export default function AbasGerenciamento({
                 style={{
                   width: compacto ? 15 : 17,
                   height: compacto ? 15 : 17,
-                  color: ativo ? "#fff" : "#2563EB",
+                  color: ativo ? "#fff" : "#2980b9",
                 }}
               />
             </span>
@@ -125,7 +125,7 @@ export default function AbasGerenciamento({
                   fontSize: compacto ? 13 : 13.5,
                   fontWeight: ativo ? 800 : 650,
                   letterSpacing: "-0.01em",
-                  color: ativo ? "#15547f" : "#16191D",
+                  color: ativo ? "#15547f" : "rgba(20,45,70,0.72)",
                   whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
@@ -140,7 +140,7 @@ export default function AbasGerenciamento({
                     fontSize: 11,
                     fontWeight: 600,
                     marginTop: 2,
-                    color: ativo ? "rgba(21,84,127,0.72)" : "#5B6570",
+                    color: ativo ? "rgba(21,84,127,0.72)" : "rgba(20,45,70,0.45)",
                     whiteSpace: "nowrap",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
@@ -162,7 +162,7 @@ export default function AbasGerenciamento({
                   bottom: 0,
                   height: 3,
                   borderRadius: "3px 3px 0 0",
-                  background: "#2563EB",
+                  background: "linear-gradient(90deg,#2980b9,#1abc9c)",
                 }}
               />
             )}
@@ -176,7 +176,7 @@ export default function AbasGerenciamento({
 // Estilos de hover/foco ficam em CSS porque inline não cobre :hover/:focus-visible.
 // Cada página injeta esta string no <style> que já mantém.
 export const cssAbasGerenciamento = `
-  .aba-ger:hover { border-color:#2563EB !important; background:#ffffff !important; transform:translateY(-1px); }
-  .aba-ger.ativa:hover { background:#EFF4FE !important; }
-  .aba-ger:focus-visible { outline:2px solid #2563EB; outline-offset:2px; }
+  .aba-ger:hover { border-color:rgba(41,128,185,0.45) !important; background:rgba(255,255,255,0.92) !important; transform:translateY(-1px); }
+  .aba-ger.ativa:hover { background:linear-gradient(135deg,rgba(41,128,185,0.18),rgba(26,188,156,0.16)) !important; }
+  .aba-ger:focus-visible { outline:2px solid #2980b9; outline-offset:2px; }
 `;

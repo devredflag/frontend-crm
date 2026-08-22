@@ -2,10 +2,11 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { LogIn } from "lucide-react";
-import PageBackground from "../../components/landing/PageBackground";
+import MouseGlowBackground from "../../components/landing/MouseGlowBackground";
 import { login as authLogin } from "../../services/auth";
 
 const gradientKeyframes = `
+  @keyframes gradientShift {
     0%   { background-position: 0% 50%; }
     50%  { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
@@ -18,10 +19,10 @@ const inputBase: React.CSSProperties = {
   padding: "0 16px",
   borderRadius: "12px",
   fontSize: "14px",
-  color: "#16191D",
-  background: "#ffffff",
-  border: "1px solid #E3E6E9",
-  boxShadow:"none",
+  color: "#1a2e40",
+  background: "rgba(255,255,255,0.82)",
+  border: "1px solid rgba(200,225,240,0.9)",
+  boxShadow: "0 2px 6px rgba(41,128,185,0.05), inset 0 1px 0 rgba(255,255,255,0.9)",
   outline: "none",
   transition: "border 0.18s, box-shadow 0.18s",
   boxSizing: "border-box" as const,
@@ -33,7 +34,7 @@ const labelStyle: React.CSSProperties = {
   fontWeight: 700,
   letterSpacing: "0.1em",
   textTransform: "uppercase" as const,
-  color: "#5B6570",
+  color: "rgba(20,45,70,0.55)",
   marginBottom: 7,
 };
 
@@ -47,15 +48,15 @@ export default function Login() {
   const navigate = useNavigate();
 
   const onFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    e.target.style.border = "1px solid #2563EB";
+    e.target.style.border = "1px solid rgba(41,128,185,0.55)";
     e.target.style.boxShadow =
-      "0 0 0 3px #2563EB, inset 0 1px 0 #ffffff";
+      "0 0 0 3px rgba(41,128,185,0.13), inset 0 1px 0 rgba(255,255,255,0.9)";
   };
 
   const onBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    e.target.style.border = "1px solid #E3E6E9";
+    e.target.style.border = "1px solid rgba(200,225,240,0.9)";
     e.target.style.boxShadow =
-      "0 2px 6px #EFF4FE, inset 0 1px 0 #ffffff";
+      "0 2px 6px rgba(41,128,185,0.05), inset 0 1px 0 rgba(255,255,255,0.9)";
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -93,12 +94,12 @@ export default function Login() {
         alignItems: "center",
         justifyContent: "center",
         background:
-          "#F6F7F8",
+          "linear-gradient(145deg, #c8e8f5 0%, #d6eef5 30%, #cceee8 65%, #c5eae0 100%)",
       }}
     >
       <style>{gradientKeyframes}</style>
 
-      <PageBackground />
+      <MouseGlowBackground />
 
       {/* Dot texture */}
       <div
@@ -108,7 +109,7 @@ export default function Login() {
           pointerEvents: "none",
           opacity: 0.55,
           backgroundImage:
-            "#2563EB",
+            "radial-gradient(circle, rgba(41,128,185,0.22) 1px, transparent 1px)",
           backgroundSize: "22px 22px",
         }}
       />
@@ -128,12 +129,14 @@ export default function Login() {
       >
         <div
           style={{
-            borderRadius: 8,
+            borderRadius: 20,
             padding: "40px 36px 36px",
-            background: "rgba(225,242,252,0.78)", 
+            background: "rgba(225,242,252,0.78)",
+            backdropFilter: "blur(28px) saturate(170%)",
             WebkitBackdropFilter: "blur(28px) saturate(170%)",
-            border: "1px solid #ffffff",
-            boxShadow:"none",
+            border: "1px solid rgba(255,255,255,0.88)",
+            boxShadow:
+              "0 20px 70px rgba(41,128,185,0.16), 0 2px 8px rgba(41,128,185,0.08), inset 0 1px 0 rgba(255,255,255,0.95)",
           }}
         >
           {/* Ícone + título */}
@@ -148,11 +151,11 @@ export default function Login() {
                 justifyContent: "center",
                 margin: "0 auto 14px",
                 background:
-                  "#EFF4FE",
-                border: "1.5px solid #2563EB",
+                  "linear-gradient(135deg, rgba(41,128,185,0.12), rgba(26,188,156,0.15))",
+                border: "1.5px solid rgba(41,128,185,0.28)",
               }}
             >
-              <LogIn style={{ width: 20, height: 20, color: "#2563EB" }} />
+              <LogIn style={{ width: 20, height: 20, color: "#2980b9" }} />
             </div>
 
             <p
@@ -161,7 +164,7 @@ export default function Login() {
                 fontWeight: 700,
                 letterSpacing: "0.14em",
                 textTransform: "uppercase",
-                color: "#2563EB",
+                color: "rgba(41,128,185,0.68)",
                 margin: "0 0 8px",
               }}
             >
@@ -173,7 +176,7 @@ export default function Login() {
                 fontSize: 26,
                 fontWeight: 900,
                 letterSpacing: "-0.02em",
-                color: "#16191D",
+                color: "#0f2133",
                 margin: 0,
               }}
             >
@@ -181,7 +184,7 @@ export default function Login() {
               <span
                 style={{
                   background:
-                    "#2563EB",
+                    "linear-gradient(90deg, #2980b9, #1abc9c, #2ecc71, #2980b9)",
                   backgroundSize: "200% 200%",
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
@@ -246,7 +249,7 @@ export default function Login() {
                   onFocus={onFocus}
                   onBlur={onBlur}
                 />
-                <p style={{ fontSize: 11, color: "#5B6570", margin: "6px 2px 0" }}>
+                <p style={{ fontSize: 11, color: "rgba(20,45,70,0.5)", margin: "6px 2px 0" }}>
                   Digite o código do seu app autenticador (ou um código de backup).
                 </p>
               </div>
@@ -256,10 +259,10 @@ export default function Login() {
               <p
                 style={{
                   fontSize: 13,
-                  color: "#B42318",
+                  color: "#c0392b",
                   background: "rgba(231,76,60,0.08)",
                   border: "1px solid rgba(231,76,60,0.25)",
-                  borderRadius: 8,
+                  borderRadius: 10,
                   padding: "10px 14px",
                   margin: 0,
                 }}
@@ -278,7 +281,7 @@ export default function Login() {
                 marginTop: 4,
                 width: "100%",
                 height: 52,
-                borderRadius: 8,
+                borderRadius: 12,
                 border: "none",
                 cursor: loading ? "not-allowed" : "pointer",
                 fontSize: 15,
@@ -290,12 +293,12 @@ export default function Login() {
                 justifyContent: "center",
                 gap: 8,
                 background: loading
-                  ? "#7ab8d4"
-                  : "#2563EB",
+                  ? "linear-gradient(135deg, #7ab8d4, #6fc5b5)"
+                  : "linear-gradient(135deg, #2980b9, #1abc9c, #2ecc71, #2980b9)",
                 backgroundSize: "200% 200%",
                 boxShadow: loading
                   ? "none"
-                  : "0 8px 28px #2563EB, inset 0 1px 0 #ffffff",
+                  : "0 8px 28px rgba(41,128,185,0.45), inset 0 1px 0 rgba(255,255,255,0.18)",
                 animation: loading ? "none" : "gradientShift 4s ease infinite",
                 transition: "box-shadow 0.3s",
               }}
@@ -312,7 +315,7 @@ export default function Login() {
                       cx="12"
                       cy="12"
                       r="10"
-                      stroke="#ffffff"
+                      stroke="rgba(255,255,255,0.35)"
                       strokeWidth="4"
                     />
                     <path fill="white" d="M4 12a8 8 0 018-8v8z" />
@@ -331,14 +334,14 @@ export default function Login() {
               marginTop: 20,
               textAlign: "center",
               fontSize: 12,
-              color: "#5B6570",
+              color: "rgba(20,45,70,0.42)",
               lineHeight: 1.5,
             }}
           >
             Não tem uma conta?{" "}
             <a
               href="/signup"
-              style={{ color: "#2563EB", textDecoration: "underline", fontWeight: 600 }}
+              style={{ color: "rgba(41,128,185,0.75)", textDecoration: "underline", fontWeight: 600 }}
             >
               Criar conta
             </a>

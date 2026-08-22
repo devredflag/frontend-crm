@@ -13,20 +13,27 @@ import {
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
   * { font-family: 'Plus Jakarta Sans', sans-serif; box-sizing: border-box; margin: 0; padding: 0; }
-  .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:8px; cursor:pointer; font-size:13.5px; font-weight:500; color:#ffffff; transition:all 0.18s; user-select:none; }
-  .nav-item:hover { background:#ffffff; color:#fff; }
-  .nav-item.active { background:#ffffff; color:#fff; font-weight:600; }
-  .glass-card { background:#ffffff; border:1px solid #ffffff; border-radius:8px; }
-  .client-row { display:grid; grid-template-columns:2.4fr 1fr 1fr 1fr 1fr 120px; align-items:center; padding:14px 20px; border-bottom:1px solid #E3E6E9; cursor:pointer; transition:background 0.15s; user-select:none; }
-  .client-row:hover { background:#2563EB; }
+  @keyframes float1 { 0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(40px,-30px) scale(1.05)}66%{transform:translate(-20px,20px) scale(0.97)} }
+  @keyframes float2 { 0%,100%{transform:translate(0,0) scale(1)}40%{transform:translate(-50px,25px) scale(1.08)}70%{transform:translate(30px,-15px) scale(0.95)} }
+  @keyframes float3 { 0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(25px,40px) scale(1.03)} }
+  @keyframes float4 { 0%,100%{transform:translate(0,0)}30%{transform:translate(-30px,-40px)}60%{transform:translate(20px,15px)} }
+  @keyframes float5 { 0%,100%{transform:translate(0,0) scale(1)}45%{transform:translate(35px,-20px) scale(1.06)}80%{transform:translate(-15px,30px) scale(0.96)} }
+  @keyframes gradientShift { 0%,100%{background-position:0% 50%}50%{background-position:100% 50%} }
+  @keyframes shimmer { 0%{background-position:-200% 0}100%{background-position:200% 0} }
+  .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:10px; cursor:pointer; font-size:13.5px; font-weight:500; color:rgba(255,255,255,0.65); transition:all 0.18s; user-select:none; }
+  .nav-item:hover { background:rgba(255,255,255,0.08); color:#fff; }
+  .nav-item.active { background:rgba(255,255,255,0.14); color:#fff; font-weight:600; }
+  .glass-card { background:rgba(255,255,255,0.72); backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.9); border-radius:16px; }
+  .client-row { display:grid; grid-template-columns:2.4fr 1fr 1fr 1fr 1fr 120px; align-items:center; padding:14px 20px; border-bottom:1px solid rgba(200,225,240,0.4); cursor:pointer; transition:background 0.15s; user-select:none; }
+  .client-row:hover { background:rgba(41,128,185,0.04); }
   .client-row:last-child { border-bottom:none; }
-  .th { display:grid; grid-template-columns:2.4fr 1fr 1fr 1fr 1fr 120px; align-items:center; padding:10px 20px; border-bottom:1px solid #E3E6E9; }
-  .chip { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:8px; font-size:11px; font-weight:700; white-space:nowrap; }
+  .th { display:grid; grid-template-columns:2.4fr 1fr 1fr 1fr 1fr 120px; align-items:center; padding:10px 20px; border-bottom:1px solid rgba(200,225,240,0.5); }
+  .chip { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:700; white-space:nowrap; }
   .action-btn { width:30px; height:30px; border-radius:8px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.15s; }
-  .skeleton { background:#E3E6E9; background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:6px; }
+  .skeleton { background:linear-gradient(90deg,rgba(200,225,240,0.4) 25%,rgba(220,240,252,0.7) 50%,rgba(200,225,240,0.4) 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:6px; }
   ::-webkit-scrollbar { width:4px; height:4px; }
   ::-webkit-scrollbar-track { background:transparent; }
-  ::-webkit-scrollbar-thumb { background:#EFF4FE; border-radius:4px; }
+  ::-webkit-scrollbar-thumb { background:rgba(41,128,185,0.25); border-radius:4px; }
 `;
 
 const API = "https://backend-crm-production-157b.up.railway.app";
@@ -93,22 +100,22 @@ function calcScore(emp: Empresa): number {
 }
 
 function scoreColor(s: number) {
-  if (s >= 70) return { color:"#0F7B4F", bg:"rgba(39,174,96,0.12)", label:"Alto" };
-  if (s >= 40) return { color:"#8A5A00", bg:"rgba(230,126,34,0.12)", label:"Médio" };
-  return { color:"#B42318", bg:"rgba(231,76,60,0.12)", label:"Baixo" };
+  if (s >= 70) return { color:"#27ae60", bg:"rgba(39,174,96,0.12)", label:"Alto" };
+  if (s >= 40) return { color:"#e67e22", bg:"rgba(230,126,34,0.12)", label:"Médio" };
+  return { color:"#e74c3c", bg:"rgba(231,76,60,0.12)", label:"Baixo" };
 }
 
 function porteColor(p: string) {
-  if (p === "Grande") return "#5B6570";
-  if (p === "Médio")  return "#2563EB";
-  return "#0F7B4F";
+  if (p === "Grande") return "#8e44ad";
+  if (p === "Médio")  return "#2980b9";
+  return "#27ae60";
 }
 
 function initials(name: string) {
   return name?.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase()||"?";
 }
 function avatarColor(name: string) {
-  const c=["#2563EB","#2563EB","#5B6570","#8A5A00","#0F7B4F","#B42318"];
+  const c=["#2980b9","#1abc9c","#8e44ad","#e67e22","#27ae60","#e74c3c"];
   return c[(name?.charCodeAt(0)||0)%c.length];
 }
 
@@ -116,7 +123,7 @@ function ScoreBar({ score }: { score: number }) {
   const sc = scoreColor(score);
   return (
     <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-      <div style={{ flex:1, height:6, borderRadius:6, background:"#E3E6E9", maxWidth:60 }}>
+      <div style={{ flex:1, height:6, borderRadius:6, background:"rgba(200,225,240,0.5)", maxWidth:60 }}>
         <div style={{ height:"100%", width:`${score}%`, borderRadius:6, background:sc.color, transition:"width 0.4s ease" }} />
       </div>
       <span style={{ fontSize:12, fontWeight:800, color:sc.color, minWidth:28 }}>{score}</span>
@@ -190,9 +197,9 @@ export default function TodosClientes() {
     });
 
   const SortTh = ({ label, field }: { label:string; field:typeof sortField }) => (
-    <button onClick={() => toggleSort(field)} style={{ display:"flex", alignItems:"center", gap:4, background:"none", border:"none", cursor:"pointer", fontSize:11, fontWeight:700, letterSpacing:"0.07em", textTransform:"uppercase", color:"#5B6570" }}>
+    <button onClick={() => toggleSort(field)} style={{ display:"flex", alignItems:"center", gap:4, background:"none", border:"none", cursor:"pointer", fontSize:11, fontWeight:700, letterSpacing:"0.07em", textTransform:"uppercase", color:"rgba(20,45,70,0.5)" }}>
       {label}
-      <ArrowUpDown style={{ width:10, height:10, opacity:sortField===field?1:0.4, color:sortField===field?"#2563EB":"inherit" }} />
+      <ArrowUpDown style={{ width:10, height:10, opacity:sortField===field?1:0.4, color:sortField===field?"#2980b9":"inherit" }} />
     </button>
   );
 
@@ -210,20 +217,29 @@ export default function TodosClientes() {
 
       {/* Background */}
       <div style={{ position:"fixed", inset:0, zIndex:0, overflow:"hidden", pointerEvents:"none" }}>
-        <div style={{ position:"absolute", inset:0, background:"#F6F7F8" }} />
-        
+        <div style={{ position:"absolute", inset:0, background:"linear-gradient(145deg,#c8e8f5 0%,#d6eef5 30%,#cceee8 65%,#c5eae0 100%)" }} />
+        <div style={{ position:"absolute", inset:0, opacity:0.4, backgroundImage:"radial-gradient(circle,rgba(41,128,185,0.2) 1px,transparent 1px)", backgroundSize:"22px 22px" }} />
+        {[
+          { w:400,h:400, top:"-60px",  left:"8%",   anim:"float1 18s ease-in-out infinite", op:0.11, c1:"#2980b9",c2:"#1abc9c" },
+          { w:260,h:260, top:"45%",    left:"-50px", anim:"float2 22s ease-in-out infinite", op:0.09, c1:"#1abc9c",c2:"#2ecc71" },
+          { w:320,h:320, top:"65%",    left:"60%",   anim:"float3 26s ease-in-out infinite", op:0.08, c1:"#2980b9",c2:"#8e44ad" },
+          { w:180,h:180, top:"15%",    left:"78%",   anim:"float4 20s ease-in-out infinite", op:0.10, c1:"#27ae60",c2:"#1abc9c" },
+          { w:220,h:220, top:"80%",    left:"25%",   anim:"float5 24s ease-in-out infinite", op:0.07, c1:"#e67e22",c2:"#f39c12" },
+        ].map((c,i) => (
+          <div key={i} style={{ position:"absolute", width:c.w, height:c.h, top:c.top, left:c.left, borderRadius:"50%", background:`radial-gradient(circle at 40% 40%,${c.c1},${c.c2})`, opacity:c.op, animation:c.anim, filter:"blur(2px)" }} />
+        ))}
       </div>
 
       {/* Sidebar */}
-      <div style={{ width:220, flexShrink:0, height:"100vh", overflowY:"auto", position:"relative", zIndex:10, background:"#1a3a5c", boxShadow:"none", display:"flex", flexDirection:"column", padding:"0 12px 20px" }}>
-        <div style={{ padding:"22px 4px 24px", borderBottom:"1px solid #ffffff", marginBottom:16 }}>
+      <div style={{ width:220, flexShrink:0, height:"100vh", overflowY:"auto", position:"relative", zIndex:10, background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)", boxShadow:"4px 0 24px rgba(0,0,0,0.18)", display:"flex", flexDirection:"column", padding:"0 12px 20px" }}>
+        <div style={{ padding:"22px 4px 24px", borderBottom:"1px solid rgba(255,255,255,0.08)", marginBottom:16 }}>
           <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-            <div style={{ width:36, height:36, borderRadius:8, background:"#2563EB", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"none" }}>
+            <div style={{ width:36, height:36, borderRadius:10, background:"linear-gradient(135deg,#2980b9,#1abc9c)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 12px rgba(41,128,185,0.4)" }}>
               <BarChart3 style={{ width:18, height:18, color:"#fff" }} />
             </div>
             <div>
               <div style={{ fontSize:14, fontWeight:800, color:"#fff" }}>Prospecção</div>
-              <div style={{ fontSize:11, fontWeight:700, background:"#2563EB", backgroundSize:"200% 200%", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", animation:"gradientShift 4s ease infinite" }}>CRM</div>
+              <div style={{ fontSize:11, fontWeight:700, background:"linear-gradient(90deg,#2980b9,#1abc9c,#2ecc71,#2980b9)", backgroundSize:"200% 200%", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", animation:"gradientShift 4s ease infinite" }}>CRM</div>
             </div>
           </div>
         </div>
@@ -255,15 +271,15 @@ export default function TodosClientes() {
       <div style={{ flex:1, height:"100vh", overflowY:"auto", position:"relative", zIndex:5 }}>
 
         {/* Topbar */}
-        <div style={{ position:"sticky", top:0, zIndex:20, padding:"14px 28px", background:"rgba(210,238,248,0.75)",  borderBottom:"1px solid #ffffff", display:"flex", alignItems:"center", gap:14 }}>
+        <div style={{ position:"sticky", top:0, zIndex:20, padding:"14px 28px", background:"rgba(210,238,248,0.75)", backdropFilter:"blur(20px)", borderBottom:"1px solid rgba(255,255,255,0.6)", display:"flex", alignItems:"center", gap:14 }}>
           <div style={{ flex:1 }}>
-            <h1 style={{ fontSize:18, fontWeight:800, color:"#16191D", letterSpacing:"-0.02em" }}>Todos os Clientes</h1>
-            <p style={{ fontSize:12, color:"#5B6570", marginTop:1 }}>{filtered.length} empresa{filtered.length!==1?"s":""} encontrada{filtered.length!==1?"s":""}</p>
+            <h1 style={{ fontSize:18, fontWeight:800, color:"#0f2133", letterSpacing:"-0.02em" }}>Todos os Clientes</h1>
+            <p style={{ fontSize:12, color:"rgba(20,45,70,0.5)", marginTop:1 }}>{filtered.length} empresa{filtered.length!==1?"s":""} encontrada{filtered.length!==1?"s":""}</p>
           </div>
-          <button onClick={fetchAll} style={{ width:36, height:36, borderRadius:8, border:"1px solid #E3E6E9", background:"#ffffff", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
-            <RefreshCw style={{ width:15, height:15, color:"#2563EB" }} />
+          <button onClick={fetchAll} style={{ width:36, height:36, borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.75)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <RefreshCw style={{ width:15, height:15, color:"#2980b9" }} />
           </button>
-          <button onClick={() => navigate("/empresas/nova")} style={{ height:38, padding:"0 16px", borderRadius:8, border:"none", cursor:"pointer", background:"#2563EB", backgroundSize:"200% 200%", animation:"gradientShift 4s ease infinite", color:"#fff", fontSize:13, fontWeight:700, display:"flex", alignItems:"center", gap:6, boxShadow:"none" }}>
+          <button onClick={() => navigate("/empresas/nova")} style={{ height:38, padding:"0 16px", borderRadius:10, border:"none", cursor:"pointer", background:"linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)", backgroundSize:"200% 200%", animation:"gradientShift 4s ease infinite", color:"#fff", fontSize:13, fontWeight:700, display:"flex", alignItems:"center", gap:6, boxShadow:"0 4px 14px rgba(41,128,185,0.35)" }}>
             <Plus style={{ width:15, height:15 }} /> Nova empresa
           </button>
         </div>
@@ -273,24 +289,24 @@ export default function TodosClientes() {
           {/* Summary chips */}
           <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
             {[
-              { label:"Total",      value:counts.total,    color:"#2563EB" },
-              { label:"Leads",      value:counts.lead,     color:"#8A929B" },
-              { label:"Em contato", value:counts.contato,  color:"#8A5A00" },
-              { label:"Proposta",   value:counts.proposta, color:"#5B6570" },
-              { label:"Fechados",   value:counts.fechado,  color:"#0F7B4F" },
+              { label:"Total",      value:counts.total,    color:"#2980b9" },
+              { label:"Leads",      value:counts.lead,     color:"#95a5a6" },
+              { label:"Em contato", value:counts.contato,  color:"#e67e22" },
+              { label:"Proposta",   value:counts.proposta, color:"#8e44ad" },
+              { label:"Fechados",   value:counts.fechado,  color:"#27ae60" },
             ].map(s => (
-              <div key={s.label} style={{ padding:"6px 14px", borderRadius:8, background:"#ffffff", border:`1px solid ${s.color}25`,  display:"flex", alignItems:"center", gap:7 }}>
+              <div key={s.label} style={{ padding:"6px 14px", borderRadius:20, background:"rgba(255,255,255,0.72)", border:`1px solid ${s.color}25`, backdropFilter:"blur(8px)", display:"flex", alignItems:"center", gap:7 }}>
                 <span style={{ fontSize:16, fontWeight:900, color:s.color }}>{s.value}</span>
-                <span style={{ fontSize:11, fontWeight:600, color:"#5B6570" }}>{s.label}</span>
+                <span style={{ fontSize:11, fontWeight:600, color:"rgba(20,45,70,0.5)" }}>{s.label}</span>
               </div>
             ))}
 
             {/* Score legend */}
-            <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:8, padding:"6px 14px", borderRadius:8, background:"#ffffff", border:"1px solid #E3E6E9" }}>
-              <Star style={{ width:12, height:12, color:"#8A5A00" }} />
-              <span style={{ fontSize:11, fontWeight:600, color:"#5B6570" }}>Score:</span>
-              {[{l:"Alto",c:"#0F7B4F"},{l:"Médio",c:"#8A5A00"},{l:"Baixo",c:"#B42318"}].map(s=>(
-                <span key={s.l} style={{ fontSize:10, fontWeight:700, color:s.c, background:`${s.c}15`, padding:"2px 7px", borderRadius:8 }}>{s.l}</span>
+            <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:8, padding:"6px 14px", borderRadius:20, background:"rgba(255,255,255,0.72)", border:"1px solid rgba(200,225,240,0.5)" }}>
+              <Star style={{ width:12, height:12, color:"#e67e22" }} />
+              <span style={{ fontSize:11, fontWeight:600, color:"rgba(20,45,70,0.5)" }}>Score:</span>
+              {[{l:"Alto",c:"#27ae60"},{l:"Médio",c:"#e67e22"},{l:"Baixo",c:"#e74c3c"}].map(s=>(
+                <span key={s.l} style={{ fontSize:10, fontWeight:700, color:s.c, background:`${s.c}15`, padding:"2px 7px", borderRadius:10 }}>{s.l}</span>
               ))}
             </div>
           </div>
@@ -298,16 +314,16 @@ export default function TodosClientes() {
           {/* Filters */}
           <div style={{ display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
             <div style={{ flex:1, minWidth:220, position:"relative" }}>
-              <Search style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", width:14, height:14, color:"#5B6570" }} />
-              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar por nome, cidade, segmento..." style={{ width:"100%", height:38, paddingLeft:34, paddingRight:14, borderRadius:8, border:"1px solid #E3E6E9", background:"#ffffff", fontSize:13, color:"#16191D", outline:"none" }} />
+              <Search style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", width:14, height:14, color:"rgba(20,45,70,0.35)" }} />
+              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar por nome, cidade, segmento..." style={{ width:"100%", height:38, paddingLeft:34, paddingRight:14, borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.78)", fontSize:13, color:"#1a2e40", outline:"none" }} />
             </div>
             <div style={{ position:"relative" }}>
-              <select value={filterPorte} onChange={e=>setFilterPorte(e.target.value)} style={{ height:38, padding:"0 32px 0 12px", borderRadius:8, border:"1px solid #E3E6E9", background:"#ffffff", fontSize:13, color:"#16191D", outline:"none", cursor:"pointer", appearance:"none" }}>
+              <select value={filterPorte} onChange={e=>setFilterPorte(e.target.value)} style={{ height:38, padding:"0 32px 0 12px", borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.78)", fontSize:13, color:"#1a2e40", outline:"none", cursor:"pointer", appearance:"none" }}>
                 {PORTE_OPTS.map(s=><option key={s}>{s}</option>)}
               </select>
-              <ChevronDown style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", width:13, height:13, color:"#5B6570", pointerEvents:"none" }} />
+              <ChevronDown style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", width:13, height:13, color:"rgba(20,45,70,0.4)", pointerEvents:"none" }} />
             </div>
-            <div style={{ display:"flex", alignItems:"center", gap:5, padding:"0 12px", height:38, borderRadius:8, background:"#ffffff", border:"1px solid #E3E6E9", fontSize:12, color:"#5B6570" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:5, padding:"0 12px", height:38, borderRadius:10, background:"rgba(255,255,255,0.6)", border:"1px solid rgba(200,225,240,0.7)", fontSize:12, color:"rgba(20,45,70,0.5)" }}>
               <Filter style={{ width:13, height:13 }} /> {filtered.length} resultado{filtered.length!==1?"s":""}
             </div>
           </div>
@@ -317,10 +333,10 @@ export default function TodosClientes() {
             <div className="th">
               <SortTh label="Empresa" field="nome" />
               <SortTh label="Porte" field="porte" />
-              <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.07em", textTransform:"uppercase", color:"#5B6570" }}>Segmento</span>
-              <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.07em", textTransform:"uppercase", color:"#5B6570" }}>Cidade</span>
+              <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.07em", textTransform:"uppercase", color:"rgba(20,45,70,0.5)" }}>Segmento</span>
+              <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.07em", textTransform:"uppercase", color:"rgba(20,45,70,0.5)" }}>Cidade</span>
               <SortTh label="Score ★" field="score" />
-              <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.07em", textTransform:"uppercase", color:"#5B6570" }}>Ações</span>
+              <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.07em", textTransform:"uppercase", color:"rgba(20,45,70,0.5)" }}>Ações</span>
             </div>
 
             {loading ? (
@@ -333,8 +349,8 @@ export default function TodosClientes() {
               ))
             ) : filtered.length === 0 ? (
               <div style={{ padding:"48px 20px", textAlign:"center" }}>
-                <Building2 style={{ width:36, height:36, color:"#2563EB", margin:"0 auto 12px" }} />
-                <p style={{ fontSize:14, fontWeight:600, color:"#5B6570" }}>Nenhuma empresa encontrada</p>
+                <Building2 style={{ width:36, height:36, color:"rgba(41,128,185,0.3)", margin:"0 auto 12px" }} />
+                <p style={{ fontSize:14, fontWeight:600, color:"rgba(20,45,70,0.5)" }}>Nenhuma empresa encontrada</p>
               </div>
             ) : (
               <AnimatePresence>
@@ -354,12 +370,12 @@ export default function TodosClientes() {
                     >
                       {/* Nome */}
                       <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                        <div style={{ width:34, height:34, borderRadius:8, background:avatarColor(emp.nome), display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#fff", flexShrink:0 }}>
+                        <div style={{ width:34, height:34, borderRadius:10, background:avatarColor(emp.nome), display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#fff", flexShrink:0 }}>
                           {initials(emp.nome)}
                         </div>
                         <div>
-                          <div style={{ fontSize:13, fontWeight:700, color:"#16191D" }}>{emp.nome}</div>
-                          {emp.responsavel_principal && <div style={{ fontSize:10, color:"#5B6570" }}>{emp.responsavel_principal}</div>}
+                          <div style={{ fontSize:13, fontWeight:700, color:"#0f2133" }}>{emp.nome}</div>
+                          {emp.responsavel_principal && <div style={{ fontSize:10, color:"rgba(20,45,70,0.4)" }}>{emp.responsavel_principal}</div>}
                         </div>
                       </div>
 
@@ -367,10 +383,10 @@ export default function TodosClientes() {
                       <span className="chip" style={{ background:`${pc}15`, color:pc, border:`1px solid ${pc}30` }}>{emp.porte||"—"}</span>
 
                       {/* Segmento */}
-                      <span style={{ fontSize:12, color:"#5B6570", fontWeight:500 }}>{emp.segmento||"—"}</span>
+                      <span style={{ fontSize:12, color:"rgba(20,45,70,0.6)", fontWeight:500 }}>{emp.segmento||"—"}</span>
 
                       {/* Cidade */}
-                      <span style={{ fontSize:12, color:"#5B6570", fontWeight:500 }}>{emp.cidade||"—"}</span>
+                      <span style={{ fontSize:12, color:"rgba(20,45,70,0.6)", fontWeight:500 }}>{emp.cidade||"—"}</span>
 
                       {/* Score */}
                       <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
@@ -380,13 +396,13 @@ export default function TodosClientes() {
 
                       {/* Ações */}
                       <div style={{ display:"flex", alignItems:"center", gap:5 }} onClick={e=>e.stopPropagation()}>
-                        <button className="action-btn" style={{ background:"#EFF4FE", color:"#2563EB" }} onClick={e=>{e.stopPropagation();navigate(`/clientes/${emp.empresa_id}`)}} title="Ver perfil">
+                        <button className="action-btn" style={{ background:"rgba(41,128,185,0.08)", color:"#2980b9" }} onClick={e=>{e.stopPropagation();navigate(`/clientes/${emp.empresa_id}`)}} title="Ver perfil">
                           <Eye style={{ width:13, height:13 }} />
                         </button>
-                        <button className="action-btn" style={{ background:"rgba(142,68,173,0.08)", color:"#5B6570" }} onClick={e=>{e.stopPropagation();navigate(`/clientes/${emp.empresa_id}/editar`)}} title="Editar">
+                        <button className="action-btn" style={{ background:"rgba(142,68,173,0.08)", color:"#8e44ad" }} onClick={e=>{e.stopPropagation();navigate(`/clientes/${emp.empresa_id}/editar`)}} title="Editar">
                           <Edit3 style={{ width:13, height:13 }} />
                         </button>
-                        <button className="action-btn" style={{ background:isDeleting?"rgba(231,76,60,0.2)":"rgba(231,76,60,0.08)", color:"#B42318" }} onClick={e=>handleDelete(e,emp.empresa_id)} title={isDeleting?"Confirmar exclusão":"Excluir"} onBlur={()=>setTimeout(()=>setDeleteConfirm(null),200)}>
+                        <button className="action-btn" style={{ background:isDeleting?"rgba(231,76,60,0.2)":"rgba(231,76,60,0.08)", color:"#e74c3c" }} onClick={e=>handleDelete(e,emp.empresa_id)} title={isDeleting?"Confirmar exclusão":"Excluir"} onBlur={()=>setTimeout(()=>setDeleteConfirm(null),200)}>
                           {isDeleting ? <CheckSquare style={{ width:13, height:13 }} /> : <Trash2 style={{ width:13, height:13 }} />}
                         </button>
                       </div>

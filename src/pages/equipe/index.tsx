@@ -15,14 +15,15 @@ const API = "https://backend-crm-production-157b.up.railway.app";
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
   * { font-family: 'Plus Jakarta Sans', sans-serif; box-sizing: border-box; margin: 0; padding: 0; }
-  .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:8px; cursor:pointer; font-size:13.5px; font-weight:500; color:#ffffff; transition:all 0.18s; user-select:none; }
-  .nav-item:hover { background:#ffffff; color:#fff; }
-  .nav-item.active { background:#ffffff; color:#fff; font-weight:600; }
-  .card { background:#ffffff; border:1px solid #ffffff; border-radius:8px; }
-  .ipt { width:100%; height:42px; border-radius:8px; border:1px solid #E3E6E9; background:#fff; padding:0 14px; font-size:13px; color:#16191D; outline:none; transition:border-color 0.15s; }
-  .ipt:focus { border-color:#2563EB; box-shadow:0 0 0 3px #EFF4FE; }
+  @keyframes gradientShift { 0%,100%{background-position:0% 50%}50%{background-position:100% 50%} }
+  .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:10px; cursor:pointer; font-size:13.5px; font-weight:500; color:rgba(255,255,255,0.65); transition:all 0.18s; user-select:none; }
+  .nav-item:hover { background:rgba(255,255,255,0.08); color:#fff; }
+  .nav-item.active { background:rgba(255,255,255,0.14); color:#fff; font-weight:600; }
+  .card { background:rgba(255,255,255,0.82); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.9); border-radius:14px; }
+  .ipt { width:100%; height:42px; border-radius:10px; border:1px solid rgba(200,225,240,0.9); background:#fff; padding:0 14px; font-size:13px; color:#1a2e40; outline:none; transition:border-color 0.15s; }
+  .ipt:focus { border-color:rgba(41,128,185,0.55); box-shadow:0 0 0 3px rgba(41,128,185,0.08); }
   ::-webkit-scrollbar { width:5px; height:5px; }
-  ::-webkit-scrollbar-thumb { background:#EFF4FE; border-radius:4px; }
+  ::-webkit-scrollbar-thumb { background:rgba(41,128,185,0.25); border-radius:4px; }
 `;
 
 interface Me {
@@ -34,8 +35,8 @@ interface Me {
 // o usuário lê "Função" (o campo continua sendo `role` na API — não se renomeia
 // contrato por estética).
 const FUNCOES = [
-  { valor: "vendedor",   rotulo: "Vendedor",   desc: "Carteira própria",          cor: "#2563EB" },
-  { valor: "supervisor", rotulo: "Supervisor", desc: "Acompanha seus vendedores", cor: "#5B6570" },
+  { valor: "vendedor",   rotulo: "Vendedor",   desc: "Carteira própria",          cor: "#2980b9" },
+  { valor: "supervisor", rotulo: "Supervisor", desc: "Acompanha seus vendedores", cor: "#8e44ad" },
   { valor: "gerente",    rotulo: "Gerente",    desc: "Vê tudo da conta",          cor: "#d97706" },
 ] as const;
 
@@ -46,7 +47,7 @@ function rotuloFuncao(role?: string) {
   return FUNCOES.find(f => f.valor === role)?.rotulo || "Vendedor";
 }
 function corFuncao(role?: string) {
-  return FUNCOES.find(f => f.valor === role)?.cor || "#2563EB";
+  return FUNCOES.find(f => f.valor === role)?.cor || "#2980b9";
 }
 
 interface UsuarioRow {
@@ -108,7 +109,7 @@ const navItems = [
 ];
 
 function initials(n: string) { return n?.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase() || "?"; }
-function avatarColor(n: string) { const c = ["#2563EB", "#2563EB", "#5B6570", "#8A5A00", "#0F7B4F", "#B42318"]; return c[(n?.charCodeAt(0) || 0) % c.length]; }
+function avatarColor(n: string) { const c = ["#2980b9", "#1abc9c", "#8e44ad", "#e67e22", "#27ae60", "#e74c3c"]; return c[(n?.charCodeAt(0) || 0) % c.length]; }
 function money(v?: number | null) { return `R$ ${Number(v || 0).toLocaleString("pt-BR")}`; }
 
 export default function Equipe() {
@@ -299,15 +300,15 @@ export default function Equipe() {
 
   if (negado) {
     return (
-      <div style={{ display: "flex", height: "100vh", alignItems: "center", justifyContent: "center", background: "#F6F7F8" }}>
+      <div style={{ display: "flex", height: "100vh", alignItems: "center", justifyContent: "center", background: "linear-gradient(145deg,#c8e8f5,#c5eae0)" }}>
         <style>{css}</style>
         <div className="card" style={{ padding: 40, textAlign: "center", maxWidth: 420 }}>
-          <Shield style={{ width: 40, height: 40, color: "#B42318", margin: "0 auto 14px" }} />
-          <h2 style={{ fontSize: 18, fontWeight: 800, color: "#16191D", marginBottom: 8 }}>Acesso restrito</h2>
-          <p style={{ fontSize: 13, color: "#5B6570", marginBottom: 20 }}>
+          <Shield style={{ width: 40, height: 40, color: "#dc2626", margin: "0 auto 14px" }} />
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: "#0f2133", marginBottom: 8 }}>Acesso restrito</h2>
+          <p style={{ fontSize: 13, color: "rgba(20,45,70,0.6)", marginBottom: 20 }}>
             Esta área é exclusiva de gerentes e supervisores da conta.
           </p>
-          <button onClick={() => navigate("/dashboard")} style={{ padding: "10px 20px", borderRadius: 8, border: "none", background: "#2563EB", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+          <button onClick={() => navigate("/dashboard")} style={{ padding: "10px 20px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#2980b9,#1abc9c)", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
             Voltar ao Dashboard
           </button>
         </div>
@@ -320,9 +321,9 @@ export default function Equipe() {
   const semSupervisor = usuarios.filter(u => u.role === "vendedor" && !u.supervisor_id).length;
 
   const cards = dash ? [
-    { label: "Vendedores", value: dash.conta.total_vendedores, color: "#2563EB", icon: Users },
-    { label: "Empresas", value: dash.conta.total_empresas, color: "#5B6570", icon: Building2 },
-    { label: "Ganhos", value: dash.conta.ganhos, color: "#0F7B4F", icon: TrendingUp },
+    { label: "Vendedores", value: dash.conta.total_vendedores, color: "#2980b9", icon: Users },
+    { label: "Empresas", value: dash.conta.total_empresas, color: "#8e44ad", icon: Building2 },
+    { label: "Ganhos", value: dash.conta.ganhos, color: "#27ae60", icon: TrendingUp },
     { label: "Pipeline", value: money(dash.conta.ticket_total), color: "#d97706", icon: BarChart3 },
   ] : [];
 
@@ -332,7 +333,8 @@ export default function Equipe() {
 
       {/* Background */}
       <div style={{ position: "fixed", inset: 0, zIndex: 0, overflow: "hidden", pointerEvents: "none" }}>
-        <div style={{ position: "absolute", inset: 0, background: "#F6F7F8" }} />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(145deg,#c8e8f5 0%,#d6eef5 30%,#cceee8 65%,#c5eae0 100%)" }} />
+        <div style={{ position: "absolute", inset: 0, opacity: 0.4, backgroundImage: "radial-gradient(circle,rgba(41,128,185,0.2) 1px,transparent 1px)", backgroundSize: "22px 22px" }} />
       </div>
 
       {/* Sidebar */}
@@ -341,19 +343,19 @@ export default function Equipe() {
       )}
       <div style={{
         width: 220, flexShrink: 0, height: "100vh", overflowY: "auto", zIndex: 1000,
-        background: "#1a3a5c",
-        boxShadow:"none", display: "flex", flexDirection: "column", padding: "0 12px 20px",
+        background: "linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)",
+        boxShadow: "4px 0 24px rgba(0,0,0,0.18)", display: "flex", flexDirection: "column", padding: "0 12px 20px",
         position: isMobile ? "fixed" : "relative", top: 0, left: 0,
         transform: isMobile && !menuOpen ? "translateX(-100%)" : "translateX(0)", transition: "transform 0.28s ease",
       }}>
-        <div style={{ padding: "22px 4px 24px", borderBottom: "1px solid #ffffff", marginBottom: 16 }}>
+        <div style={{ padding: "22px 4px 24px", borderBottom: "1px solid rgba(255,255,255,0.08)", marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 8, background: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center", boxShadow:"none" }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,#2980b9,#1abc9c)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(41,128,185,0.4)" }}>
               <BarChart3 style={{ width: 18, height: 18, color: "#fff" }} />
             </div>
             <div>
               <div style={{ fontSize: 14, fontWeight: 800, color: "#fff" }}>Prospecção</div>
-              <div style={{ fontSize: 11, fontWeight: 700, background: "#2563EB", backgroundSize: "200% 200%", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", animation: "gradientShift 4s ease infinite" }}>CRM</div>
+              <div style={{ fontSize: 11, fontWeight: 700, background: "linear-gradient(90deg,#2980b9,#1abc9c,#2ecc71,#2980b9)", backgroundSize: "200% 200%", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", animation: "gradientShift 4s ease infinite" }}>CRM</div>
             </div>
           </div>
         </div>
@@ -370,25 +372,25 @@ export default function Equipe() {
       {/* Main */}
       <div style={{ flex: 1, height: "100vh", overflow: "auto", position: "relative", zIndex: 5 }}>
         {/* Header */}
-        <div style={{ padding: isMobile ? "14px 16px" : "20px 30px", background: "rgba(210,238,248,0.85)",  borderBottom: "1px solid #ffffff", display: "flex", alignItems: "center", gap: 14, position: "sticky", top: 0, zIndex: 10 }}>
+        <div style={{ padding: isMobile ? "14px 16px" : "20px 30px", background: "rgba(210,238,248,0.85)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,0.6)", display: "flex", alignItems: "center", gap: 14, position: "sticky", top: 0, zIndex: 10 }}>
           {isMobile && (
-            <button onClick={() => setMenuOpen(true)} style={{ width: 36, height: 36, borderRadius: 8, border: "1px solid #E3E6E9", background: "#ffffff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Menu style={{ width: 18, height: 18, color: "#2563EB" }} />
+            <button onClick={() => setMenuOpen(true)} style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid rgba(200,225,240,0.9)", background: "rgba(255,255,255,0.75)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Menu style={{ width: 18, height: 18, color: "#2980b9" }} />
             </button>
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#5B6570", letterSpacing: "0.08em", textTransform: "uppercase" }}>{me?.conta_nome || "Gestão"}</div>
-            <h1 style={{ fontSize: 22, fontWeight: 900, color: "#16191D", letterSpacing: "-0.03em" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(20,45,70,0.45)", letterSpacing: "0.08em", textTransform: "uppercase" }}>{me?.conta_nome || "Gestão"}</div>
+            <h1 style={{ fontSize: 22, fontWeight: 900, color: "#0f2133", letterSpacing: "-0.03em" }}>
               {ehGerente ? "Equipe & Usuários" : "Minha equipe"}
             </h1>
           </div>
-          <button onClick={carregar} style={{ width: 38, height: 38, borderRadius: 8, border: "1px solid #E3E6E9", background: "#ffffff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <RefreshCw style={{ width: 15, height: 15, color: "#2563EB" }} />
+          <button onClick={carregar} style={{ width: 38, height: 38, borderRadius: 10, border: "1px solid rgba(200,225,240,0.9)", background: "rgba(255,255,255,0.75)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <RefreshCw style={{ width: 15, height: 15, color: "#2980b9" }} />
           </button>
           {/* Convidar usuario e prerrogativa do gerente — a API tambem recusa
               a chamada de quem nao for gerente, nao e so o botao escondido. */}
           {ehGerente && (
-            <button onClick={() => { setShowInvite(true); setErro(""); setSucesso(""); setLinkAtivacao(""); setMotivoEmail(""); }} style={{ height: 38, padding: "0 16px", borderRadius: 8, border: "none", cursor: "pointer", background: "#2563EB", backgroundSize: "200% 200%", animation: "gradientShift 4s ease infinite", color: "#fff", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, boxShadow:"none" }}>
+            <button onClick={() => { setShowInvite(true); setErro(""); setSucesso(""); setLinkAtivacao(""); setMotivoEmail(""); }} style={{ height: 38, padding: "0 16px", borderRadius: 10, border: "none", cursor: "pointer", background: "linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)", backgroundSize: "200% 200%", animation: "gradientShift 4s ease infinite", color: "#fff", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, boxShadow: "0 4px 14px rgba(41,128,185,0.35)" }}>
               <UserPlus style={{ width: 15, height: 15 }} /> Adicionar usuário
             </button>
           )}
@@ -403,7 +405,7 @@ export default function Equipe() {
                   <div style={{ width: 32, height: 32, borderRadius: 9, background: `${c.color}18`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <c.icon style={{ width: 16, height: 16, color: c.color }} />
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#5B6570", textTransform: "uppercase", letterSpacing: "0.05em" }}>{c.label}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(20,45,70,0.5)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{c.label}</span>
                 </div>
                 <div style={{ fontSize: 24, fontWeight: 900, color: c.color }}>{c.value}</div>
               </div>
@@ -412,11 +414,11 @@ export default function Equipe() {
 
           {/* Aviso do resultado das ações de hierarquia */}
           {aviso && (
-            <div className="card" style={{ padding: "11px 14px", marginBottom: 16, display: "flex", alignItems: "center", gap: 9, border: "1px solid #2563EB", background: "#2563EB" }}>
-              <CheckCircle2 style={{ width: 15, height: 15, color: "#2563EB", flexShrink: 0 }} />
+            <div className="card" style={{ padding: "11px 14px", marginBottom: 16, display: "flex", alignItems: "center", gap: 9, border: "1px solid rgba(41,128,185,0.28)", background: "rgba(41,128,185,0.07)" }}>
+              <CheckCircle2 style={{ width: 15, height: 15, color: "#2980b9", flexShrink: 0 }} />
               <span style={{ fontSize: 12.5, fontWeight: 600, color: "#15547f", flex: 1 }}>{aviso}</span>
               <button onClick={() => { setAviso(""); setLinkAtivacao(""); setMotivoEmail(""); }} aria-label="Fechar aviso"
-                style={{ border: "none", background: "none", cursor: "pointer", color: "#5B6570", display: "flex" }}>
+                style={{ border: "none", background: "none", cursor: "pointer", color: "rgba(20,45,70,0.45)", display: "flex" }}>
                 <X style={{ width: 14, height: 14 }} />
               </button>
             </div>
@@ -431,8 +433,8 @@ export default function Equipe() {
           {/* Estrutura da equipe: Gerente -> Supervisor -> Vendedores */}
           <div className="card" style={{ padding: isMobile ? "14px" : "20px 22px", marginBottom: 22 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
-              <Network style={{ width: 18, height: 18, color: "#5B6570" }} />
-              <h2 style={{ fontSize: 16, fontWeight: 800, color: "#16191D" }}>
+              <Network style={{ width: 18, height: 18, color: "#8e44ad" }} />
+              <h2 style={{ fontSize: 16, fontWeight: 800, color: "#0f2133" }}>
                 {ehGerente ? "Estrutura da equipe" : "Vendedores sob sua supervisão"}
               </h2>
               {ehGerente && semSupervisor > 0 && (
@@ -441,16 +443,16 @@ export default function Equipe() {
                 </span>
               )}
             </div>
-            <p style={{ fontSize: 12, color: "#5B6570", marginBottom: 16 }}>
+            <p style={{ fontSize: 12, color: "rgba(20,45,70,0.5)", marginBottom: 16 }}>
               {ehGerente
                 ? "Cada supervisor enxerga apenas os vendedores atribuídos a ele. Use a coluna Supervisor, na lista abaixo, para mudar as atribuições."
                 : "Você acompanha os resultados destes vendedores. A estrutura é definida pelo gerente da conta."}
             </p>
 
             {loading ? (
-              <div style={{ padding: 30, textAlign: "center", color: "#5B6570", fontSize: 13 }}>Carregando estrutura...</div>
+              <div style={{ padding: 30, textAlign: "center", color: "rgba(20,45,70,0.4)", fontSize: 13 }}>Carregando estrutura...</div>
             ) : !estrutura || (estrutura.supervisores.length === 0 && estrutura.sem_supervisor.length === 0) ? (
-              <div style={{ padding: "30px 20px", textAlign: "center", color: "#5B6570" }}>
+              <div style={{ padding: "30px 20px", textAlign: "center", color: "rgba(20,45,70,0.45)" }}>
                 <Network style={{ width: 30, height: 30, margin: "0 auto 10px", opacity: 0.3 }} />
                 <p style={{ fontSize: 13, fontWeight: 700 }}>
                   {ehGerente ? "Nenhum supervisor cadastrado ainda." : "Nenhum vendedor atribuído a você ainda."}
@@ -464,15 +466,15 @@ export default function Equipe() {
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill,minmax(300px,1fr))", gap: 14 }}>
                 {estrutura.supervisores.map(sup => (
-                  <div key={sup.usuario_id} style={{ borderRadius: 8, border: "1px solid rgba(142,68,173,0.25)", background: "rgba(142,68,173,0.04)", padding: 14 }}>
+                  <div key={sup.usuario_id} style={{ borderRadius: 12, border: "1px solid rgba(142,68,173,0.25)", background: "rgba(142,68,173,0.04)", padding: 14 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: 10, borderBottom: "1px solid rgba(142,68,173,0.18)" }}>
-                      <div style={{ width: 34, height: 34, borderRadius: 8, background: "#5B6570", display: "grid", placeItems: "center", fontSize: 12, fontWeight: 800, color: "#fff", flexShrink: 0 }}>
+                      <div style={{ width: 34, height: 34, borderRadius: 10, background: "#8e44ad", display: "grid", placeItems: "center", fontSize: 12, fontWeight: 800, color: "#fff", flexShrink: 0 }}>
                         {initials(sup.nome)}
                       </div>
                       <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{ fontSize: 13, fontWeight: 800, color: "#16191D", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: "#0f2133", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {sup.nome}
-                          {!sup.ativo && <span style={{ fontSize: 10, color: "#B42318", marginLeft: 6 }}>inativo</span>}
+                          {!sup.ativo && <span style={{ fontSize: 10, color: "#dc2626", marginLeft: 6 }}>inativo</span>}
                         </div>
                         <div style={{ fontSize: 10.5, fontWeight: 700, color: "#7d3c98" }}>Supervisor</div>
                       </div>
@@ -481,7 +483,7 @@ export default function Equipe() {
                       </span>
                     </div>
                     {sup.vendedores.length === 0 ? (
-                      <p style={{ fontSize: 11.5, color: "#5B6570", fontWeight: 600, padding: "12px 2px 2px" }}>
+                      <p style={{ fontSize: 11.5, color: "rgba(20,45,70,0.45)", fontWeight: 600, padding: "12px 2px 2px" }}>
                         Nenhum vendedor atribuído a este supervisor.
                       </p>
                     ) : (
@@ -491,10 +493,10 @@ export default function Equipe() {
                             <div style={{ width: 26, height: 26, borderRadius: 8, background: avatarColor(v.nome), display: "grid", placeItems: "center", fontSize: 10, fontWeight: 700, color: "#fff", flexShrink: 0 }}>
                               {initials(v.nome)}
                             </div>
-                            <span style={{ fontSize: 12.5, fontWeight: 600, color: "#16191D", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            <span style={{ fontSize: 12.5, fontWeight: 600, color: "#0f2133", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                               {v.nome}
                             </span>
-                            <span style={{ fontSize: 11, fontWeight: 700, color: "#5B6570", flexShrink: 0 }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(20,45,70,0.45)", flexShrink: 0 }}>
                               {v.total_empresas} emp.
                             </span>
                           </div>
@@ -507,7 +509,7 @@ export default function Equipe() {
                 {/* Vendedores sem vínculo existem de propósito: remover a
                     atribuição não exclui o usuário. */}
                 {estrutura.sem_supervisor.length > 0 && (
-                  <div style={{ borderRadius: 8, border: "1px dashed rgba(217,119,6,0.4)", background: "rgba(217,119,6,0.05)", padding: 14 }}>
+                  <div style={{ borderRadius: 12, border: "1px dashed rgba(217,119,6,0.4)", background: "rgba(217,119,6,0.05)", padding: 14 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, paddingBottom: 10, borderBottom: "1px solid rgba(217,119,6,0.2)" }}>
                       <Ban style={{ width: 15, height: 15, color: "#b45309" }} />
                       <div style={{ fontSize: 13, fontWeight: 800, color: "#b45309", flex: 1 }}>Sem supervisor</div>
@@ -519,10 +521,10 @@ export default function Equipe() {
                           <div style={{ width: 26, height: 26, borderRadius: 8, background: avatarColor(v.nome), display: "grid", placeItems: "center", fontSize: 10, fontWeight: 700, color: "#fff", flexShrink: 0 }}>
                             {initials(v.nome)}
                           </div>
-                          <span style={{ fontSize: 12.5, fontWeight: 600, color: "#16191D", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <span style={{ fontSize: 12.5, fontWeight: 600, color: "#0f2133", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {v.nome}
                           </span>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: "#5B6570", flexShrink: 0 }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(20,45,70,0.45)", flexShrink: 0 }}>
                             {v.total_empresas} emp.
                           </span>
                         </div>
@@ -537,22 +539,22 @@ export default function Equipe() {
           {/* Lista de usuários */}
           <div className="card" style={{ padding: isMobile ? "14px" : "20px 22px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-              <Users style={{ width: 18, height: 18, color: "#2563EB" }} />
-              <h2 style={{ fontSize: 16, fontWeight: 800, color: "#16191D" }}>{ehGerente ? "Usuários da conta" : "Meus vendedores"}</h2>
-              <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 800, color: "#2563EB", background: "#EFF4FE", padding: "2px 9px", borderRadius: 8 }}>{usuarios.length}</span>
+              <Users style={{ width: 18, height: 18, color: "#2980b9" }} />
+              <h2 style={{ fontSize: 16, fontWeight: 800, color: "#0f2133" }}>{ehGerente ? "Usuários da conta" : "Meus vendedores"}</h2>
+              <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 800, color: "#2980b9", background: "rgba(41,128,185,0.1)", padding: "2px 9px", borderRadius: 8 }}>{usuarios.length}</span>
             </div>
 
             {loading ? (
-              <div style={{ padding: 40, textAlign: "center", color: "#5B6570", fontSize: 13 }}>Carregando...</div>
+              <div style={{ padding: 40, textAlign: "center", color: "rgba(20,45,70,0.4)", fontSize: 13 }}>Carregando...</div>
             ) : usuarios.length === 0 ? (
-              <div style={{ padding: 40, textAlign: "center", color: "#5B6570" }}>
+              <div style={{ padding: 40, textAlign: "center", color: "rgba(20,45,70,0.45)" }}>
                 <Users style={{ width: 34, height: 34, margin: "0 auto 10px", opacity: 0.3 }} />
                 <p style={{ fontSize: 13, fontWeight: 600 }}>Nenhum usuário ainda. Adicione o primeiro vendedor.</p>
               </div>
             ) : (
               <div style={{ overflowX: "auto" }}>
                 <div style={{ minWidth: isMobile ? 720 : undefined }}>
-                  <div style={{ display: "grid", gridTemplateColumns: GRID_USUARIOS, gap: 12, padding: "6px 12px", fontSize: 10, fontWeight: 700, color: "#5B6570", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: GRID_USUARIOS, gap: 12, padding: "6px 12px", fontSize: 10, fontWeight: 700, color: "rgba(20,45,70,0.45)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
                     <span>Usuário</span><span>Função</span><span>Supervisor</span><span>Carteira</span><span>Status</span><span>Ações</span>
                   </div>
                   {usuarios.map((u, idx) => {
@@ -560,12 +562,12 @@ export default function Equipe() {
                     const cor = corFuncao(u.role);
                     return (
                       <motion.div key={u.usuario_id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18, delay: idx * 0.03 }}
-                        style={{ display: "grid", gridTemplateColumns: GRID_USUARIOS, gap: 12, alignItems: "center", padding: "12px", borderTop: "1px solid #E3E6E9" }}>
+                        style={{ display: "grid", gridTemplateColumns: GRID_USUARIOS, gap: 12, alignItems: "center", padding: "12px", borderTop: "1px solid rgba(200,225,240,0.5)" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                          <div style={{ width: 38, height: 38, borderRadius: 8, background: avatarColor(u.nome), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: "#fff", flexShrink: 0 }}>{initials(u.nome)}</div>
+                          <div style={{ width: 38, height: 38, borderRadius: 10, background: avatarColor(u.nome), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: "#fff", flexShrink: 0 }}>{initials(u.nome)}</div>
                           <div style={{ minWidth: 0 }}>
-                            <div style={{ fontSize: 13, fontWeight: 700, color: "#16191D", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.nome}</div>
-                            <div style={{ fontSize: 11, color: "#5B6570", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.email}</div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: "#0f2133", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.nome}</div>
+                            <div style={{ fontSize: 11, color: "rgba(20,45,70,0.5)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.email}</div>
                           </div>
                         </div>
                         {/* Função — quem não é gerente vê o rótulo, sem poder editar */}
@@ -587,7 +589,7 @@ export default function Equipe() {
                             Remover não exclui o usuário: ele só fica sem supervisor. */}
                         <div>
                           {u.role !== "vendedor" ? (
-                            <span style={{ fontSize: 11, fontWeight: 600, color: "#5B6570" }}>—</span>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(20,45,70,0.3)" }}>—</span>
                           ) : ehGerente ? (
                             <select value={u.supervisor_id || ""} onChange={e => definirSupervisor(u, e.target.value)}
                               aria-label={`Supervisor de ${u.nome}`}
@@ -599,37 +601,37 @@ export default function Equipe() {
                               ))}
                             </select>
                           ) : (
-                            <span style={{ fontSize: 11.5, fontWeight: 600, color: u.supervisor_nome ? "#7d3c98" : "#5B6570" }}>
+                            <span style={{ fontSize: 11.5, fontWeight: 600, color: u.supervisor_nome ? "#7d3c98" : "rgba(20,45,70,0.35)" }}>
                               {u.supervisor_nome || "Sem supervisor"}
                             </span>
                           )}
                         </div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: "#16191D" }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(20,45,70,0.7)" }}>
                           {u.total_empresas}
-                          {m && m.ganhos > 0 && <span style={{ fontSize: 10, color: "#0F7B4F", marginLeft: 4 }}>· {m.ganhos}✓</span>}
+                          {m && m.ganhos > 0 && <span style={{ fontSize: 10, color: "#27ae60", marginLeft: 4 }}>· {m.ganhos}✓</span>}
                         </div>
                         <div>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 7, background: u.ativo ? "rgba(39,174,96,0.12)" : "rgba(220,38,38,0.1)", color: u.ativo ? "#1e8449" : "#B42318" }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 7, background: u.ativo ? "rgba(39,174,96,0.12)" : "rgba(220,38,38,0.1)", color: u.ativo ? "#1e8449" : "#dc2626" }}>
                             {u.ativo ? <CheckCircle2 style={{ width: 11, height: 11 }} /> : <Ban style={{ width: 11, height: 11 }} />}
                             {u.ativo ? "Ativo" : "Inativo"}
                           </span>
                         </div>
                         <div>
                           {u.email === me?.email ? (
-                            <span style={{ fontSize: 11, fontWeight: 600, color: "#5B6570" }}>Você</span>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(20,45,70,0.4)" }}>Você</span>
                           ) : !ehGerente ? (
-                            <span style={{ fontSize: 11, fontWeight: 600, color: "#5B6570" }}>—</span>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(20,45,70,0.3)" }}>—</span>
                           ) : (
                             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                               <button onClick={() => toggleAtivo(u)}
-                                style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #E3E6E9", background: u.ativo ? "rgba(220,38,38,0.06)" : "rgba(39,174,96,0.08)", color: u.ativo ? "#B42318" : "#1e8449", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                                style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(200,225,240,0.8)", background: u.ativo ? "rgba(220,38,38,0.06)" : "rgba(39,174,96,0.08)", color: u.ativo ? "#dc2626" : "#1e8449", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
                                 {u.ativo ? "Desativar" : "Reativar"}
                               </button>
                               {/* Quem nunca ativou pode nao ter recebido o email */}
                               {!u.ativo && (
                                 <button onClick={() => reenviarConvite(u)} disabled={reenviandoId === u.usuario_id}
                                   title="Gerar um convite novo e reenviar por email"
-                                  style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #2563EB", background: "#EFF4FE", color: "#2563EB", fontSize: 11, fontWeight: 700, cursor: reenviandoId === u.usuario_id ? "wait" : "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                                  style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(41,128,185,0.35)", background: "rgba(41,128,185,0.08)", color: "#2980b9", fontSize: 11, fontWeight: 700, cursor: reenviandoId === u.usuario_id ? "wait" : "pointer", display: "flex", alignItems: "center", gap: 4 }}>
                                   <Mail style={{ width: 11, height: 11 }} />
                                   {reenviandoId === u.usuario_id ? "Enviando..." : "Reenviar"}
                                 </button>
@@ -652,41 +654,41 @@ export default function Equipe() {
         {showInvite && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={() => !saving && setShowInvite(false)}
-            style={{ position: "fixed", inset: 0, background: "rgba(10,31,51,0.5)",  zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+            style={{ position: "fixed", inset: 0, background: "rgba(10,31,51,0.5)", backdropFilter: "blur(4px)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
             <motion.div initial={{ scale: 0.94, y: 14 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.94, y: 14 }}
               onClick={e => e.stopPropagation()}
-              style={{ width: "100%", maxWidth: 440, background: "#fff", borderRadius: 8, padding: 26, boxShadow:"none" }}>
+              style={{ width: "100%", maxWidth: 440, background: "#fff", borderRadius: 18, padding: 26, boxShadow: "0 24px 70px rgba(0,0,0,0.3)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
-                <div style={{ width: 40, height: 40, borderRadius: 8, background: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ width: 40, height: 40, borderRadius: 11, background: "linear-gradient(135deg,#2980b9,#1abc9c)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <UserPlus style={{ width: 19, height: 19, color: "#fff" }} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <h3 style={{ fontSize: 17, fontWeight: 800, color: "#16191D" }}>Adicionar usuário</h3>
-                  <p style={{ fontSize: 12, color: "#5B6570" }}>Ele recebe um email para criar a senha.</p>
+                  <h3 style={{ fontSize: 17, fontWeight: 800, color: "#0f2133" }}>Adicionar usuário</h3>
+                  <p style={{ fontSize: 12, color: "rgba(20,45,70,0.5)" }}>Ele recebe um email para criar a senha.</p>
                 </div>
-                <button onClick={() => setShowInvite(false)} style={{ width: 30, height: 30, borderRadius: 8, border: "none", background: "#E3E6E9", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <X style={{ width: 16, height: 16, color: "#5B6570" }} />
+                <button onClick={() => setShowInvite(false)} style={{ width: 30, height: 30, borderRadius: 8, border: "none", background: "rgba(200,225,240,0.4)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <X style={{ width: 16, height: 16, color: "rgba(20,45,70,0.6)" }} />
                 </button>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 <div>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: "#5B6570", marginBottom: 5, display: "block" }}>Nome</label>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: "rgba(20,45,70,0.6)", marginBottom: 5, display: "block" }}>Nome</label>
                   <input className="ipt" value={nome} onChange={e => setNome(e.target.value)} placeholder="Nome completo" />
                 </div>
                 <div>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: "#5B6570", marginBottom: 5, display: "block" }}>Email</label>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: "rgba(20,45,70,0.6)", marginBottom: 5, display: "block" }}>Email</label>
                   <div style={{ position: "relative" }}>
-                    <Mail style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", width: 15, height: 15, color: "#5B6570" }} />
+                    <Mail style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", width: 15, height: 15, color: "rgba(20,45,70,0.35)" }} />
                     <input className="ipt" style={{ paddingLeft: 36 }} value={email} onChange={e => setEmail(e.target.value)} placeholder="email@empresa.com" />
                   </div>
                 </div>
                 <div>
-                  <label htmlFor="novo-telefone" style={{ fontSize: 11, fontWeight: 700, color: "#5B6570", marginBottom: 5, display: "block" }}>Telefone</label>
+                  <label htmlFor="novo-telefone" style={{ fontSize: 11, fontWeight: 700, color: "rgba(20,45,70,0.6)", marginBottom: 5, display: "block" }}>Telefone</label>
                   <input id="novo-telefone" className="ipt" value={telefone} onChange={e => setTelefone(e.target.value)} placeholder="(00) 00000-0000" />
                 </div>
                 <div>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#5B6570", marginBottom: 5, display: "block" }}>Função</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(20,45,70,0.6)", marginBottom: 5, display: "block" }}>Função</span>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 8 }}>
                     {[
                       { v: "vendedor",   ic: Users,        },
@@ -698,12 +700,12 @@ export default function Equipe() {
                       return (
                         <button key={opt.v} type="button" onClick={() => { setRole(opt.v); if (opt.v !== "vendedor") setSupervisorId(""); }}
                           aria-pressed={on}
-                          style={{ padding: "10px 9px", borderRadius: 8, border: `1.5px solid ${on ? info.cor : "#E3E6E9"}`, background: on ? `${info.cor}12` : "#fff", cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}>
+                          style={{ padding: "10px 9px", borderRadius: 10, border: `1.5px solid ${on ? info.cor : "rgba(200,225,240,0.9)"}`, background: on ? `${info.cor}12` : "#fff", cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
-                            <opt.ic style={{ width: 14, height: 14, color: on ? info.cor : "#5B6570", flexShrink: 0 }} />
-                            <span style={{ fontSize: 12, fontWeight: 700, color: on ? info.cor : "#16191D" }}>{info.rotulo}</span>
+                            <opt.ic style={{ width: 14, height: 14, color: on ? info.cor : "rgba(20,45,70,0.5)", flexShrink: 0 }} />
+                            <span style={{ fontSize: 12, fontWeight: 700, color: on ? info.cor : "#0f2133" }}>{info.rotulo}</span>
                           </div>
-                          <div style={{ fontSize: 10, color: "#5B6570", lineHeight: 1.35 }}>{info.desc}</div>
+                          <div style={{ fontSize: 10, color: "rgba(20,45,70,0.5)", lineHeight: 1.35 }}>{info.desc}</div>
                         </button>
                       );
                     })}
@@ -714,11 +716,11 @@ export default function Equipe() {
                     gerente nao ter que abrir outra tela depois. */}
                 {role === "vendedor" && (
                   <div>
-                    <label htmlFor="novo-supervisor" style={{ fontSize: 11, fontWeight: 700, color: "#5B6570", marginBottom: 5, display: "block" }}>
+                    <label htmlFor="novo-supervisor" style={{ fontSize: 11, fontWeight: 700, color: "rgba(20,45,70,0.6)", marginBottom: 5, display: "block" }}>
                       Supervisor
                     </label>
                     {supervisores.length === 0 ? (
-                      <div style={{ fontSize: 11.5, color: "#5B6570", background: "rgba(217,119,6,0.07)", border: "1px solid rgba(217,119,6,0.25)", borderRadius: 9, padding: "9px 12px" }}>
+                      <div style={{ fontSize: 11.5, color: "rgba(20,45,70,0.5)", background: "rgba(217,119,6,0.07)", border: "1px solid rgba(217,119,6,0.25)", borderRadius: 9, padding: "9px 12px" }}>
                         Nenhum supervisor cadastrado ainda. Você pode criar o vendedor agora e atribuir depois.
                       </div>
                     ) : (
@@ -731,7 +733,7 @@ export default function Equipe() {
                   </div>
                 )}
 
-                {erro && <div style={{ fontSize: 12, fontWeight: 600, color: "#B42318", background: "rgba(220,38,38,0.08)", padding: "8px 12px", borderRadius: 9 }}>{erro}</div>}
+                {erro && <div style={{ fontSize: 12, fontWeight: 600, color: "#dc2626", background: "rgba(220,38,38,0.08)", padding: "8px 12px", borderRadius: 9 }}>{erro}</div>}
                 {sucesso && (
                   <div style={{ fontSize: 12, fontWeight: 600, color: linkAtivacao ? "#b45309" : "#1e8449", background: linkAtivacao ? "rgba(217,119,6,0.1)" : "rgba(39,174,96,0.1)", padding: "8px 12px", borderRadius: 9 }}>
                     {sucesso}
@@ -740,7 +742,7 @@ export default function Equipe() {
                 {linkAtivacao && <LinkAtivacao link={linkAtivacao} motivo={motivoEmail} copiado={copiado} onCopiar={copiarLink} />}
 
                 <button onClick={convidar} disabled={saving}
-                  style={{ height: 44, borderRadius: 8, border: "none", cursor: saving ? "default" : "pointer", background: "#2563EB", backgroundSize: "200% 200%", animation: "gradientShift 4s ease infinite", color: "#fff", fontSize: 14, fontWeight: 700, opacity: saving ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 4 }}>
+                  style={{ height: 44, borderRadius: 11, border: "none", cursor: saving ? "default" : "pointer", background: "linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)", backgroundSize: "200% 200%", animation: "gradientShift 4s ease infinite", color: "#fff", fontSize: 14, fontWeight: 700, opacity: saving ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 4 }}>
                   {saving ? "Enviando..." : <><Plus style={{ width: 16, height: 16 }} /> Enviar convite</>}
                 </button>
               </div>
@@ -760,21 +762,21 @@ function LinkAtivacao({
   link: string; motivo: string; copiado: boolean; onCopiar: () => void;
 }) {
   return (
-    <div style={{ padding: "12px 14px", borderRadius: 8, background: "rgba(217,119,6,0.07)", border: "1px solid rgba(217,119,6,0.28)" }}>
+    <div style={{ padding: "12px 14px", borderRadius: 10, background: "rgba(217,119,6,0.07)", border: "1px solid rgba(217,119,6,0.28)" }}>
       <div style={{ fontSize: 11.5, fontWeight: 700, color: "#b45309", marginBottom: 6 }}>
         Envie este link de ativação para a pessoa:
       </div>
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         <input readOnly value={link} onFocus={e => e.currentTarget.select()}
           aria-label="Link de ativação"
-          style={{ flex: 1, minWidth: 180, height: 34, padding: "0 10px", borderRadius: 8, border: "1px solid rgba(217,119,6,0.3)", background: "#fff", fontSize: 11.5, color: "#16191D", outline: "none" }} />
+          style={{ flex: 1, minWidth: 180, height: 34, padding: "0 10px", borderRadius: 8, border: "1px solid rgba(217,119,6,0.3)", background: "#fff", fontSize: 11.5, color: "#0f2133", outline: "none" }} />
         <button onClick={onCopiar}
           style={{ height: 34, padding: "0 14px", borderRadius: 8, border: "none", cursor: "pointer", background: copiado ? "#1e8449" : "#b45309", color: "#fff", fontSize: 11.5, fontWeight: 700, fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5 }}>
           {copiado ? <><CheckCircle2 style={{ width: 12, height: 12 }} /> Copiado</> : "Copiar"}
         </button>
       </div>
       {motivo && (
-        <div style={{ fontSize: 11, color: "#5B6570", marginTop: 8, lineHeight: 1.5 }}>
+        <div style={{ fontSize: 11, color: "rgba(20,45,70,0.6)", marginTop: 8, lineHeight: 1.5 }}>
           <strong>Por que o email não saiu:</strong> {motivo}
         </div>
       )}

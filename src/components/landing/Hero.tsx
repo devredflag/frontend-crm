@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
-import PageBackground from "./PageBackground";
+import MouseGlowBackground from "./MouseGlowBackground";
 
 export default function Hero() {
   const [email, setEmail] = useState("");
@@ -10,7 +10,7 @@ export default function Hero() {
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-24">
 
       {/* BACKGROUND */}
-      <PageBackground />
+      <MouseGlowBackground />
 
       {/* FADE */}
       <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-white/70 to-transparent pointer-events-none" />
@@ -79,8 +79,8 @@ export default function Hero() {
               whileTap={{ scale: 0.96 }}
               className="w-full sm:w-[45%] h-14 px-8 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2"
               style={{
-                background: "#2563EB",
-                boxShadow:"none"
+                background: "linear-gradient(135deg, #2f80ed 0%, #27ae60 100%)",
+                boxShadow: "0 14px 40px rgba(47,128,237,0.45)"
               }}
             >
               Começar Agora

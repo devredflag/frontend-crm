@@ -78,9 +78,9 @@ async function rotaOSRM(a: Ponto, b: Ponto): Promise<{ coords: [number, number][
 }
 
 function tempCor(t?: string) {
-  if (t === "Quente") return "#B42318";
-  if (t === "Morno") return "#8A5A00";
-  if (t === "Frio") return "#2563EB";
+  if (t === "Quente") return "#e74c3c";
+  if (t === "Morno") return "#e67e22";
+  if (t === "Frio") return "#2980b9";
   return "#7f8c9a";
 }
 
@@ -168,7 +168,7 @@ export default function MapaProximidade({
         if (linhasFeitas.has(key)) return;
         linhasFeitas.add(key);
         const opac = Math.max(0.2, 1 - d.km / raioKm);
-        L.polyline([[p.lat, p.lng], [d.q.lat, d.q.lng]], { color: "#2563EB", weight: 1.5, opacity: opac, dashArray: "4 4" }).addTo(group);
+        L.polyline([[p.lat, p.lng], [d.q.lat, d.q.lng]], { color: "#2980b9", weight: 1.5, opacity: opac, dashArray: "4 4" }).addTo(group);
       });
     });
 
@@ -182,7 +182,7 @@ export default function MapaProximidade({
       for (const v of vz) {
         const rota = await rotaOSRM(origem, v.pt);
         if (rota && rotasRef.current) {
-          window.L.polyline(rota.coords, { color: "#5B6570", weight: 5, opacity: 0.85 }).addTo(rotasRef.current);
+          window.L.polyline(rota.coords, { color: "#8e44ad", weight: 5, opacity: 0.85 }).addTo(rotasRef.current);
           destinos.push({ nome: v.pt.emp.nome, km: rota.km, min: rota.min });
         } else {
           // Sem rota viária: cai pra distância em linha reta
@@ -204,10 +204,10 @@ export default function MapaProximidade({
         : `<div style="margin-top:6px;font-size:11px;color:#9aa">Nenhuma empresa dentro de ${raioKm} km</div>`;
       const popup = `
         <div style="font-family:'Plus Jakarta Sans',sans-serif;min-width:190px">
-          <div style="font-size:13px;font-weight:800;color:#16191D">${escapeHtml(p.emp.nome)}</div>
+          <div style="font-size:13px;font-weight:800;color:#0f2133">${escapeHtml(p.emp.nome)}</div>
           <div style="font-size:11px;color:#7a8a9a;margin-top:2px">${escapeHtml(p.emp.segmento || "—")}${p.emp.cidade ? " · " + escapeHtml(p.emp.cidade) : ""}</div>
           ${listaVz}
-          ${vz.length ? '<div style="margin-top:6px;font-size:11px;color:#5B6570;font-weight:700">Clique no ponto para ver a rota pelas ruas</div>' : ""}
+          ${vz.length ? '<div style="margin-top:6px;font-size:11px;color:#8e44ad;font-weight:700">Clique no ponto para ver a rota pelas ruas</div>' : ""}
         </div>`;
       L.circleMarker([p.lat, p.lng], { radius: 8, color: "#fff", weight: 2, fillColor: cor, fillOpacity: 0.9 })
         .bindPopup(popup)
@@ -224,7 +224,7 @@ export default function MapaProximidade({
 
   if (erro) {
     return (
-      <div style={{ padding: 40, textAlign: "center", fontSize: 14, color: "#5B6570", fontWeight: 600 }}>
+      <div style={{ padding: 40, textAlign: "center", fontSize: 14, color: "rgba(20,45,70,0.5)", fontWeight: 600 }}>
         Não foi possível carregar o mapa. Verifique sua conexão e tente novamente.
       </div>
     );
@@ -237,15 +237,15 @@ export default function MapaProximidade({
       {/* Controles + legenda */}
       <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: "#5B6570" }}>Raio de proximidade</span>
-          <input type="range" min={1} max={50} step={1} value={raioKm} onChange={(e) => setRaioKm(Number(e.target.value))} style={{ accentColor: "#2563EB", width: 160 }} />
-          <span style={{ fontSize: 12, fontWeight: 800, color: "#2563EB", minWidth: 48 }}>{raioKm} km</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(20,45,70,0.6)" }}>Raio de proximidade</span>
+          <input type="range" min={1} max={50} step={1} value={raioKm} onChange={(e) => setRaioKm(Number(e.target.value))} style={{ accentColor: "#2980b9", width: 160 }} />
+          <span style={{ fontSize: 12, fontWeight: 800, color: "#2980b9", minWidth: 48 }}>{raioKm} km</span>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginLeft: "auto", flexWrap: "wrap" }}>
-          {[{ l: "Quente", c: "#B42318" }, { l: "Morno", c: "#8A5A00" }, { l: "Frio", c: "#2563EB" }, { l: "Sem temp.", c: "#7f8c9a" }].map((s) => (
-            <span key={s.l} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: "#5B6570" }}>
-              <span style={{ width: 10, height: 10, borderRadius: "50%", background: s.c, border: "1.5px solid #fff", boxShadow:"none" }} />
+          {[{ l: "Quente", c: "#e74c3c" }, { l: "Morno", c: "#e67e22" }, { l: "Frio", c: "#2980b9" }, { l: "Sem temp.", c: "#7f8c9a" }].map((s) => (
+            <span key={s.l} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: "rgba(20,45,70,0.55)" }}>
+              <span style={{ width: 10, height: 10, borderRadius: "50%", background: s.c, border: "1.5px solid #fff", boxShadow: "0 0 0 1px rgba(0,0,0,0.08)" }} />
               {s.l}
             </span>
           ))}
@@ -254,7 +254,7 @@ export default function MapaProximidade({
 
       {/* Banner: empresas sem coordenada + botão de geocodificar */}
       {semCoords > 0 && onGeocodificar && (
-        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 8, background: "rgba(230,126,34,0.08)", border: "1.5px solid rgba(230,126,34,0.25)", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 10, background: "rgba(230,126,34,0.08)", border: "1.5px solid rgba(230,126,34,0.25)", flexWrap: "wrap" }}>
           <span style={{ fontSize: 12, fontWeight: 600, color: "#b9651a", flex: 1, minWidth: 200 }}>
             {gc?.rodando
               ? `Localizando empresas... ${gc.feitas} já posicionadas${gc.restantes != null ? `, ${gc.restantes} restantes` : ""}`
@@ -263,7 +263,7 @@ export default function MapaProximidade({
           <button
             onClick={onGeocodificar}
             disabled={gc?.rodando}
-            style={{ height: 32, padding: "0 14px", borderRadius: 8, border: "none", cursor: gc?.rodando ? "wait" : "pointer", background: "#8A5A00", color: "#fff", fontSize: 12, fontWeight: 700, opacity: gc?.rodando ? 0.7 : 1, whiteSpace: "nowrap" }}
+            style={{ height: 32, padding: "0 14px", borderRadius: 8, border: "none", cursor: gc?.rodando ? "wait" : "pointer", background: "linear-gradient(135deg,#e67e22,#f39c12)", color: "#fff", fontSize: 12, fontWeight: 700, opacity: gc?.rodando ? 0.7 : 1, whiteSpace: "nowrap" }}
           >
             {gc?.rodando ? "Localizando..." : "Localizar no mapa"}
           </button>
@@ -272,28 +272,28 @@ export default function MapaProximidade({
 
       {/* Resumo da rota selecionada */}
       {rotaSel && (
-        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 8, background: "rgba(142,68,173,0.07)", border: "1.5px solid rgba(142,68,173,0.22)", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 10, background: "rgba(142,68,173,0.07)", border: "1.5px solid rgba(142,68,173,0.22)", flexWrap: "wrap" }}>
           <span style={{ fontSize: 12, color: "#5a3d6b", flex: 1, minWidth: 220 }}>
             {rotando
               ? "Calculando rota pelas ruas..."
               : rotaSel.destinos.length
-                ? <><b style={{ color: "#5B6570" }}>Rotas de {rotaSel.origem}:</b>{" "}
+                ? <><b style={{ color: "#8e44ad" }}>Rotas de {rotaSel.origem}:</b>{" "}
                     {rotaSel.destinos.map((d, i) => (
                       <span key={i}>{i > 0 ? " · " : " "}{d.nome} <b>{d.km.toFixed(1)} km</b>{Number.isFinite(d.min) ? ` (${Math.round(d.min)} min)` : ""}</span>
                     ))}
                   </>
                 : `Nenhuma empresa dentro de ${raioKm} km de ${rotaSel.origem}.`}
           </span>
-          <button onClick={limparRotas} style={{ height: 28, padding: "0 12px", borderRadius: 8, border: "1px solid rgba(142,68,173,0.3)", background: "rgba(142,68,173,0.06)", color: "#5B6570", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+          <button onClick={limparRotas} style={{ height: 28, padding: "0 12px", borderRadius: 8, border: "1px solid rgba(142,68,173,0.3)", background: "rgba(142,68,173,0.06)", color: "#8e44ad", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
             Limpar rota
           </button>
         </div>
       )}
 
       {/* Mapa */}
-      <div style={{ position: "relative", borderRadius: 8, overflow: "hidden", border: "1px solid #E3E6E9" }}>
+      <div style={{ position: "relative", borderRadius: 14, overflow: "hidden", border: "1px solid rgba(200,225,240,0.7)" }}>
         {!ready && (
-          <div style={{ position: "absolute", inset: 0, zIndex: 5, display: "flex", alignItems: "center", justifyContent: "center", background: "#F0F2F4", fontSize: 13, fontWeight: 600, color: "#5B6570" }}>
+          <div style={{ position: "absolute", inset: 0, zIndex: 5, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(228,244,252,0.6)", fontSize: 13, fontWeight: 600, color: "rgba(20,45,70,0.5)" }}>
             Carregando mapa...
           </div>
         )}
@@ -301,9 +301,9 @@ export default function MapaProximidade({
       </div>
 
       {/* Rodapé informativo */}
-      <div style={{ fontSize: 11, color: "#5B6570", display: "flex", gap: 14, flexWrap: "wrap" }}>
-        <span><b style={{ color: "#2563EB" }}>{pontos.length}</b> empresa{pontos.length !== 1 ? "s" : ""} no mapa</span>
-        {semCoords > 0 && <span style={{ color: "#8A5A00" }}>{semCoords} sem localização</span>}
+      <div style={{ fontSize: 11, color: "rgba(20,45,70,0.5)", display: "flex", gap: 14, flexWrap: "wrap" }}>
+        <span><b style={{ color: "#2980b9" }}>{pontos.length}</b> empresa{pontos.length !== 1 ? "s" : ""} no mapa</span>
+        {semCoords > 0 && <span style={{ color: "#e67e22" }}>{semCoords} sem localização</span>}
         <span style={{ marginLeft: "auto" }}>Tracejado = proximidade · Roxo = rota real pelas ruas (clique numa empresa) · OpenStreetMap + OSRM (custo zero)</span>
       </div>
     </div>

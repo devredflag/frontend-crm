@@ -18,9 +18,9 @@ export default function MapaWaze({
     <div
       style={{
         position: "relative",
-        borderRadius: 8,
+        borderRadius: 14,
         overflow: "hidden",
-        border: "1px solid #E3E6E9",
+        border: "1px solid rgba(200,225,240,0.7)",
       }}
     >
       <iframe
@@ -36,9 +36,9 @@ export default function MapaWaze({
         style={{
           padding: "6px 12px",
           fontSize: 11,
-          color: "#5B6570",
-          background: "#ffffff",
-          borderTop: "1px solid #E3E6E9",
+          color: "rgba(20,45,70,0.5)",
+          background: "rgba(255,255,255,0.85)",
+          borderTop: "1px solid rgba(200,225,240,0.6)",
         }}
       >
         Mapa apenas para referência da sua posição. Toque em uma empresa abaixo para abrir a rota no Waze.

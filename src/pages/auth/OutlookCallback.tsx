@@ -63,27 +63,27 @@ export default function OutlookCallback() {
   }, []);
 
   return (
-    <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100vh", background:"#F6F7F8", fontFamily:"sans-serif" }}>
-      <div style={{ background:"#ffffff", borderRadius:8, padding:"40px 48px", textAlign:"center", boxShadow:"none", maxWidth:360 }}>
+    <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100vh", background:"linear-gradient(145deg,#c8e8f5,#d6eef5,#cceee8)", fontFamily:"sans-serif" }}>
+      <div style={{ background:"rgba(255,255,255,0.9)", borderRadius:20, padding:"40px 48px", textAlign:"center", boxShadow:"0 8px 40px rgba(41,128,185,0.15)", maxWidth:360 }}>
         {status === "loading" && (
           <>
             <div style={{ width:48, height:48, border:"4px solid rgba(0,120,212,0.15)", borderTop:"4px solid #0078D4", borderRadius:"50%", margin:"0 auto 20px", animation:"spin 0.8s linear infinite" }} />
-            <div style={{ fontSize:16, fontWeight:700, color:"#16191D" }}>Conectando Outlook...</div>
-            <div style={{ fontSize:13, color:"#5B6570", marginTop:8 }}>Aguarde um momento</div>
+            <div style={{ fontSize:16, fontWeight:700, color:"#0f2133" }}>Conectando Outlook...</div>
+            <div style={{ fontSize:13, color:"rgba(20,45,70,0.5)", marginTop:8 }}>Aguarde um momento</div>
           </>
         )}
         {status === "success" && (
           <>
             <div style={{ fontSize:48, marginBottom:16 }}>✅</div>
-            <div style={{ fontSize:16, fontWeight:700, color:"#16191D" }}>{msg}</div>
-            <div style={{ fontSize:13, color:"#5B6570", marginTop:8 }}>Redirecionando para o calendário...</div>
+            <div style={{ fontSize:16, fontWeight:700, color:"#0f2133" }}>{msg}</div>
+            <div style={{ fontSize:13, color:"rgba(20,45,70,0.5)", marginTop:8 }}>Redirecionando para o calendário...</div>
           </>
         )}
         {status === "error" && (
           <>
             <div style={{ fontSize:48, marginBottom:16 }}>❌</div>
-            <div style={{ fontSize:16, fontWeight:700, color:"#B42318" }}>{msg}</div>
-            <div style={{ fontSize:13, color:"#5B6570", marginTop:8 }}>Redirecionando...</div>
+            <div style={{ fontSize:16, fontWeight:700, color:"#e74c3c" }}>{msg}</div>
+            <div style={{ fontSize:13, color:"rgba(20,45,70,0.5)", marginTop:8 }}>Redirecionando...</div>
           </>
         )}
         <style>{`@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
