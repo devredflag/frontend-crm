@@ -27,7 +27,7 @@ export default function Problems() {
         <svg width="100%" height="100%">
           <defs>
             <pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse">
-              <circle cx="1" cy="1" r="0.8" fill="rgba(41,128,185,0.3)" />
+              <circle cx="1" cy="1" r="0.8" fill="#2563EB" />
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#dots)" />
@@ -64,9 +64,8 @@ export default function Problems() {
             <div
               className="p-8 rounded-2xl"
               style={{
-                background: "rgba(255,220,220,0.35)",
-                backdropFilter: "blur(16px)",
-                border: "1px solid rgba(255,255,255,0.5)",
+                background: "rgba(255,220,220,0.35)", 
+                border: "1px solid #ffffff",
               }}
             >
               <div className="flex items-center gap-3 mb-6">
@@ -100,9 +99,8 @@ export default function Problems() {
             <div
               className="p-8 rounded-2xl"
               style={{
-                background: "rgba(200,240,235,0.45)",
-                backdropFilter: "blur(16px)",
-                border: "1px solid rgba(255,255,255,0.65)",
+                background: "rgba(200,240,235,0.45)", 
+                border: "1px solid #ffffff",
               }}
             >
               <div className="flex items-center gap-3 mb-6">

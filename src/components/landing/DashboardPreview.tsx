@@ -32,7 +32,7 @@ export default function DashboardPreview() {
         <svg width="100%" height="100%">
           <defs>
             <pattern id="d-dots" width="24" height="24">
-              <circle cx="1" cy="1" r="0.8" fill="rgba(41,128,185,0.3)" />
+              <circle cx="1" cy="1" r="0.8" fill="#2563EB" />
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#d-dots)" />
@@ -66,10 +66,9 @@ export default function DashboardPreview() {
           <div
             className="rounded-2xl overflow-hidden"
             style={{
-              background: "rgba(225,244,252,0.75)",
-              backdropFilter: "blur(24px)",
-              border: "1px solid rgba(255,255,255,0.8)",
-              boxShadow: "0 24px 80px rgba(41,128,185,0.18)",
+              background: "rgba(225,244,252,0.75)", 
+              border: "1px solid #ffffff",
+              boxShadow:"none",
             }}
           >
 

@@ -19,23 +19,16 @@ import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGe
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
   * { font-family: 'Plus Jakarta Sans', sans-serif; box-sizing: border-box; margin: 0; padding: 0; }
-  @keyframes float1 { 0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(40px,-30px) scale(1.05)}66%{transform:translate(-20px,20px) scale(0.97)} }
-  @keyframes float2 { 0%,100%{transform:translate(0,0) scale(1)}40%{transform:translate(-50px,25px) scale(1.08)}70%{transform:translate(30px,-15px) scale(0.95)} }
-  @keyframes float3 { 0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(25px,40px) scale(1.03)} }
-  @keyframes float4 { 0%,100%{transform:translate(0,0)}30%{transform:translate(-30px,-40px)}60%{transform:translate(20px,15px)} }
-  @keyframes float5 { 0%,100%{transform:translate(0,0) scale(1)}45%{transform:translate(35px,-20px) scale(1.06)}80%{transform:translate(-15px,30px) scale(0.96)} }
-  @keyframes gradientShift { 0%,100%{background-position:0% 50%}50%{background-position:100% 50%} }
-  @keyframes shimmer { 0%{background-position:-200% 0}100%{background-position:200% 0} }
   @keyframes pulse-red { 0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,0.3)}50%{box-shadow:0 0 0 6px rgba(220,38,38,0)} }
 
-  .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:10px; cursor:pointer; font-size:13.5px; font-weight:500; color:rgba(255,255,255,0.65); transition:all 0.18s; user-select:none; }
-  .nav-item:hover { background:rgba(255,255,255,0.08); color:#fff; }
-  .nav-item.active { background:rgba(255,255,255,0.14); color:#fff; font-weight:600; }
+  .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:8px; cursor:pointer; font-size:13.5px; font-weight:500; color:#ffffff; transition:all 0.18s; user-select:none; }
+  .nav-item:hover { background:#ffffff; color:#fff; }
+  .nav-item.active { background:#ffffff; color:#fff; font-weight:600; }
 
   .kanban-card {
-    background:rgba(255,255,255,0.88);
-    border:1px solid rgba(200,225,240,0.7);
-    border-radius:14px;
+    background:#ffffff;
+    border:1px solid #E3E6E9;
+    border-radius:8px;
     padding:13px 13px 10px;
     cursor:pointer;
     transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
@@ -45,8 +38,8 @@ const css = `
   }
   .kanban-card:hover {
     transform:translateY(-2px);
-    box-shadow:0 16px 40px rgba(41,128,185,0.18);
-    border-color:rgba(41,128,185,0.4);
+    box-shadow: none;
+    border-color:#2563EB;
     z-index:10;
     overflow:visible;
   }
@@ -64,36 +57,36 @@ const css = `
     pointer-events: all;
   }
 
-  .drop-active { border-color:rgba(41,128,185,0.55)!important; background:rgba(41,128,185,0.06)!important; }
-  .skeleton { background:linear-gradient(90deg,rgba(200,225,240,0.4) 25%,rgba(220,240,252,0.7) 50%,rgba(200,225,240,0.4) 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:8px; }
+  .drop-active { border-color:#2563EB!important; background:#EFF4FE!important; }
+  .skeleton { background:#E3E6E9; background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:8px; }
 
-  .list-row { background:rgba(255,255,255,0.78); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.9); border-radius:12px; transition:all 0.18s; }
-  .list-row:hover { box-shadow:0 4px 16px rgba(41,128,185,0.1); border-color:rgba(41,128,185,0.25); transform:translateY(-1px); }
+  .list-row { background:#ffffff; border:1px solid #ffffff; border-radius:8px; transition:all 0.18s; }
+  .list-row:hover { box-shadow:0 4px 16px #EFF4FE; border-color:#EFF4FE; transform:translateY(-1px); }
 
-  .mini-status-select { width:100%; height:30px; border-radius:8px; border:1px solid rgba(200,225,240,0.85); background:rgba(255,255,255,0.85); font-size:11px; font-weight:700; outline:none; padding:0 26px 0 10px; cursor:pointer; appearance:none; }
-  .mini-status-select:focus { border-color:rgba(41,128,185,0.55); box-shadow:0 0 0 2px rgba(41,128,185,0.08); }
+  .mini-status-select { width:100%; height:30px; border-radius:8px; border:1px solid #E3E6E9; background:#ffffff; font-size:11px; font-weight:700; outline:none; padding:0 26px 0 10px; cursor:pointer; appearance:none; }
+  .mini-status-select:focus { border-color:#2563EB; box-shadow:0 0 0 2px #EFF4FE; }
 
-  .mini-input { height:30px; border-radius:8px; border:1px solid rgba(200,225,240,0.85); background:rgba(255,255,255,0.85); font-size:11px; font-weight:500; outline:none; padding:0 8px; width:100%; color:#1a2e40; transition:border-color 0.15s; }
-  .mini-input:focus { border-color:rgba(41,128,185,0.55); box-shadow:0 0 0 2px rgba(41,128,185,0.08); }
+  .mini-input { height:30px; border-radius:8px; border:1px solid #E3E6E9; background:#ffffff; font-size:11px; font-weight:500; outline:none; padding:0 8px; width:100%; color:#16191D; transition:border-color 0.15s; }
+  .mini-input:focus { border-color:#2563EB; box-shadow:0 0 0 2px #EFF4FE; }
   .mini-input[type="date"] { padding:0 6px; font-size:10.5px; }
 
-  .mini-select { height:30px; border-radius:8px; border:1px solid rgba(200,225,240,0.85); background:rgba(255,255,255,0.85); font-size:11px; font-weight:600; outline:none; padding:0 8px; cursor:pointer; width:100%; color:#1a2e40; transition:border-color 0.15s; }
-  .mini-select:focus { border-color:rgba(41,128,185,0.55); }
+  .mini-select { height:30px; border-radius:8px; border:1px solid #E3E6E9; background:#ffffff; font-size:11px; font-weight:600; outline:none; padding:0 8px; cursor:pointer; width:100%; color:#16191D; transition:border-color 0.15s; }
+  .mini-select:focus { border-color:#2563EB; }
 
-  .quick-btn { width:24px; height:24px; border-radius:6px; border:1px solid rgba(200,225,240,0.75); background:rgba(255,255,255,0.72); display:flex; align-items:center; justify-content:center; cursor:pointer; color:#2980b9; text-decoration:none; transition:all 0.15s; }
-  .quick-btn:hover { transform:translateY(-1px); border-color:rgba(41,128,185,0.45); background:#fff; }
+  .quick-btn { width:24px; height:24px; border-radius:6px; border:1px solid #E3E6E9; background:#ffffff; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#2563EB; text-decoration:none; transition:all 0.15s; }
+  .quick-btn:hover { transform:translateY(-1px); border-color:#2563EB; background:#fff; }
 
-  .chip-select { height:32px; border-radius:9px; border:1px solid rgba(200,225,240,0.75); background:rgba(255,255,255,0.68); color:rgba(20,45,70,0.66); font-size:11px; font-weight:700; outline:none; padding:0 9px; cursor:pointer; }
+  .chip-select { height:32px; border-radius:9px; border:1px solid #E3E6E9; background:#ffffff; color:#16191D; font-size:11px; font-weight:700; outline:none; padding:0 9px; cursor:pointer; }
 
-  .overdue-btn { display:flex; align-items:center; gap:6px; padding:6px 14px; border-radius:10px; border:1.5px solid rgba(220,38,38,0.35); background:rgba(220,38,38,0.07); cursor:pointer; transition:all 0.18s; animation:pulse-red 2.5s infinite; }
+  .overdue-btn { display:flex; align-items:center; gap:6px; padding:6px 14px; border-radius:8px; border:1.5px solid rgba(220,38,38,0.35); background:rgba(220,38,38,0.07); cursor:pointer; transition:all 0.18s; animation:pulse-red 2.5s infinite; }
   .overdue-btn:hover { background:rgba(220,38,38,0.14); border-color:rgba(220,38,38,0.55); transform:translateY(-1px); animation:none; }
 
-  .overdue-row { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; border:1px solid rgba(220,38,38,0.2); background:rgba(255,255,255,0.9); transition:all 0.15s; }
+  .overdue-row { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; border:1px solid rgba(220,38,38,0.2); background:#ffffff; transition:all 0.15s; }
   .overdue-row:hover { border-color:rgba(220,38,38,0.4); box-shadow:0 3px 12px rgba(220,38,38,0.1); }
 
   ::-webkit-scrollbar { width:4px; height:4px; }
   ::-webkit-scrollbar-track { background:transparent; }
-  ::-webkit-scrollbar-thumb { background:rgba(41,128,185,0.25); border-radius:4px; }
+  ::-webkit-scrollbar-thumb { background:#EFF4FE; border-radius:4px; }
 `;
 
 const API = "https://backend-crm-production-157b.up.railway.app";
@@ -135,26 +128,26 @@ const navItems = [
 
 const PIPELINE = [
   { key:"Lead", label:"Lead", color:"#64748b", light:"rgba(148,163,184,0.12)", dot:"#94a3b8" },
-  { key:"Em contato", label:"Em contato", color:"#2980b9", light:"rgba(41,128,185,0.1)", dot:"#60a5fa" },
+  { key:"Em contato", label:"Em contato", color:"#2563EB", light:"#EFF4FE", dot:"#60a5fa" },
   { key:"Visita agendada", label:"Visita agendada", color:"#0891b2", light:"rgba(8,145,178,0.1)", dot:"#22d3ee" },
   { key:"Proposta", label:"Proposta", color:"#7c3aed", light:"rgba(124,58,237,0.1)", dot:"#a78bfa" },
   { key:"Negociação", label:"Negociação", color:"#d97706", light:"rgba(217,119,6,0.1)", dot:"#fbbf24" },
   { key:"Fechado", label:"Fechado", color:"#16a34a", light:"rgba(22,163,74,0.1)", dot:"#4ade80" },
-  { key:"Perdido", label:"Perdido", color:"#dc2626", light:"rgba(220,38,38,0.1)", dot:"#f87171" },
+  { key:"Perdido", label:"Perdido", color:"#B42318", light:"rgba(220,38,38,0.1)", dot:"#f87171" },
 ];
 
 // ✅ MUDANÇA 1: Ícones de temperatura alterados para emojis
 const TEMPS = [
-  { key:"Quente", icon:"🔥", color:"#c0392b", bg:"rgba(192,57,43,0.1)" },
+  { key:"Quente", icon:"🔥", color:"#B42318", bg:"rgba(192,57,43,0.1)" },
   { key:"Morno",  icon:"🌡️", color:"#d68910", bg:"rgba(214,137,16,0.1)" },
-  { key:"Frio",   icon:"❄️", color:"#2980b9", bg:"rgba(41,128,185,0.1)" },
+  { key:"Frio",   icon:"❄️", color:"#2563EB", bg:"#EFF4FE" },
 ];
 
 function initials(n: string) { return n?.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase()||"?"; }
-function avatarColor(n: string) { const c=["#2980b9","#1abc9c","#8e44ad","#e67e22","#27ae60","#e74c3c"]; return c[(n?.charCodeAt(0)||0)%c.length]; }
+function avatarColor(n: string) { const c=["#2563EB","#2563EB","#5B6570","#8A5A00","#0F7B4F","#B42318"]; return c[(n?.charCodeAt(0)||0)%c.length]; }
 function porteInfo(p: string) {
   if(p==="Grande") return { color:"#7c3aed", bg:"rgba(124,58,237,0.1)" };
-  if(p==="Médio") return { color:"#2980b9", bg:"rgba(41,128,185,0.1)" };
+  if(p==="Médio") return { color:"#2563EB", bg:"#EFF4FE" };
   return { color:"#16a34a", bg:"rgba(22,163,74,0.1)" };
 }
 function calcScore(e: Empresa) {
@@ -171,7 +164,7 @@ function calcScore(e: Empresa) {
 function scoreColor(s: number) {
   if(s>=70) return { color:"#16a34a", bg:"rgba(22,163,74,0.12)" };
   if(s>=40) return { color:"#d97706", bg:"rgba(217,119,6,0.12)" };
-  return { color:"#dc2626", bg:"rgba(220,38,38,0.1)" };
+  return { color:"#B42318", bg:"rgba(220,38,38,0.1)" };
 }
 function dateOnly(value?: string | null) {
   return value ? value.slice(0, 10) : "";
@@ -196,13 +189,13 @@ function daysLabel(d: number) {
 
 function nextActionInfo(e: Empresa) {
   const date = dateOnly(e.data_proxima_acao);
-  if(!date) return { label:"Sem data", status:"sem-data", color:"rgba(20,45,70,0.45)", bg:"rgba(200,225,240,0.35)" };
+  if(!date) return { label:"Sem data", status:"sem-data", color:"#5B6570", bg:"#E3E6E9" };
   const today = new Date(); today.setHours(0,0,0,0);
   const target = new Date(`${date}T00:00:00`);
   const diff = Math.round((target.getTime() - today.getTime()) / 86400000);
-  if(diff < 0) return { label:`Atrasada ${Math.abs(diff)}d`, status:"atrasada", color:"#dc2626", bg:"rgba(220,38,38,0.1)" };
+  if(diff < 0) return { label:`Atrasada ${Math.abs(diff)}d`, status:"atrasada", color:"#B42318", bg:"rgba(220,38,38,0.1)" };
   if(diff === 0) return { label:"Hoje", status:"hoje", color:"#d97706", bg:"rgba(217,119,6,0.12)" };
-  return { label:`Em ${diff}d`, status:"proxima", color:"#2980b9", bg:"rgba(41,128,185,0.1)" };
+  return { label:`Em ${diff}d`, status:"proxima", color:"#2563EB", bg:"#EFF4FE" };
 }
 function uniqueOptions(values: Array<string | null | undefined>) {
   return Array.from(new Set(values.filter((v): v is string => Boolean(v)))).sort((a,b)=>a.localeCompare(b,"pt-BR"));
@@ -360,35 +353,26 @@ export default function Gerenciamento() {
 
       {/* Background */}
       <div style={{position:"fixed",inset:0,zIndex:0,overflow:"hidden",pointerEvents:"none"}}>
-        <div style={{position:"absolute",inset:0,background:"linear-gradient(145deg,#c8e8f5 0%,#d6eef5 30%,#cceee8 65%,#c5eae0 100%)"}}/>
-        <div style={{position:"absolute",inset:0,opacity:0.4,backgroundImage:"radial-gradient(circle,rgba(41,128,185,0.2) 1px,transparent 1px)",backgroundSize:"22px 22px"}}/>
-        {[
-          {w:420,h:420,top:"-80px",left:"10%",anim:"float1 18s ease-in-out infinite",op:0.1,c1:"#2980b9",c2:"#1abc9c"},
-          {w:280,h:280,top:"40%",left:"-60px",anim:"float2 22s ease-in-out infinite",op:0.08,c1:"#1abc9c",c2:"#2ecc71"},
-          {w:360,h:360,top:"60%",left:"55%",anim:"float3 26s ease-in-out infinite",op:0.07,c1:"#2980b9",c2:"#8e44ad"},
-          {w:200,h:200,top:"20%",left:"75%",anim:"float4 20s ease-in-out infinite",op:0.09,c1:"#27ae60",c2:"#1abc9c"},
-          {w:300,h:300,top:"75%",left:"20%",anim:"float5 24s ease-in-out infinite",op:0.07,c1:"#e67e22",c2:"#f39c12"},
-        ].map((c,i)=>(
-          <div key={i} style={{position:"absolute",width:c.w,height:c.h,top:c.top,left:c.left,borderRadius:"50%",background:`radial-gradient(circle at 40% 40%,${c.c1},${c.c2})`,opacity:c.op,animation:c.anim,filter:"blur(2px)"}}/>
-        ))}
+        <div style={{position:"absolute",inset:0,background:"#F6F7F8"}}/>
+        
       </div>
 
       {/* Sidebar */}
       {isMobile && menuOpen && (
         <div onClick={()=>setMenuOpen(false)} style={{position:"fixed",inset:0,background:"rgba(10,31,51,0.45)",zIndex:999}}/>
       )}
-      <div style={{width:220,flexShrink:0,height:"100vh",overflowY:"auto",zIndex:1000,background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)",boxShadow:"4px 0 24px rgba(0,0,0,0.18)",display:"flex",flexDirection:"column",padding:"0 12px 20px",
+      <div style={{width:220,flexShrink:0,height:"100vh",overflowY:"auto",zIndex:1000,background:"#1a3a5c",boxShadow:"none",display:"flex",flexDirection:"column",padding:"0 12px 20px",
         position: isMobile ? "fixed" : "relative", top:0, left:0,
         transform: isMobile && !menuOpen ? "translateX(-100%)" : "translateX(0)",
         transition:"transform 0.28s ease"}}>
-        <div style={{padding:"22px 4px 24px",borderBottom:"1px solid rgba(255,255,255,0.08)",marginBottom:16}}>
+        <div style={{padding:"22px 4px 24px",borderBottom:"1px solid #ffffff",marginBottom:16}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#2980b9,#1abc9c)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 12px rgba(41,128,185,0.4)"}}>
+            <div style={{width:36,height:36,borderRadius:8,background:"#2563EB",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"none"}}>
               <BarChart3 style={{width:18,height:18,color:"#fff"}}/>
             </div>
             <div>
               <div style={{fontSize:14,fontWeight:800,color:"#fff"}}>Prospecção</div>
-              <div style={{fontSize:11,fontWeight:700,background:"linear-gradient(90deg,#2980b9,#1abc9c,#2ecc71,#2980b9)",backgroundSize:"200% 200%",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"gradientShift 4s ease infinite"}}>CRM</div>
+              <div style={{fontSize:11,fontWeight:700,background:"#2563EB",backgroundSize:"200% 200%",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"gradientShift 4s ease infinite"}}>CRM</div>
             </div>
           </div>
         </div>
@@ -418,42 +402,42 @@ export default function Gerenciamento() {
       <div style={{flex:1,height:"100vh",overflow:"hidden",display:"flex",flexDirection:"column",position:"relative",zIndex:5}}>
 
         {/* Header */}
-        <div style={{padding:isMobile?"12px 14px":"16px 28px",background:"rgba(210,238,248,0.85)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,0.6)",flexShrink:0}}>
+        <div style={{padding:isMobile?"12px 14px":"16px 28px",background:"rgba(210,238,248,0.85)", borderBottom:"1px solid #ffffff",flexShrink:0}}>
           <div style={{display:"flex",alignItems:"flex-start",gap:isMobile?10:16,marginBottom:14}}>
             {isMobile && (
-              <button onClick={()=>setMenuOpen(true)} style={{width:36,height:36,borderRadius:10,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.75)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                <Menu style={{width:18,height:18,color:"#2980b9"}}/>
+              <button onClick={()=>setMenuOpen(true)} style={{width:36,height:36,borderRadius:8,border:"1px solid #E3E6E9",background:"#ffffff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <Menu style={{width:18,height:18,color:"#2563EB"}}/>
               </button>
             )}
             <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:11,fontWeight:700,color:"rgba(20,45,70,0.45)",letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:3}}>Gerenciamento</div>
+              <div style={{fontSize:11,fontWeight:700,color:"#5B6570",letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:3}}>Gerenciamento</div>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <h1 style={{fontSize:22,fontWeight:900,color:"#0f2133",letterSpacing:"-0.03em"}}>
+                <h1 style={{fontSize:22,fontWeight:900,color:"#16191D",letterSpacing:"-0.03em"}}>
                   {aba==="clientes"?"Pipeline de Vendas":"Orçamentos e vendas"}
                 </h1>
                 {aba==="clientes"
-                  ? <TrendingUp style={{width:18,height:18,color:"#27ae60"}}/>
-                  : <FileText style={{width:18,height:18,color:"#2980b9"}}/>}
+                  ? <TrendingUp style={{width:18,height:18,color:"#0F7B4F"}}/>
+                  : <FileText style={{width:18,height:18,color:"#2563EB"}}/>}
               </div>
-              <p style={{fontSize:12,color:"rgba(20,45,70,0.5)",marginTop:2}}>
+              <p style={{fontSize:12,color:"#5B6570",marginTop:2}}>
                 {aba==="clientes"
                   ? "Acompanhe suas oportunidades e mova os negócios adiante."
                   : "Monte orçamentos, envie para o cliente e acompanhe o fechamento."}
               </p>
             </div>
             <div style={{display:"flex",gap:8,alignItems:"center"}}>
-              <button onClick={fetchAll} style={{width:38,height:38,borderRadius:10,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.75)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                <RefreshCw style={{width:15,height:15,color:"#2980b9"}}/>
+              <button onClick={fetchAll} style={{width:38,height:38,borderRadius:8,border:"1px solid #E3E6E9",background:"#ffffff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <RefreshCw style={{width:15,height:15,color:"#2563EB"}}/>
               </button>
               {aba==="clientes" && (<>
-              <div style={{display:"flex",gap:3,background:"rgba(255,255,255,0.55)",borderRadius:10,padding:3,border:"1px solid rgba(200,225,240,0.6)"}}>
+              <div style={{display:"flex",gap:3,background:"#ffffff",borderRadius:8,padding:3,border:"1px solid #E3E6E9"}}>
                 {(["kanban","lista","mapa","proximas"] as const).map(v=>(
-                  <button key={v} onClick={()=>setView(v)} style={{padding:"5px 14px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:600,background:view===v?"#2980b9":"transparent",color:view===v?"#fff":"rgba(20,45,70,0.6)",transition:"all 0.18s"}}>
+                  <button key={v} onClick={()=>setView(v)} style={{padding:"5px 14px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:600,background:view===v?"#2563EB":"transparent",color:view===v?"#fff":"#5B6570",transition:"all 0.18s"}}>
                     {v==="kanban"?"Visão do funil":v==="lista"?"Lista":v==="mapa"?"Mapa":"Próximas"}
                   </button>
                 ))}
               </div>
-              <button onClick={()=>navigate("/empresas/nova")} style={{height:38,padding:"0 16px",borderRadius:10,border:"none",cursor:"pointer",background:"linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)",backgroundSize:"200% 200%",animation:"gradientShift 4s ease infinite",color:"#fff",fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:6,boxShadow:"0 4px 14px rgba(41,128,185,0.35)"}}>
+              <button onClick={()=>navigate("/empresas/nova")} style={{height:38,padding:"0 16px",borderRadius:8,border:"none",cursor:"pointer",background:"#2563EB",backgroundSize:"200% 200%",animation:"gradientShift 4s ease infinite",color:"#fff",fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:6,boxShadow:"none"}}>
                 <Plus style={{width:15,height:15}}/> Nova oportunidade
               </button>
               </>)}
@@ -464,8 +448,8 @@ export default function Gerenciamento() {
           {aba==="clientes" && (<>
           <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",marginBottom:10}}>
             <div style={{position:"relative",width:240}}>
-              <Search style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",width:12,height:12,color:"rgba(20,45,70,0.35)"}}/>
-              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar empresa..." style={{width:"100%",height:34,paddingLeft:28,borderRadius:9,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.8)",fontSize:12,color:"#1a2e40",outline:"none"}}/>
+              <Search style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",width:12,height:12,color:"#5B6570"}}/>
+              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar empresa..." style={{width:"100%",height:34,paddingLeft:28,borderRadius:9,border:"1px solid #E3E6E9",background:"#ffffff",fontSize:12,color:"#16191D",outline:"none"}}/>
             </div>
             {/* Novos leads x clientes já em andamento — conversa com a aba de vendas */}
             {([
@@ -475,7 +459,7 @@ export default function Gerenciamento() {
             ]).map(f=>{
               const active=filtroLead===f.key;
               return(
-                <button key={f.key} onClick={()=>setFiltroLead(f.key)} style={{padding:"5px 12px",borderRadius:8,border:`1px solid ${active?"rgba(142,68,173,0.45)":"rgba(200,225,240,0.7)"}`,background:active?"rgba(142,68,173,0.1)":"rgba(255,255,255,0.6)",color:active?"#7d3c98":"rgba(20,45,70,0.55)",fontSize:11,fontWeight:700,cursor:"pointer",transition:"all 0.15s"}}>
+                <button key={f.key} onClick={()=>setFiltroLead(f.key)} style={{padding:"5px 12px",borderRadius:8,border:`1px solid ${active?"rgba(142,68,173,0.45)":"#E3E6E9"}`,background:active?"rgba(142,68,173,0.1)":"#ffffff",color:active?"#7d3c98":"#5B6570",fontSize:11,fontWeight:700,cursor:"pointer",transition:"all 0.15s"}}>
                   {f.label}
                 </button>
               );
@@ -484,20 +468,20 @@ export default function Gerenciamento() {
               const info=TEMPS.find(x=>x.key===t);
               const active=filterTemp===t;
               return(
-                <button key={t} onClick={()=>setFilterTemp(t)} style={{padding:"5px 12px",borderRadius:8,border:`1px solid ${active?(info?.color||"#2980b9")+"50":"rgba(200,225,240,0.7)"}`,background:active?(info?.bg||"rgba(41,128,185,0.1)"):"rgba(255,255,255,0.6)",color:active?(info?.color||"#2980b9"):"rgba(20,45,70,0.55)",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4,transition:"all 0.15s"}}>
+                <button key={t} onClick={()=>setFilterTemp(t)} style={{padding:"5px 12px",borderRadius:8,border:`1px solid ${active?(info?.color||"#2563EB")+"50":"#E3E6E9"}`,background:active?(info?.bg||"#EFF4FE"):"#ffffff",color:active?(info?.color||"#2563EB"):"#5B6570",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4,transition:"all 0.15s"}}>
                   {info?.icon} {t}
                 </button>
               );
             })}
             <div style={{marginLeft:"auto",display:"flex",gap:16,alignItems:"center"}}>
               {[
-                {label:"Pipeline",value:`R$ ${totalTicket.toLocaleString("pt-BR")}`,color:"#2980b9"},
-                {label:"Ticket médio",value:`R$ ${avgTicket.toLocaleString("pt-BR")}`,color:"#8e44ad"},
-                {label:"Conversão",value:`${conversao}%`,color:"#27ae60"},
-                {label:"Perda",value:`${perda}%`,color:"#dc2626"},
+                {label:"Pipeline",value:`R$ ${totalTicket.toLocaleString("pt-BR")}`,color:"#2563EB"},
+                {label:"Ticket médio",value:`R$ ${avgTicket.toLocaleString("pt-BR")}`,color:"#5B6570"},
+                {label:"Conversão",value:`${conversao}%`,color:"#0F7B4F"},
+                {label:"Perda",value:`${perda}%`,color:"#B42318"},
               ].map(s=>(
                 <div key={s.label} style={{textAlign:"right"}}>
-                  <div style={{fontSize:9,fontWeight:700,color:"rgba(20,45,70,0.4)",textTransform:"uppercase",letterSpacing:"0.07em"}}>{s.label}</div>
+                  <div style={{fontSize:9,fontWeight:700,color:"#5B6570",textTransform:"uppercase",letterSpacing:"0.07em"}}>{s.label}</div>
                   <div style={{fontSize:14,fontWeight:900,color:s.color}}>{s.value}</div>
                 </div>
               ))}
@@ -505,7 +489,7 @@ export default function Gerenciamento() {
           </div>
 
           <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-            <div style={{display:"flex",alignItems:"center",gap:5,color:"rgba(20,45,70,0.45)",fontSize:10,fontWeight:800,textTransform:"uppercase",letterSpacing:"0.06em"}}>
+            <div style={{display:"flex",alignItems:"center",gap:5,color:"#5B6570",fontSize:10,fontWeight:800,textTransform:"uppercase",letterSpacing:"0.06em"}}>
               <Filter style={{width:12,height:12}}/> Filtros
             </div>
             <select className="chip-select" value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}>
@@ -543,7 +527,7 @@ export default function Gerenciamento() {
         </div>
 
         {/* Abas: Clientes x Vendas — as duas areas navegaveis da tela */}
-        <div style={{padding:isMobile?"12px 14px":"14px 24px",flexShrink:0,borderBottom:"1px solid rgba(200,225,240,0.5)"}}>
+        <div style={{padding:isMobile?"12px 14px":"14px 24px",flexShrink:0,borderBottom:"1px solid #E3E6E9"}}>
           <AbasGerenciamento aba={aba} onChange={setAba} />
         </div>
 
@@ -568,14 +552,14 @@ export default function Gerenciamento() {
                     onDrop={ev=>{ev.preventDefault();const id=ev.dataTransfer.getData("text/plain")||draggedId;if(id)updateStatus(id,col.key);setDraggedId(null);setDragOverStatus(null);}}
                   >
                     {/* Column header */}
-                    <div className={dragOverStatus===col.key?"drop-active":""} style={{marginBottom:12,padding:"12px 14px",borderRadius:12,background:"rgba(255,255,255,0.65)",backdropFilter:"blur(12px)",border:"1px solid rgba(255,255,255,0.85)"}}>
+                    <div className={dragOverStatus===col.key?"drop-active":""} style={{marginBottom:12,padding:"12px 14px",borderRadius:8,background:"#ffffff", border:"1px solid #ffffff"}}>
                       <div style={{height:3,borderRadius:3,background:col.color,marginBottom:10}}/>
                       <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:3}}>
                         <div style={{width:8,height:8,borderRadius:"50%",background:col.dot}}/>
-                        <span style={{fontSize:14,fontWeight:800,color:"#0f2133"}}>{col.label}</span>
+                        <span style={{fontSize:14,fontWeight:800,color:"#16191D"}}>{col.label}</span>
                         <span style={{marginLeft:"auto",fontSize:11,fontWeight:800,color:col.color,background:`${col.color}18`,padding:"1px 7px",borderRadius:8}}>{cards.length}</span>
                       </div>
-                      <div style={{display:"flex",justifyContent:"space-between",gap:8,fontSize:10,color:"rgba(20,45,70,0.45)",fontWeight:600}}>
+                      <div style={{display:"flex",justifyContent:"space-between",gap:8,fontSize:10,color:"#5B6570",fontWeight:600}}>
                         <span>{colTicket>0?`R$ ${colTicket.toLocaleString("pt-BR")}`:"Sem valor"}</span>
                         <span>{avgStageDays}d médios</span>
                       </div>
@@ -583,11 +567,11 @@ export default function Gerenciamento() {
 
                     {/* Cards */}
                     <div style={{display:"flex",flexDirection:"column",gap:8,paddingRight:2,paddingBottom:8,minHeight:120}}>
-                      {loading?([1,2].map(i=><div key={i} className="skeleton" style={{height:100,borderRadius:14}}/>)):
+                      {loading?([1,2].map(i=><div key={i} className="skeleton" style={{height:100,borderRadius:8}}/>)):
                       cards.length===0?(
-                        <div style={{padding:"28px 0",textAlign:"center",border:"2px dashed rgba(200,225,240,0.6)",borderRadius:14,background:"rgba(255,255,255,0.35)"}}>
-                          <Building2 style={{width:22,height:22,color:"rgba(41,128,185,0.3)",margin:"0 auto 8px"}}/>
-                          <p style={{fontSize:10,color:"rgba(20,45,70,0.35)",fontWeight:600}}>Sem oportunidades</p>
+                        <div style={{padding:"28px 0",textAlign:"center",border:"2px dashed #E3E6E9",borderRadius:8,background:"#ffffff"}}>
+                          <Building2 style={{width:22,height:22,color:"#2563EB",margin:"0 auto 8px"}}/>
+                          <p style={{fontSize:10,color:"#5B6570",fontWeight:600}}>Sem oportunidades</p>
                           <button onClick={()=>navigate("/empresas/nova")} style={{marginTop:8,padding:"4px 10px",borderRadius:6,border:"none",background:col.color,color:"#fff",fontSize:9,fontWeight:700,cursor:"pointer"}}>+ Adicionar</button>
                         </div>
                       ):cards.map((emp,idx)=>{
@@ -622,8 +606,8 @@ export default function Gerenciamento() {
                               <div style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:7}}>
                                 <div style={{width:32,height:32,borderRadius:9,background:avatarColor(emp.nome),display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:"#fff",flexShrink:0,boxShadow:`0 3px 8px ${avatarColor(emp.nome)}40`}}>{initials(emp.nome)}</div>
                                 <div style={{flex:1,minWidth:0}}>
-                                  <div style={{fontSize:12,fontWeight:700,color:"#0f2133",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{emp.nome}</div>
-                                  <div style={{fontSize:10,color:"rgba(20,45,70,0.45)",marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{emp.segmento||"—"}</div>
+                                  <div style={{fontSize:12,fontWeight:700,color:"#16191D",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{emp.nome}</div>
+                                  <div style={{fontSize:10,color:"#5B6570",marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{emp.segmento||"—"}</div>
                                 </div>
                                 <div style={{flexShrink:0,padding:"2px 6px",borderRadius:6,background:sc.bg,color:sc.color,fontSize:9,fontWeight:800}}>{score}</div>
                               </div>
@@ -631,35 +615,35 @@ export default function Gerenciamento() {
                               {/* Info compacta */}
                               <div style={{display:"flex",flexDirection:"column",gap:3,marginBottom:7}}>
                                 {emp.cidade&&(
-                                  <div style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:"rgba(20,45,70,0.55)"}}>
-                                    <MapPin style={{width:9,height:9,flexShrink:0,color:"#2980b9"}}/>
+                                  <div style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:"#5B6570"}}>
+                                    <MapPin style={{width:9,height:9,flexShrink:0,color:"#2563EB"}}/>
                                     <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{emp.cidade}</span>
-                                    {emp.responsavel_principal&&<><span style={{color:"rgba(20,45,70,0.3)"}}>·</span><span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:"rgba(20,45,70,0.45)"}}>{emp.responsavel_principal}</span></>}
+                                    {emp.responsavel_principal&&<><span style={{color:"#5B6570"}}>·</span><span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:"#5B6570"}}>{emp.responsavel_principal}</span></>}
                                   </div>
                                 )}
                                 {/* ✅ Próxima ação + status badge */}
                                 <div style={{display:"flex",alignItems:"center",gap:5,fontSize:10}}>
                                   <CalendarClock style={{width:9,height:9,flexShrink:0,color:next.color}}/>
-                                  <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:"rgba(20,45,70,0.6)",flex:1}}>{emp.proxima_acao||"Sem próxima ação"}</span>
+                                  <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:"#5B6570",flex:1}}>{emp.proxima_acao||"Sem próxima ação"}</span>
                                   <span style={{flexShrink:0,padding:"1px 6px",borderRadius:5,background:next.bg,color:next.color,fontWeight:700,fontSize:9}}>{next.label}</span>
                                 </div>
                                 {emp.status==="Perdido"&&emp.motivo_perdido&&(
-                                  <div style={{fontSize:9,color:"#dc2626",fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>Motivo: {emp.motivo_perdido}</div>
+                                  <div style={{fontSize:9,color:"#B42318",fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>Motivo: {emp.motivo_perdido}</div>
                                 )}
                               </div>
 
                               {/* Tags compactas */}
                               <div style={{display:"flex",gap:3,flexWrap:"wrap",marginBottom:6}}>
                                 {emp.porte&&<span style={{fontSize:9,fontWeight:700,padding:"1px 5px",borderRadius:4,background:pi.bg,color:pi.color}}>{emp.porte}</span>}
-                                {emp.origem_lead&&<span style={{fontSize:9,fontWeight:600,padding:"1px 5px",borderRadius:4,background:"rgba(200,225,240,0.4)",color:"rgba(20,45,70,0.5)"}}>{emp.origem_lead}</span>}
+                                {emp.origem_lead&&<span style={{fontSize:9,fontWeight:600,padding:"1px 5px",borderRadius:4,background:"#E3E6E9",color:"#5B6570"}}>{emp.origem_lead}</span>}
                                 {/* ✅ MUDANÇA 5: dia / dias correto */}
-                                <span style={{fontSize:9,fontWeight:700,padding:"1px 5px",borderRadius:4,background:"rgba(41,128,185,0.08)",color:"#2980b9"}}>{daysLabel(daysInStage(emp))}</span>
+                                <span style={{fontSize:9,fontWeight:700,padding:"1px 5px",borderRadius:4,background:"#EFF4FE",color:"#2563EB"}}>{daysLabel(daysInStage(emp))}</span>
                               </div>
                             </div>
 
                             {/* ── SEÇÃO EXPANSÍVEL NO HOVER ── */}
                             <div className="card-expand-section">
-                            <div style={{height:1,background:"rgba(200,225,240,0.5)",marginBottom:8}}/>
+                            <div style={{height:1,background:"#E3E6E9",marginBottom:8}}/>
                             {/* Mover etapa */}
                             <div onClick={e=>e.stopPropagation()} style={{position:"relative"}}>
                               <select
@@ -689,12 +673,12 @@ export default function Gerenciamento() {
 
           {view==="lista"&&(
             <div style={{display:"flex",flexDirection:"column",gap:8,maxWidth:1320,overflowX:isMobile?"auto":undefined}}>
-              <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 105px 145px 100px 110px",gap:12,padding:"6px 18px",fontSize:10,fontWeight:700,color:"rgba(20,45,70,0.45)",letterSpacing:"0.07em",textTransform:"uppercase",minWidth:isMobile?900:undefined}}>
+              <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 105px 145px 100px 110px",gap:12,padding:"6px 18px",fontSize:10,fontWeight:700,color:"#5B6570",letterSpacing:"0.07em",textTransform:"uppercase",minWidth:isMobile?900:undefined}}>
                 <span>Empresa</span><span>Status</span><span>Cidade</span><span>Score</span><span>Próxima ação</span><span>Parado</span><span>Ações</span>
               </div>
-              {loading?([1,2,3,4].map(i=><div key={i} className="skeleton" style={{height:64,borderRadius:12}}/>)):
+              {loading?([1,2,3,4].map(i=><div key={i} className="skeleton" style={{height:64,borderRadius:8}}/>)):
               filtered.length===0?(
-                <div style={{textAlign:"center",padding:"60px 0",color:"rgba(20,45,70,0.4)"}}>
+                <div style={{textAlign:"center",padding:"60px 0",color:"#5B6570"}}>
                   <Building2 style={{width:36,height:36,margin:"0 auto 12px",opacity:0.3}}/>
                   <p style={{fontSize:14,fontWeight:600}}>Nenhuma empresa encontrada</p>
                 </div>
@@ -708,28 +692,28 @@ export default function Gerenciamento() {
                     <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
                       <div style={{width:36,height:36,borderRadius:9,background:avatarColor(emp.nome),display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"#fff",flexShrink:0}}>{initials(emp.nome)}</div>
                       <div style={{minWidth:0}}>
-                        <div style={{fontSize:13,fontWeight:700,color:"#0f2133",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{emp.nome}</div>
-                        <div style={{fontSize:10,color:"rgba(20,45,70,0.4)"}}>{emp.segmento||"—"}</div>
+                        <div style={{fontSize:13,fontWeight:700,color:"#16191D",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{emp.nome}</div>
+                        <div style={{fontSize:10,color:"#5B6570"}}>{emp.segmento||"—"}</div>
                       </div>
                     </div>
                     <select value={emp.status} onChange={e=>updateStatus(emp.empresa_id,e.target.value)} style={{height:30,padding:"0 8px",borderRadius:7,border:`1px solid ${si.color}40`,background:si.light,fontSize:11,fontWeight:700,color:si.color,outline:"none",cursor:"pointer"}}>
                       {PIPELINE.map(p=><option key={p.key} value={p.key}>{p.label}</option>)}
                     </select>
-                    <span style={{fontSize:12,color:"rgba(20,45,70,0.6)"}}>{emp.cidade||"—"}</span>
+                    <span style={{fontSize:12,color:"#5B6570"}}>{emp.cidade||"—"}</span>
                     <div style={{display:"flex",alignItems:"center",gap:5}}>
-                      <div style={{width:36,height:4,borderRadius:4,background:"rgba(200,225,240,0.5)"}}>
+                      <div style={{width:36,height:4,borderRadius:4,background:"#E3E6E9"}}>
                         <div style={{height:"100%",width:`${score}%`,borderRadius:4,background:sc.color}}/>
                       </div>
                       <span style={{fontSize:11,fontWeight:800,color:sc.color}}>{score}</span>
                     </div>
                     <div>
                       <div style={{fontSize:11,fontWeight:800,color:next.color}}>{emp.proxima_acao||"—"}</div>
-                      <div style={{fontSize:10,color:"rgba(20,45,70,0.45)"}}>{formatDate(emp.data_proxima_acao)}</div>
+                      <div style={{fontSize:10,color:"#5B6570"}}>{formatDate(emp.data_proxima_acao)}</div>
                     </div>
-                    <span style={{fontSize:12,fontWeight:700,color:"rgba(20,45,70,0.55)"}}>{daysInStage(emp)} {daysInStage(emp)===1?"dia":"dias"}</span>
+                    <span style={{fontSize:12,fontWeight:700,color:"#5B6570"}}>{daysInStage(emp)} {daysInStage(emp)===1?"dia":"dias"}</span>
                     <div style={{display:"flex",gap:5,alignItems:"center"}}>
-                      <button onClick={()=>navigate(`/clientes/${emp.empresa_id}`,{state:{from:"/gerenciamento"}})} style={{width:30,height:30,borderRadius:8,border:"1px solid rgba(200,225,240,0.7)",background:"rgba(255,255,255,0.7)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
-                        <ChevronRight style={{width:13,height:13,color:"#2980b9"}}/>
+                      <button onClick={()=>navigate(`/clientes/${emp.empresa_id}`,{state:{from:"/gerenciamento"}})} style={{width:30,height:30,borderRadius:8,border:"1px solid #E3E6E9",background:"#ffffff",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+                        <ChevronRight style={{width:13,height:13,color:"#2563EB"}}/>
                       </button>
                     </div>
                   </motion.div>
@@ -740,40 +724,40 @@ export default function Gerenciamento() {
 
           {/* Mapa de proximidade das empresas da carteira */}
           {view==="mapa"&&(
-            <div style={{background:"rgba(255,255,255,0.72)",backdropFilter:"blur(16px)",border:"1px solid rgba(255,255,255,0.9)",borderRadius:16,padding:"18px 20px"}}>
+            <div style={{background:"#ffffff", border:"1px solid #ffffff",borderRadius:8,padding:"18px 20px"}}>
               <MapaProximidade empresas={filtered} onGeocodificar={geocodificar} geocode={geocode} />
             </div>
           )}
 
           {/* Empresas próximas da minha localização atual (Geolocation + Waze) */}
           {view==="proximas"&&(
-            <div style={{background:"rgba(255,255,255,0.72)",backdropFilter:"blur(16px)",border:"1px solid rgba(255,255,255,0.9)",borderRadius:16,padding:"18px 20px"}}>
+            <div style={{background:"#ffffff", border:"1px solid #ffffff",borderRadius:8,padding:"18px 20px"}}>
               <ListaEmpresasProximas empresas={filtered} />
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div style={{padding:"12px 28px",background:"rgba(210,238,248,0.85)",backdropFilter:"blur(20px)",borderTop:"1px solid rgba(255,255,255,0.6)",display:"flex",alignItems:"center",gap:24,flexShrink:0}}>
+        <div style={{padding:"12px 28px",background:"rgba(210,238,248,0.85)", borderTop:"1px solid #ffffff",display:"flex",alignItems:"center",gap:24,flexShrink:0}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <div style={{width:38,height:38,borderRadius:10,background:"linear-gradient(135deg,#2980b9,#1abc9c)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <div style={{width:38,height:38,borderRadius:8,background:"#2563EB",display:"flex",alignItems:"center",justifyContent:"center"}}>
               <TrendingUp style={{width:16,height:16,color:"#fff"}}/>
             </div>
             <div>
-              <div style={{fontSize:9,color:"rgba(20,45,70,0.45)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.07em"}}>Total do pipeline</div>
-              <div style={{fontSize:18,fontWeight:900,color:"#0f2133",letterSpacing:"-0.02em"}}>R$ {totalTicket.toLocaleString("pt-BR")}</div>
+              <div style={{fontSize:9,color:"#5B6570",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.07em"}}>Total do pipeline</div>
+              <div style={{fontSize:18,fontWeight:900,color:"#16191D",letterSpacing:"-0.02em"}}>R$ {totalTicket.toLocaleString("pt-BR")}</div>
             </div>
           </div>
           {[
-            {label:"Oportunidades",value:String(filtered.length),color:"#0f2133"},
-            {label:"Ticket médio",value:`R$ ${avgTicket.toLocaleString("pt-BR")}`,color:"#8e44ad"},
-            {label:"Taxa de fechamento",value:`${conversao}%`,color:"#27ae60"},
-            {label:"Taxa de perda",value:`${perda}%`,color:"#dc2626"},
+            {label:"Oportunidades",value:String(filtered.length),color:"#16191D"},
+            {label:"Ticket médio",value:`R$ ${avgTicket.toLocaleString("pt-BR")}`,color:"#5B6570"},
+            {label:"Taxa de fechamento",value:`${conversao}%`,color:"#0F7B4F"},
+            {label:"Taxa de perda",value:`${perda}%`,color:"#B42318"},
           ].map(s=>(
             <div key={s.label} style={{display:"flex",alignItems:"center",gap:24}}>
-              <div style={{width:1,height:32,background:"rgba(200,225,240,0.6)"}}/>
+              <div style={{width:1,height:32,background:"#E3E6E9"}}/>
               <div>
-                <div style={{fontSize:9,color:"rgba(20,45,70,0.45)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.07em"}}>{s.label}</div>
+                <div style={{fontSize:9,color:"#5B6570",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.07em"}}>{s.label}</div>
                 <div style={{fontSize:16,fontWeight:800,color:s.color}}>{s.value}</div>
               </div>
             </div>
@@ -787,12 +771,12 @@ export default function Gerenciamento() {
               disabled={overdueEmpresas.length===0}
               style={{opacity:overdueEmpresas.length===0?0.5:1,cursor:overdueEmpresas.length===0?"default":"pointer"}}
             >
-              <Clock style={{width:16,height:16,color:"#dc2626"}}/>
+              <Clock style={{width:16,height:16,color:"#B42318"}}/>
               <div>
-                <div style={{fontSize:13,fontWeight:800,color:"#dc2626"}}>{overdueEmpresas.length} {overdueEmpresas.length===1?"atrasada":"atrasadas"}</div>
-                <div style={{fontSize:9,color:"rgba(20,45,70,0.4)"}}>clique para ver</div>
+                <div style={{fontSize:13,fontWeight:800,color:"#B42318"}}>{overdueEmpresas.length} {overdueEmpresas.length===1?"atrasada":"atrasadas"}</div>
+                <div style={{fontSize:9,color:"#5B6570"}}>clique para ver</div>
               </div>
-              {overdueEmpresas.length>0&&<AlertCircle style={{width:14,height:14,color:"#dc2626"}}/>}
+              {overdueEmpresas.length>0&&<AlertCircle style={{width:14,height:14,color:"#B42318"}}/>}
             </button>
           </div>
         </div>
@@ -815,22 +799,22 @@ export default function Gerenciamento() {
               animate={{x:0}}
               exit={{x:400}}
               transition={{duration:0.22,ease:[0.4,0,0.2,1]}}
-              style={{width:400,height:"100%",background:"rgba(248,252,255,0.98)",boxShadow:"-16px 0 40px rgba(10,31,51,0.2)",display:"flex",flexDirection:"column"}}
+              style={{width:400,height:"100%",background:"rgba(248,252,255,0.98)",boxShadow:"none",display:"flex",flexDirection:"column"}}
               onClick={e=>e.stopPropagation()}
             >
               {/* Header do painel */}
-              <div style={{padding:"20px 20px 16px",borderBottom:"1px solid rgba(220,38,38,0.12)",background:"rgba(255,255,255,0.9)"}}>
+              <div style={{padding:"20px 20px 16px",borderBottom:"1px solid rgba(220,38,38,0.12)",background:"#ffffff"}}>
                 <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8}}>
-                  <div style={{width:38,height:38,borderRadius:11,background:"rgba(220,38,38,0.1)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                    <AlertCircle style={{width:18,height:18,color:"#dc2626"}}/>
+                  <div style={{width:38,height:38,borderRadius:8,background:"rgba(220,38,38,0.1)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                    <AlertCircle style={{width:18,height:18,color:"#B42318"}}/>
                   </div>
                   <div style={{flex:1}}>
-                    <div style={{fontSize:15,fontWeight:900,color:"#0f2133"}}>Ações Atrasadas</div>
-                    <div style={{fontSize:11,color:"rgba(20,45,70,0.5)"}}>{overdueEmpresas.length} {overdueEmpresas.length===1?"empresa precisa":"empresas precisam"} de atenção</div>
+                    <div style={{fontSize:15,fontWeight:900,color:"#16191D"}}>Ações Atrasadas</div>
+                    <div style={{fontSize:11,color:"#5B6570"}}>{overdueEmpresas.length} {overdueEmpresas.length===1?"empresa precisa":"empresas precisam"} de atenção</div>
                   </div>
                   <button onClick={()=>setShowOverduePanel(false)} className="quick-btn" style={{width:30,height:30}}><X style={{width:14,height:14}}/></button>
                 </div>
-                <p style={{fontSize:11,color:"rgba(20,45,70,0.5)",lineHeight:1.5}}>
+                <p style={{fontSize:11,color:"#5B6570",lineHeight:1.5}}>
                   Essas empresas têm ações que passaram da data prevista. Acesse o perfil da empresa ou a agenda para registrar o contato.
                 </p>
               </div>
@@ -838,7 +822,7 @@ export default function Gerenciamento() {
               {/* Lista de atrasadas */}
               <div style={{flex:1,overflowY:"auto",padding:"14px 16px",display:"flex",flexDirection:"column",gap:8}}>
                 {overdueEmpresas.length===0?(
-                  <div style={{padding:"40px 0",textAlign:"center",color:"rgba(20,45,70,0.4)"}}>
+                  <div style={{padding:"40px 0",textAlign:"center",color:"#5B6570"}}>
                     <div style={{fontSize:32,marginBottom:8}}>✅</div>
                     <p style={{fontSize:13,fontWeight:700}}>Sem ações atrasadas</p>
                     <p style={{fontSize:11,marginTop:4}}>Tudo em dia!</p>
@@ -858,14 +842,14 @@ export default function Gerenciamento() {
                     >
                       <div style={{width:36,height:36,borderRadius:9,background:avatarColor(emp.nome),display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:"#fff",flexShrink:0}}>{initials(emp.nome)}</div>
                       <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontSize:12,fontWeight:700,color:"#0f2133",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{emp.nome}</div>
+                        <div style={{fontSize:12,fontWeight:700,color:"#16191D",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{emp.nome}</div>
                         <div style={{display:"flex",alignItems:"center",gap:5,marginTop:2}}>
                           <span style={{fontSize:9,fontWeight:700,padding:"1px 5px",borderRadius:4,background:si.light,color:si.color}}>{emp.status}</span>
-                          <span style={{fontSize:10,color:"#dc2626",fontWeight:700}}>
+                          <span style={{fontSize:10,color:"#B42318",fontWeight:700}}>
                             {emp.proxima_acao||"Ação sem nome"} · há {daysLate} {daysLate===1?"dia":"dias"}
                           </span>
                         </div>
-                        <div style={{fontSize:9,color:"rgba(20,45,70,0.4)",marginTop:1}}>
+                        <div style={{fontSize:9,color:"#5B6570",marginTop:1}}>
                           Previsto: {formatDate(emp.data_proxima_acao)} · {emp.responsavel_principal||"Sem responsável"}
                         </div>
                       </div>
@@ -873,7 +857,7 @@ export default function Gerenciamento() {
                       <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0}}>
                         <button
                           onClick={()=>navigate(`/clientes/${emp.empresa_id}`,{state:{from:"/gerenciamento"}})}
-                          style={{height:26,padding:"0 9px",borderRadius:7,border:"1px solid rgba(41,128,185,0.3)",background:"rgba(41,128,185,0.08)",color:"#2980b9",fontSize:10,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}
+                          style={{height:26,padding:"0 9px",borderRadius:7,border:"1px solid #2563EB",background:"#EFF4FE",color:"#2563EB",fontSize:10,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}
                         >
                           <Eye style={{width:10,height:10}}/> Ver empresa
                         </button>
@@ -890,16 +874,16 @@ export default function Gerenciamento() {
               </div>
 
               {/* Footer do painel */}
-              <div style={{padding:"14px 16px",borderTop:"1px solid rgba(200,225,240,0.5)",background:"rgba(255,255,255,0.9)",display:"flex",gap:8}}>
+              <div style={{padding:"14px 16px",borderTop:"1px solid #E3E6E9",background:"#ffffff",display:"flex",gap:8}}>
                 <button
                   onClick={()=>{setShowOverduePanel(false);setFilterAction("atrasada");}}
-                  style={{flex:1,height:38,borderRadius:10,border:"none",background:"linear-gradient(135deg,#dc2626,#ef4444)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}
+                  style={{flex:1,height:38,borderRadius:8,border:"none",background:"#B42318",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}
                 >
                   <Filter style={{width:13,height:13}}/> Filtrar atrasadas no pipeline
                 </button>
                 <button
                   onClick={()=>navigate("/calendario")}
-                  style={{height:38,padding:"0 16px",borderRadius:10,border:"1px solid rgba(41,128,185,0.3)",background:"rgba(41,128,185,0.08)",color:"#2980b9",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}
+                  style={{height:38,padding:"0 16px",borderRadius:8,border:"1px solid #2563EB",background:"#EFF4FE",color:"#2563EB",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}
                 >
                   <Calendar style={{width:13,height:13}}/> Agenda
                 </button>

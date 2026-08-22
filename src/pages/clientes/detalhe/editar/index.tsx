@@ -80,61 +80,61 @@ import CardUsuario from "../../../../components/CardUsuario";
     @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
     @keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
 
-    .nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:10px;cursor:pointer;font-size:13.5px;font-weight:500;color:rgba(255,255,255,0.65);transition:all 0.18s;user-select:none;}
-    .nav-item:hover{background:rgba(255,255,255,0.08);color:#fff;}
-    .nav-item.active{background:rgba(255,255,255,0.14);color:#fff;font-weight:600;}
-    .glass-card{background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.9);border-radius:16px;}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:8px;cursor:pointer;font-size:13.5px;font-weight:500;color:#ffffff;transition:all 0.18s;user-select:none;}
+    .nav-item:hover{background:#ffffff;color:#fff;}
+    .nav-item.active{background:#ffffff;color:#fff;font-weight:600;}
+    .glass-card{background:#ffffff;border:1px solid #ffffff;border-radius:8px;}
     .field-group{display:flex;flex-direction:column;gap:5px;}
-    .field-label{font-size:10px;font-weight:700;letter-spacing:0.06em;color:rgba(15,33,51,0.45);text-transform:uppercase;}
-    .field-input{height:44px;padding:0 14px;border-radius:10px;border:1.5px solid rgba(200,225,240,0.8);background:rgba(255,255,255,0.75);font-size:13px;color:#0f2133;outline:none;transition:border-color 0.18s,box-shadow 0.18s;width:100%;}
-    .field-input:focus{border-color:rgba(41,128,185,0.55);box-shadow:0 0 0 3px rgba(41,128,185,0.1);}
-    .field-select{height:44px;padding:0 14px;border-radius:10px;border:1.5px solid rgba(200,225,240,0.8);background:rgba(255,255,255,0.75);font-size:13px;color:#0f2133;outline:none;transition:border-color 0.18s;width:100%;cursor:pointer;appearance:none;}
-    .field-select:focus{border-color:rgba(41,128,185,0.55);box-shadow:0 0 0 3px rgba(41,128,185,0.1);}
-    .field-textarea{padding:12px 14px;border-radius:10px;border:1.5px solid rgba(200,225,240,0.8);background:rgba(255,255,255,0.75);font-size:13px;color:#0f2133;outline:none;transition:border-color 0.18s;width:100%;resize:vertical;min-height:80px;}
-    .field-textarea:focus{border-color:rgba(41,128,185,0.55);box-shadow:0 0 0 3px rgba(41,128,185,0.1);}
+    .field-label{font-size:10px;font-weight:700;letter-spacing:0.06em;color:#5B6570;text-transform:uppercase;}
+    .field-input{height:44px;padding:0 14px;border-radius:8px;border:1.5px solid #E3E6E9;background:#ffffff;font-size:13px;color:#16191D;outline:none;transition:border-color 0.18s,box-shadow 0.18s;width:100%;}
+    .field-input:focus{border-color:#2563EB;box-shadow:0 0 0 3px #EFF4FE;}
+    .field-select{height:44px;padding:0 14px;border-radius:8px;border:1.5px solid #E3E6E9;background:#ffffff;font-size:13px;color:#16191D;outline:none;transition:border-color 0.18s;width:100%;cursor:pointer;appearance:none;}
+    .field-select:focus{border-color:#2563EB;box-shadow:0 0 0 3px #EFF4FE;}
+    .field-textarea{padding:12px 14px;border-radius:8px;border:1.5px solid #E3E6E9;background:#ffffff;font-size:13px;color:#16191D;outline:none;transition:border-color 0.18s;width:100%;resize:vertical;min-height:80px;}
+    .field-textarea:focus{border-color:#2563EB;box-shadow:0 0 0 3px #EFF4FE;}
     .field-input-icon{position:relative;display:flex;align-items:center;}
-    .field-input-icon .icon{position:absolute;left:12px;color:rgba(20,45,70,0.3);pointer-events:none;}
+    .field-input-icon .icon{position:absolute;left:12px;color:#5B6570;pointer-events:none;}
     .field-input-icon .field-input{padding-left:36px;}
 
     .seg-wrapper{position:relative;}
-    .seg-input{height:44px;padding:0 40px 0 36px;border-radius:10px;border:1.5px solid rgba(200,225,240,0.8);background:rgba(255,255,255,0.75);font-size:13px;color:#0f2133;outline:none;transition:border-color 0.18s,box-shadow 0.18s;width:100%;}
-    .seg-input:focus,.seg-input.open{border-color:rgba(41,128,185,0.55);box-shadow:0 0 0 3px rgba(41,128,185,0.1);}
+    .seg-input{height:44px;padding:0 40px 0 36px;border-radius:8px;border:1.5px solid #E3E6E9;background:#ffffff;font-size:13px;color:#16191D;outline:none;transition:border-color 0.18s,box-shadow 0.18s;width:100%;}
+    .seg-input:focus,.seg-input.open{border-color:#2563EB;box-shadow:0 0 0 3px #EFF4FE;}
     .seg-input.open{border-bottom-left-radius:0;border-bottom-right-radius:0;}
-    .seg-icon-left{position:absolute;left:12px;color:rgba(20,45,70,0.3);pointer-events:none;width:14px;height:14px;}
-    .seg-chevron{position:absolute;right:12px;color:rgba(20,45,70,0.35);pointer-events:none;width:15px;height:15px;transition:transform 0.2s;}
+    .seg-icon-left{position:absolute;left:12px;color:#5B6570;pointer-events:none;width:14px;height:14px;}
+    .seg-chevron{position:absolute;right:12px;color:#5B6570;pointer-events:none;width:15px;height:15px;transition:transform 0.2s;}
     .seg-chevron.open{transform:rotate(180deg);}
-    .seg-dropdown{position:absolute;top:calc(100% - 1px);left:0;right:0;z-index:999;background:rgba(255,255,255,0.97);backdrop-filter:blur(20px);border:1.5px solid rgba(41,128,185,0.45);border-top:1px solid rgba(200,225,240,0.5);border-bottom-left-radius:10px;border-bottom-right-radius:10px;box-shadow:0 12px 40px rgba(20,45,70,0.14);max-height:240px;overflow-y:auto;}
-    .seg-option{padding:10px 14px;font-size:13px;color:#1a2e40;cursor:pointer;transition:background 0.12s;display:flex;align-items:center;gap:8px;}
-    .seg-option:hover,.seg-option.highlighted{background:rgba(41,128,185,0.07);color:#2980b9;}
-    .seg-option.selected{background:rgba(41,128,185,0.1);color:#2980b9;font-weight:700;}
-    .seg-option-new{padding:10px 14px;font-size:13px;cursor:pointer;transition:background 0.12s;display:flex;align-items:center;gap:8px;color:#e67e22;font-weight:600;border-top:1px solid rgba(200,225,240,0.5);}
+    .seg-dropdown{position:absolute;top:calc(100% - 1px);left:0;right:0;z-index:999;background:#ffffff;border:1.5px solid #2563EB;border-top:1px solid #E3E6E9;border-bottom-left-radius:10px;border-bottom-right-radius:10px;box-shadow:0 12px 40px #E3E6E9;max-height:240px;overflow-y:auto;}
+    .seg-option{padding:10px 14px;font-size:13px;color:#16191D;cursor:pointer;transition:background 0.12s;display:flex;align-items:center;gap:8px;}
+    .seg-option:hover,.seg-option.highlighted{background:#2563EB;color:#2563EB;}
+    .seg-option.selected{background:#EFF4FE;color:#2563EB;font-weight:700;}
+    .seg-option-new{padding:10px 14px;font-size:13px;cursor:pointer;transition:background 0.12s;display:flex;align-items:center;gap:8px;color:#8A5A00;font-weight:600;border-top:1px solid #E3E6E9;}
     .seg-option-new:hover{background:rgba(230,126,34,0.07);}
 
-    .contact-card{background:rgba(255,255,255,0.6);border:1.5px solid rgba(200,225,240,0.7);border-radius:14px;padding:20px;transition:box-shadow 0.2s;}
-    .contact-card:hover{box-shadow:0 6px 24px rgba(41,128,185,0.12);}
-    .temp-btn{flex:1;height:38px;border-radius:8px;border:1.5px solid rgba(200,225,240,0.8);background:rgba(255,255,255,0.75);font-size:12px;font-weight:600;cursor:pointer;transition:all 0.18s;display:flex;align-items:center;justify-content:center;gap:5px;}
-    .temp-btn.frio.active{background:rgba(52,152,219,0.12);border-color:#3498db;color:#2980b9;}
-    .temp-btn.morno.active{background:rgba(230,126,34,0.12);border-color:#e67e22;color:#e67e22;}
-    .temp-btn.quente.active{background:rgba(231,76,60,0.12);border-color:#e74c3c;color:#e74c3c;}
-    .temp-btn:not(.active){color:rgba(20,45,70,0.4);}
-    .prio-btn{flex:1;height:34px;border-radius:8px;border:1.5px solid rgba(200,225,240,0.8);background:rgba(255,255,255,0.75);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.18s;}
-    .prio-btn.alta.active{background:rgba(231,76,60,0.12);border-color:#e74c3c;color:#e74c3c;}
-    .prio-btn.media.active{background:rgba(230,126,34,0.12);border-color:#e67e22;color:#e67e22;}
-    .prio-btn.baixa.active{background:rgba(39,174,96,0.12);border-color:#27ae60;color:#27ae60;}
-    .prio-btn:not(.active){color:rgba(20,45,70,0.4);}
-    .checkbox-decisor{display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 12px;border-radius:8px;border:1.5px solid rgba(200,225,240,0.8);background:rgba(255,255,255,0.75);transition:all 0.18s;}
-    .checkbox-decisor.checked{border-color:#27ae60;background:rgba(39,174,96,0.08);}
-    .checkbox-decisor .box{width:16px;height:16px;border-radius:4px;border:1.5px solid rgba(200,225,240,0.9);background:#fff;display:flex;align-items:center;justify-content:center;transition:all 0.18s;flex-shrink:0;}
-    .checkbox-decisor.checked .box{background:#27ae60;border-color:#27ae60;}
-    .btn-grad{border:none;cursor:pointer;border-radius:10px;color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;display:flex;align-items:center;justify-content:center;gap:7px;background:linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9);background-size:200% 200%;animation:gradientShift 4s ease infinite;box-shadow:0 4px 14px rgba(41,128,185,0.35);transition:transform 0.15s,box-shadow 0.15s;}
-    .btn-grad:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(41,128,185,0.42);}
-    .btn-ghost{border:1.5px solid rgba(200,225,240,0.9);background:rgba(255,255,255,0.75);cursor:pointer;border-radius:10px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;color:rgba(20,45,70,0.65);display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.18s;}
-    .btn-ghost:hover{background:rgba(255,255,255,0.95);border-color:rgba(41,128,185,0.3);color:#2980b9;}
+    .contact-card{background:#ffffff;border:1.5px solid #E3E6E9;border-radius:8px;padding:20px;transition:box-shadow 0.2s;}
+    .contact-card:hover{box-shadow:0 6px 24px #EFF4FE;}
+    .temp-btn{flex:1;height:38px;border-radius:8px;border:1.5px solid #E3E6E9;background:#ffffff;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.18s;display:flex;align-items:center;justify-content:center;gap:5px;}
+    .temp-btn.frio.active{background:rgba(52,152,219,0.12);border-color:#2563EB;color:#2563EB;}
+    .temp-btn.morno.active{background:rgba(230,126,34,0.12);border-color:#8A5A00;color:#8A5A00;}
+    .temp-btn.quente.active{background:rgba(231,76,60,0.12);border-color:#B42318;color:#B42318;}
+    .temp-btn:not(.active){color:#5B6570;}
+    .prio-btn{flex:1;height:34px;border-radius:8px;border:1.5px solid #E3E6E9;background:#ffffff;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.18s;}
+    .prio-btn.alta.active{background:rgba(231,76,60,0.12);border-color:#B42318;color:#B42318;}
+    .prio-btn.media.active{background:rgba(230,126,34,0.12);border-color:#8A5A00;color:#8A5A00;}
+    .prio-btn.baixa.active{background:rgba(39,174,96,0.12);border-color:#0F7B4F;color:#0F7B4F;}
+    .prio-btn:not(.active){color:#5B6570;}
+    .checkbox-decisor{display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 12px;border-radius:8px;border:1.5px solid #E3E6E9;background:#ffffff;transition:all 0.18s;}
+    .checkbox-decisor.checked{border-color:#0F7B4F;background:rgba(39,174,96,0.08);}
+    .checkbox-decisor .box{width:16px;height:16px;border-radius:4px;border:1.5px solid #E3E6E9;background:#fff;display:flex;align-items:center;justify-content:center;transition:all 0.18s;flex-shrink:0;}
+    .checkbox-decisor.checked .box{background:#0F7B4F;border-color:#0F7B4F;}
+    .btn-grad{border:none;cursor:pointer;border-radius:8px;color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;display:flex;align-items:center;justify-content:center;gap:7px;background:#2563EB;background-size:200% 200%;animation:gradientShift 4s ease infinite;box-shadow:0 4px 14px #2563EB;transition:transform 0.15s,box-shadow 0.15s;}
+    .btn-grad:hover{transform:translateY(-1px);box-shadow:0 8px 22px #2563EB;}
+    .btn-ghost{border:1.5px solid #E3E6E9;background:#ffffff;cursor:pointer;border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;color:#5B6570;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.18s;}
+    .btn-ghost:hover{background:#ffffff;border-color:#2563EB;color:#2563EB;}
     .spin{animation:spin 0.9s linear infinite;}
-    .toast{position:fixed;bottom:28px;right:28px;z-index:9999;padding:12px 18px;border-radius:12px;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;box-shadow:0 8px 28px rgba(0,0,0,0.15);animation:slideIn 0.25s ease;}
+    .toast{position:fixed;bottom:28px;right:28px;z-index:9999;padding:12px 18px;border-radius:8px;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;box-shadow:0 8px 28px rgba(0,0,0,0.15);animation:slideIn 0.25s ease;}
     ::-webkit-scrollbar{width:4px;}
     ::-webkit-scrollbar-track{background:transparent;}
-    ::-webkit-scrollbar-thumb{background:rgba(41,128,185,0.25);border-radius:4px;}
+    ::-webkit-scrollbar-thumb{background:#EFF4FE;border-radius:4px;}
   `;
 
   const navItems = [
@@ -199,10 +199,10 @@ import CardUsuario from "../../../../components/CardUsuario";
         <AnimatePresence>
           {open&&(
             <motion.div className="seg-dropdown" initial={{opacity:0,y:-6,scaleY:0.95}} animate={{opacity:1,y:0,scaleY:1}} exit={{opacity:0,y:-6,scaleY:0.95}} transition={{duration:0.14}} style={{transformOrigin:"top"}}>
-              {filtered.length===0&&!showNew&&<div style={{padding:"14px",fontSize:12,color:"rgba(20,45,70,0.4)",textAlign:"center"}}>Nenhum segmento encontrado</div>}
+              {filtered.length===0&&!showNew&&<div style={{padding:"14px",fontSize:12,color:"#5B6570",textAlign:"center"}}>Nenhum segmento encontrado</div>}
               {filtered.map((opt,i)=>(
                 <div key={opt} className={`seg-option${normalizeStr(opt)===normalizeStr(value)?" selected":""}${hi===i?" highlighted":""}`} onMouseDown={e=>{e.preventDefault();select(opt);}} onMouseEnter={()=>setHi(i)}>
-                  <div style={{width:6,height:6,borderRadius:"50%",background:"rgba(41,128,185,0.35)",flexShrink:0}}/>{opt}
+                  <div style={{width:6,height:6,borderRadius:"50%",background:"#2563EB",flexShrink:0}}/>{opt}
                 </div>
               ))}
               {showNew&&(
@@ -232,22 +232,22 @@ import CardUsuario from "../../../../components/CardUsuario";
     onRemove: (localId: number) => void;
   }) {
     const up = (f: string, v: any) => onChange(contato._localId, f, v);
-    const cor = ["#2980b9","#1abc9c","#e67e22","#8e44ad","#27ae60"][index%5];
+    const cor = ["#2563EB","#2563EB","#8A5A00","#5B6570","#0F7B4F"][index%5];
     const ini = contato.nome ? contato.nome.split(" ").map((w:string)=>w[0]).join("").slice(0,2).toUpperCase() : "?";
     return (
       <motion.div className="contact-card" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}} transition={{duration:0.25}}>
         <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
           <div style={{width:38,height:38,borderRadius:"50%",background:cor,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:"#fff",flexShrink:0}}>{ini}</div>
           <div style={{flex:1}}>
-            <div style={{fontSize:13,fontWeight:700,color:"#0f2133"}}>{contato.nome||`Contato ${index+1}`}</div>
-            <div style={{fontSize:11,color:"rgba(20,45,70,0.4)"}}>{contato.funcao||"Função não definida"}</div>
+            <div style={{fontSize:13,fontWeight:700,color:"#16191D"}}>{contato.nome||`Contato ${index+1}`}</div>
+            <div style={{fontSize:11,color:"#5B6570"}}>{contato.funcao||"Função não definida"}</div>
           </div>
-          {contato.isNew&&<span style={{fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:4,background:"rgba(41,128,185,0.1)",color:"#2980b9"}}>NOVO</span>}
+          {contato.isNew&&<span style={{fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:4,background:"#EFF4FE",color:"#2563EB"}}>NOVO</span>}
           <div className={`checkbox-decisor${contato.decisor?" checked":""}`} onClick={()=>up("decisor",!contato.decisor)}>
             <div className="box">{contato.decisor&&<svg width="9" height="9" viewBox="0 0 10 10" fill="none"><polyline points="2,5 4,7.5 8,2.5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}</div>
-            <span style={{fontSize:11,fontWeight:600,color:contato.decisor?"#27ae60":"rgba(20,45,70,0.5)"}}>Decisor</span>
+            <span style={{fontSize:11,fontWeight:600,color:contato.decisor?"#0F7B4F":"#5B6570"}}>Decisor</span>
           </div>
-          <button onClick={()=>onRemove(contato._localId)} style={{width:32,height:32,borderRadius:8,border:"1.5px solid rgba(231,76,60,0.2)",background:"rgba(231,76,60,0.06)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#e74c3c",transition:"all 0.18s"}} onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(231,76,60,0.14)";}} onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(231,76,60,0.06)";}}>
+          <button onClick={()=>onRemove(contato._localId)} style={{width:32,height:32,borderRadius:8,border:"1.5px solid rgba(231,76,60,0.2)",background:"rgba(231,76,60,0.06)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#B42318",transition:"all 0.18s"}} onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(231,76,60,0.14)";}} onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(231,76,60,0.06)";}}>
             <Trash2 style={{width:13,height:13}}/>
           </button>
         </div>
@@ -457,10 +457,10 @@ import CardUsuario from "../../../../components/CardUsuario";
 
 
     if(loading) return (
-      <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(145deg,#c8e8f5,#c5eae0)"}}>
+      <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#F6F7F8"}}>
         <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
-          <Loader className="spin" style={{width:28,height:28,color:"#2980b9"}}/>
-          <div style={{fontSize:13,color:"rgba(20,45,70,0.5)",fontWeight:600}}>Carregando empresa...</div>
+          <Loader className="spin" style={{width:28,height:28,color:"#2563EB"}}/>
+          <div style={{fontSize:13,color:"#5B6570",fontWeight:600}}>Carregando empresa...</div>
         </div>
       </div>
     );
@@ -484,28 +484,20 @@ import CardUsuario from "../../../../components/CardUsuario";
 
         {/* Fundo animado */}
         <div style={{position:"fixed",inset:0,zIndex:0,overflow:"hidden",pointerEvents:"none"}}>
-          <div style={{position:"absolute",inset:0,background:"linear-gradient(145deg,#c8e8f5 0%,#d6eef5 30%,#cceee8 65%,#c5eae0 100%)"}}/>
-          <div style={{position:"absolute",inset:0,opacity:0.4,backgroundImage:"radial-gradient(circle,rgba(41,128,185,0.2) 1px,transparent 1px)",backgroundSize:"22px 22px"}}/>
-          {[
-            {w:420,h:420,top:"-80px",left:"10%",anim:"float1 18s ease-in-out infinite",op:0.1,c1:"#2980b9",c2:"#1abc9c"},
-            {w:280,h:280,top:"40%",left:"-60px",anim:"float2 22s ease-in-out infinite",op:0.08,c1:"#1abc9c",c2:"#2ecc71"},
-            {w:360,h:360,top:"60%",left:"55%",anim:"float3 26s ease-in-out infinite",op:0.07,c1:"#2980b9",c2:"#8e44ad"},
-            {w:200,h:200,top:"20%",left:"75%",anim:"float4 20s ease-in-out infinite",op:0.09,c1:"#27ae60",c2:"#1abc9c"},
-          ].map((c,i)=>(
-            <div key={i} style={{position:"absolute",width:c.w,height:c.h,top:c.top,left:c.left,borderRadius:"50%",background:`radial-gradient(circle at 40% 40%,${c.c1},${c.c2})`,opacity:c.op,animation:c.anim,filter:"blur(2px)"}}/>
-          ))}
+          <div style={{position:"absolute",inset:0,background:"#F6F7F8"}}/>
+          
         </div>
 
         {/* Sidebar */}
-        <div style={{width:220,flexShrink:0,height:"100vh",overflowY:"auto",position:"relative",zIndex:10,background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)",boxShadow:"4px 0 24px rgba(0,0,0,0.18)",display:"flex",flexDirection:"column",padding:"0 12px 20px"}}>
-          <div style={{padding:"22px 4px 24px",borderBottom:"1px solid rgba(255,255,255,0.08)",marginBottom:16}}>
+        <div style={{width:220,flexShrink:0,height:"100vh",overflowY:"auto",position:"relative",zIndex:10,background:"#1a3a5c",boxShadow:"none",display:"flex",flexDirection:"column",padding:"0 12px 20px"}}>
+          <div style={{padding:"22px 4px 24px",borderBottom:"1px solid #ffffff",marginBottom:16}}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
-              <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#2980b9,#1abc9c)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <div style={{width:36,height:36,borderRadius:8,background:"#2563EB",display:"flex",alignItems:"center",justifyContent:"center"}}>
                 <BarChart3 style={{width:18,height:18,color:"#fff"}}/>
               </div>
               <div>
                 <div style={{fontSize:14,fontWeight:800,color:"#fff"}}>Prospecção</div>
-                <div style={{fontSize:11,fontWeight:700,background:"linear-gradient(90deg,#2980b9,#1abc9c,#2ecc71,#2980b9)",backgroundSize:"200% 200%",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"gradientShift 4s ease infinite"}}>CRM</div>
+                <div style={{fontSize:11,fontWeight:700,background:"#2563EB",backgroundSize:"200% 200%",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"gradientShift 4s ease infinite"}}>CRM</div>
               </div>
             </div>
           </div>
@@ -523,13 +515,13 @@ import CardUsuario from "../../../../components/CardUsuario";
         <div style={{flex:1,height:"100vh",overflowY:"auto",position:"relative",zIndex:5}}>
 
           {/* Top bar */}
-          <div style={{position:"sticky",top:0,zIndex:20,padding:"14px 28px",background:"rgba(210,238,248,0.75)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,0.6)",display:"flex",alignItems:"center",gap:16}}>
+          <div style={{position:"sticky",top:0,zIndex:20,padding:"14px 28px",background:"rgba(210,238,248,0.75)", borderBottom:"1px solid #ffffff",display:"flex",alignItems:"center",gap:16}}>
             <button className="btn-ghost" style={{height:38,padding:"0 14px",fontSize:13}} onClick={()=>navigate(`/clientes/${id}`)}>
               <ArrowLeft style={{width:15,height:15}}/> Voltar
             </button>
             <div style={{flex:1}}>
-              <h1 style={{fontSize:18,fontWeight:800,color:"#0f2133",letterSpacing:"-0.02em"}}>Editar Empresa</h1>
-              <p style={{fontSize:12,color:"rgba(20,45,70,0.5)",marginTop:1}}>{form.nome||"..."} — todas as alterações são salvas no banco de dados</p>
+              <h1 style={{fontSize:18,fontWeight:800,color:"#16191D",letterSpacing:"-0.02em"}}>Editar Empresa</h1>
+              <p style={{fontSize:12,color:"#5B6570",marginTop:1}}>{form.nome||"..."} — todas as alterações são salvas no banco de dados</p>
             </div>
             <button className="btn-grad" style={{height:38,padding:"0 18px",fontSize:13,opacity:saving?0.7:1}} onClick={handleSubmit} disabled={saving}>
               {saving?<Loader className="spin" style={{width:14,height:14}}/>:<Save style={{width:15,height:15}}/>}
@@ -547,12 +539,12 @@ import CardUsuario from "../../../../components/CardUsuario";
                 {/* Informações Principais */}
                 <motion.div className="glass-card" style={{padding:"24px"}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.32}}>
                   <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
-                    <div style={{width:36,height:36,borderRadius:10,background:"rgba(41,128,185,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                      <Building2 style={{width:17,height:17,color:"#2980b9"}}/>
+                    <div style={{width:36,height:36,borderRadius:8,background:"#EFF4FE",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      <Building2 style={{width:17,height:17,color:"#2563EB"}}/>
                     </div>
                     <div>
-                      <div style={{fontSize:14,fontWeight:700,color:"#0f2133"}}>Informações Principais</div>
-                      <div style={{fontSize:11,color:"rgba(20,45,70,0.45)"}}>Dados da empresa</div>
+                      <div style={{fontSize:14,fontWeight:700,color:"#16191D"}}>Informações Principais</div>
+                      <div style={{fontSize:11,color:"#5B6570"}}>Dados da empresa</div>
                     </div>
                   </div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
@@ -564,12 +556,12 @@ import CardUsuario from "../../../../components/CardUsuario";
                     <Field label="Segmento *">
                       <SegmentoAutocomplete value={form.segmento} onChange={v=>setF("segmento",v)} opcoes={segmentosOrdenados}/>
                       {form.segmento.trim()&&!segmentoExiste&&(
-                        <div style={{marginTop:5,fontSize:10,fontWeight:600,color:"#e67e22",display:"flex",alignItems:"center",gap:4}}>
+                        <div style={{marginTop:5,fontSize:10,fontWeight:600,color:"#8A5A00",display:"flex",alignItems:"center",gap:4}}>
                           <AlertTriangle style={{width:11,height:11}}/> Segmento novo — será validado ao salvar
                         </div>
                       )}
                       {form.segmento.trim()&&segmentoExiste&&(
-                        <div style={{marginTop:5,fontSize:10,fontWeight:600,color:"#27ae60",display:"flex",alignItems:"center",gap:4}}>
+                        <div style={{marginTop:5,fontSize:10,fontWeight:600,color:"#0F7B4F",display:"flex",alignItems:"center",gap:4}}>
                           <CheckCircle style={{width:11,height:11}}/> Segmento reconhecido
                         </div>
                       )}
@@ -601,12 +593,12 @@ import CardUsuario from "../../../../components/CardUsuario";
                 {/* Localização */}
                 <motion.div className="glass-card" style={{padding:"24px"}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.32,delay:0.06}}>
                   <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
-                    <div style={{width:36,height:36,borderRadius:10,background:"rgba(26,188,156,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                      <MapPin style={{width:17,height:17,color:"#1abc9c"}}/>
+                    <div style={{width:36,height:36,borderRadius:8,background:"rgba(26,188,156,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      <MapPin style={{width:17,height:17,color:"#2563EB"}}/>
                     </div>
                     <div>
-                      <div style={{fontSize:14,fontWeight:700,color:"#0f2133"}}>Localização</div>
-                      <div style={{fontSize:11,color:"rgba(20,45,70,0.45)"}}>Endereço completo</div>
+                      <div style={{fontSize:14,fontWeight:700,color:"#16191D"}}>Localização</div>
+                      <div style={{fontSize:11,color:"#5B6570"}}>Endereço completo</div>
                     </div>
                   </div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
@@ -621,12 +613,12 @@ import CardUsuario from "../../../../components/CardUsuario";
                 {/* Observações */}
                 <motion.div className="glass-card" style={{padding:"24px"}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.32,delay:0.12}}>
                   <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
-                    <div style={{width:36,height:36,borderRadius:10,background:"rgba(142,68,173,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                      <FileText style={{width:17,height:17,color:"#8e44ad"}}/>
+                    <div style={{width:36,height:36,borderRadius:8,background:"rgba(142,68,173,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      <FileText style={{width:17,height:17,color:"#5B6570"}}/>
                     </div>
                     <div>
-                      <div style={{fontSize:14,fontWeight:700,color:"#0f2133"}}>Observações</div>
-                      <div style={{fontSize:11,color:"rgba(20,45,70,0.45)"}}>Notas internas</div>
+                      <div style={{fontSize:14,fontWeight:700,color:"#16191D"}}>Observações</div>
+                      <div style={{fontSize:11,color:"#5B6570"}}>Notas internas</div>
                     </div>
                   </div>
                   <Field label="Observações">
@@ -641,12 +633,12 @@ import CardUsuario from "../../../../components/CardUsuario";
                 {/* Dados de Prospecção */}
                 <motion.div className="glass-card" style={{padding:"24px"}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.32,delay:0.04}}>
                   <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
-                    <div style={{width:36,height:36,borderRadius:10,background:"rgba(230,126,34,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                      <Target style={{width:17,height:17,color:"#e67e22"}}/>
+                    <div style={{width:36,height:36,borderRadius:8,background:"rgba(230,126,34,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      <Target style={{width:17,height:17,color:"#8A5A00"}}/>
                     </div>
                     <div>
-                      <div style={{fontSize:14,fontWeight:700,color:"#0f2133"}}>Dados de Prospecção</div>
-                      <div style={{fontSize:11,color:"rgba(20,45,70,0.45)"}}>Status e qualificação</div>
+                      <div style={{fontSize:14,fontWeight:700,color:"#16191D"}}>Dados de Prospecção</div>
+                      <div style={{fontSize:11,color:"#5B6570"}}>Status e qualificação</div>
                     </div>
                   </div>
                   <div style={{display:"flex",flexDirection:"column",gap:12}}>
@@ -677,12 +669,12 @@ import CardUsuario from "../../../../components/CardUsuario";
                 {/* Acompanhamento */}
                 <motion.div className="glass-card" style={{padding:"24px"}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.32,delay:0.10}}>
                   <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
-                    <div style={{width:36,height:36,borderRadius:10,background:"rgba(39,174,96,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                      <Clock style={{width:17,height:17,color:"#27ae60"}}/>
+                    <div style={{width:36,height:36,borderRadius:8,background:"rgba(39,174,96,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      <Clock style={{width:17,height:17,color:"#0F7B4F"}}/>
                     </div>
                     <div>
-                      <div style={{fontSize:14,fontWeight:700,color:"#0f2133"}}>Acompanhamento</div>
-                      <div style={{fontSize:11,color:"rgba(20,45,70,0.45)"}}>Ações e datas</div>
+                      <div style={{fontSize:14,fontWeight:700,color:"#16191D"}}>Acompanhamento</div>
+                      <div style={{fontSize:11,color:"#5B6570"}}>Ações e datas</div>
                     </div>
                   </div>
                   <div style={{display:"flex",flexDirection:"column",gap:12}}>
@@ -704,26 +696,26 @@ import CardUsuario from "../../../../components/CardUsuario";
                 {/* Preview contatos */}
                 <motion.div className="glass-card" style={{padding:"20px 24px"}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.32,delay:0.16}}>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-                    <div style={{fontSize:13,fontWeight:700,color:"#0f2133"}}>Contatos</div>
-                    <span style={{padding:"3px 10px",borderRadius:20,background:"rgba(41,128,185,0.1)",color:"#2980b9",fontSize:11,fontWeight:700}}>
+                    <div style={{fontSize:13,fontWeight:700,color:"#16191D"}}>Contatos</div>
+                    <span style={{padding:"3px 10px",borderRadius:8,background:"#EFF4FE",color:"#2563EB",fontSize:11,fontWeight:700}}>
                       {contatos.length} contato{contatos.length!==1?"s":""}
                     </span>
                   </div>
                   {contatos.length===0?(
-                    <div style={{padding:"16px 0",textAlign:"center",fontSize:12,color:"rgba(20,45,70,0.4)"}}>Nenhum contato cadastrado</div>
+                    <div style={{padding:"16px 0",textAlign:"center",fontSize:12,color:"#5B6570"}}>Nenhum contato cadastrado</div>
                   ):(
                     <div style={{display:"flex",flexDirection:"column",gap:6}}>
                       {contatos.map((c,i)=>{
-                        const cor=["#2980b9","#1abc9c","#e67e22","#8e44ad","#27ae60"][i%5];
+                        const cor=["#2563EB","#2563EB","#8A5A00","#5B6570","#0F7B4F"][i%5];
                         const ini=c.nome?c.nome.split(" ").map((w:string)=>w[0]).join("").slice(0,2).toUpperCase():"?";
                         return(
-                          <div key={c._localId} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:8,background:"rgba(255,255,255,0.55)",border:"1px solid rgba(200,225,240,0.5)"}}>
+                          <div key={c._localId} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:8,background:"#ffffff",border:"1px solid #E3E6E9"}}>
                             <div style={{width:26,height:26,borderRadius:"50%",background:cor,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:"#fff",flexShrink:0}}>{ini}</div>
                             <div style={{flex:1,minWidth:0}}>
-                              <div style={{fontSize:11,fontWeight:600,color:"#0f2133",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.nome||`Contato ${i+1}`}</div>
-                              <div style={{fontSize:10,color:"rgba(20,45,70,0.4)"}}>{c.funcao||"—"}</div>
+                              <div style={{fontSize:11,fontWeight:600,color:"#16191D",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.nome||`Contato ${i+1}`}</div>
+                              <div style={{fontSize:10,color:"#5B6570"}}>{c.funcao||"—"}</div>
                             </div>
-                            {c.decisor&&<span style={{fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:4,background:"rgba(39,174,96,0.1)",color:"#27ae60",border:"1px solid rgba(39,174,96,0.2)"}}>Decisor</span>}
+                            {c.decisor&&<span style={{fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:4,background:"rgba(39,174,96,0.1)",color:"#0F7B4F",border:"1px solid rgba(39,174,96,0.2)"}}>Decisor</span>}
                           </div>
                         );
                       })}
@@ -737,12 +729,12 @@ import CardUsuario from "../../../../components/CardUsuario";
             <motion.div style={{marginTop:20}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.32,delay:0.20}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
                 <div style={{display:"flex",alignItems:"center",gap:12}}>
-                  <div style={{width:38,height:38,borderRadius:10,background:"linear-gradient(135deg,#2980b9,#1abc9c)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 12px rgba(41,128,185,0.3)"}}>
+                  <div style={{width:38,height:38,borderRadius:8,background:"#2563EB",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"none"}}>
                     <Users style={{width:18,height:18,color:"#fff"}}/>
                   </div>
                   <div>
-                    <div style={{fontSize:16,fontWeight:800,color:"#0f2133"}}>Contatos Vinculados</div>
-                    <div style={{fontSize:12,color:"rgba(20,45,70,0.45)"}}>Edite, adicione ou remova contatos</div>
+                    <div style={{fontSize:16,fontWeight:800,color:"#16191D"}}>Contatos Vinculados</div>
+                    <div style={{fontSize:12,color:"#5B6570"}}>Edite, adicione ou remova contatos</div>
                   </div>
                 </div>
                 <button className="btn-grad" style={{height:40,padding:"0 18px",fontSize:13}} onClick={addContato}>
@@ -753,11 +745,11 @@ import CardUsuario from "../../../../components/CardUsuario";
                 {contatos.map((c,i)=>(
                   <ContatoCard key={c._localId} contato={c} index={i} onChange={handleContatoChange} onRemove={removeContato}/>
                 ))}
-                <div onClick={addContato} style={{border:"2px dashed rgba(41,128,185,0.25)",borderRadius:14,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8,cursor:"pointer",padding:"32px 20px",transition:"all 0.18s",minHeight:120,background:"rgba(255,255,255,0.35)"}} onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.borderColor="rgba(41,128,185,0.5)";}} onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.borderColor="rgba(41,128,185,0.25)";}}>
-                  <div style={{width:40,height:40,borderRadius:"50%",background:"rgba(41,128,185,0.08)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                    <Plus style={{width:18,height:18,color:"#2980b9"}}/>
+                <div onClick={addContato} style={{border:"2px dashed #EFF4FE",borderRadius:8,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8,cursor:"pointer",padding:"32px 20px",transition:"all 0.18s",minHeight:120,background:"#ffffff"}} onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.borderColor="#2563EB";}} onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.borderColor="#EFF4FE";}}>
+                  <div style={{width:40,height:40,borderRadius:"50%",background:"#EFF4FE",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    <Plus style={{width:18,height:18,color:"#2563EB"}}/>
                   </div>
-                  <span style={{fontSize:13,fontWeight:600,color:"rgba(41,128,185,0.7)"}}>Adicionar contato</span>
+                  <span style={{fontSize:13,fontWeight:600,color:"#2563EB"}}>Adicionar contato</span>
                 </div>
               </div>
             </motion.div>

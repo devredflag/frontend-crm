@@ -14,47 +14,46 @@ import CardUsuario from "../../components/CardUsuario";
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
   * { font-family: 'Plus Jakarta Sans', sans-serif; box-sizing: border-box; margin: 0; padding: 0; }
-  @keyframes gradientShift { 0%,100%{background-position:0% 50%}50%{background-position:100% 50%} }
   @keyframes spin { from{transform:rotate(0deg)}to{transform:rotate(360deg)} }
-  .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:10px; cursor:pointer; font-size:13.5px; font-weight:500; color:rgba(255,255,255,0.65); transition:all 0.18s; user-select:none; }
-  .nav-item:hover { background:rgba(255,255,255,0.08); color:#fff; }
-  .nav-item.active { background:rgba(255,255,255,0.14); color:#fff; font-weight:600; }
-  .glass { background:rgba(255,255,255,0.72); backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.9); border-radius:16px; }
-  .day-cell { border-right:1px solid rgba(200,225,240,0.4); border-bottom:1px solid rgba(200,225,240,0.4); min-height:100px; padding:6px; cursor:pointer; transition:background 0.13s; }
-  .day-cell:hover { background:rgba(41,128,185,0.04); }
-  .day-cell.today { background:rgba(41,128,185,0.06); }
+  .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:8px; cursor:pointer; font-size:13.5px; font-weight:500; color:#ffffff; transition:all 0.18s; user-select:none; }
+  .nav-item:hover { background:#ffffff; color:#fff; }
+  .nav-item.active { background:#ffffff; color:#fff; font-weight:600; }
+  .glass { background:#ffffff; border:1px solid #ffffff; border-radius:8px; }
+  .day-cell { border-right:1px solid #E3E6E9; border-bottom:1px solid #E3E6E9; min-height:100px; padding:6px; cursor:pointer; transition:background 0.13s; }
+  .day-cell:hover { background:#2563EB; }
+  .day-cell.today { background:#EFF4FE; }
   .day-cell.other-month { opacity:0.4; }
-  .hour-slot { border-bottom:1px solid rgba(200,225,240,0.3); display:flex; align-items:stretch; min-height:56px; cursor:pointer; transition:background 0.13s; }
-  .hour-slot:hover { background:rgba(41,128,185,0.03); }
+  .hour-slot { border-bottom:1px solid #E3E6E9; display:flex; align-items:stretch; min-height:56px; cursor:pointer; transition:background 0.13s; }
+  .hour-slot:hover { background:#2563EB; }
   .view-btn { padding:6px 14px; border-radius:8px; border:none; cursor:pointer; font-size:12px; font-weight:600; transition:all 0.18s; }
-  .tipo-btn { padding:8px 12px; border-radius:10px; border:2px solid transparent; cursor:pointer; font-size:12px; font-weight:600; transition:all 0.18s; display:flex; align-items:center; gap:6px; }
+  .tipo-btn { padding:8px 12px; border-radius:8px; border:2px solid transparent; cursor:pointer; font-size:12px; font-weight:600; transition:all 0.18s; display:flex; align-items:center; gap:6px; }
   .tipo-btn.selected { border-color: currentColor; }
-  .input-field { width:100%; height:44px; padding:0 14px; border-radius:10px; border:1px solid rgba(200,225,240,0.9); background:rgba(255,255,255,0.85); font-size:13px; color:#1a2e40; outline:none; transition:border 0.18s; }
-  .input-field:focus { border-color:rgba(41,128,185,0.5); box-shadow:0 0 0 3px rgba(41,128,185,0.1); }
-  .textarea-field { width:100%; padding:10px 14px; border-radius:10px; border:1px solid rgba(200,225,240,0.9); background:rgba(255,255,255,0.85); font-size:13px; color:#1a2e40; outline:none; resize:vertical; min-height:70px; transition:border 0.18s; }
-  .textarea-field:focus { border-color:rgba(41,128,185,0.5); box-shadow:0 0 0 3px rgba(41,128,185,0.1); }
-  .select-field { width:100%; height:44px; padding:0 14px; border-radius:10px; border:1px solid rgba(200,225,240,0.9); background:rgba(255,255,255,0.85); font-size:13px; color:#1a2e40; outline:none; cursor:pointer; }
-  .connect-card { display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:12px; border:1.5px solid; cursor:pointer; transition:all 0.18s; }
+  .input-field { width:100%; height:44px; padding:0 14px; border-radius:8px; border:1px solid #E3E6E9; background:#ffffff; font-size:13px; color:#16191D; outline:none; transition:border 0.18s; }
+  .input-field:focus { border-color:#2563EB; box-shadow:0 0 0 3px #EFF4FE; }
+  .textarea-field { width:100%; padding:10px 14px; border-radius:8px; border:1px solid #E3E6E9; background:#ffffff; font-size:13px; color:#16191D; outline:none; resize:vertical; min-height:70px; transition:border 0.18s; }
+  .textarea-field:focus { border-color:#2563EB; box-shadow:0 0 0 3px #EFF4FE; }
+  .select-field { width:100%; height:44px; padding:0 14px; border-radius:8px; border:1px solid #E3E6E9; background:#ffffff; font-size:13px; color:#16191D; outline:none; cursor:pointer; }
+  .connect-card { display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:8px; border:1.5px solid; cursor:pointer; transition:all 0.18s; }
   .connect-card:hover { transform:translateY(-1px); box-shadow:0 4px 16px rgba(0,0,0,0.08); }
-  .toggle-box { display:flex; align-items:center; gap:10px; padding:12px 14px; border-radius:12px; border:1.5px solid rgba(200,225,240,0.9); background:rgba(255,255,255,0.6); cursor:pointer; transition:all 0.18s; margin-bottom:8px; }
-  .toggle-box:hover { border-color:rgba(41,128,185,0.4); }
-  .toggle-box.active { border-color:rgba(41,128,185,0.5); background:rgba(41,128,185,0.06); }
-  .email-option { padding:10px 14px; cursor:pointer; font-size:13px; color:#1a2e40; transition:background 0.13s; display:flex; flex-direction:column; gap:2px; }
-  .email-option:hover { background:rgba(41,128,185,0.06); }
-  .email-option:not(:last-child) { border-bottom:1px solid rgba(200,225,240,0.4); }
+  .toggle-box { display:flex; align-items:center; gap:10px; padding:12px 14px; border-radius:8px; border:1.5px solid #E3E6E9; background:#ffffff; cursor:pointer; transition:all 0.18s; margin-bottom:8px; }
+  .toggle-box:hover { border-color:#2563EB; }
+  .toggle-box.active { border-color:#2563EB; background:#EFF4FE; }
+  .email-option { padding:10px 14px; cursor:pointer; font-size:13px; color:#16191D; transition:background 0.13s; display:flex; flex-direction:column; gap:2px; }
+  .email-option:hover { background:#EFF4FE; }
+  .email-option:not(:last-child) { border-bottom:1px solid #E3E6E9; }
   ::-webkit-scrollbar { width:4px; height:4px; }
   ::-webkit-scrollbar-track { background:transparent; }
-  ::-webkit-scrollbar-thumb { background:rgba(41,128,185,0.25); border-radius:4px; }
+  ::-webkit-scrollbar-thumb { background:#EFF4FE; border-radius:4px; }
 `;
 
 const API = "https://backend-crm-production-157b.up.railway.app";
 
 const TIPOS = [
-  { key:"call",    label:"Call",     icon:Phone,    color:"#2980b9", bg:"rgba(41,128,185,0.12)"  },
-  { key:"visita",  label:"Visita",   icon:Eye,      color:"#27ae60", bg:"rgba(39,174,96,0.12)"   },
-  { key:"reuniao", label:"Reunião",  icon:Users2,   color:"#8e44ad", bg:"rgba(142,68,173,0.12)"  },
-  { key:"proposta",label:"Proposta", icon:FileText, color:"#e67e22", bg:"rgba(230,126,34,0.12)"  },
-  { key:"outro",   label:"Outro",    icon:Calendar, color:"#95a5a6", bg:"rgba(149,165,166,0.12)" },
+  { key:"call",    label:"Call",     icon:Phone,    color:"#2563EB", bg:"#EFF4FE"  },
+  { key:"visita",  label:"Visita",   icon:Eye,      color:"#0F7B4F", bg:"rgba(39,174,96,0.12)"   },
+  { key:"reuniao", label:"Reunião",  icon:Users2,   color:"#5B6570", bg:"rgba(142,68,173,0.12)"  },
+  { key:"proposta",label:"Proposta", icon:FileText, color:"#8A5A00", bg:"rgba(230,126,34,0.12)"  },
+  { key:"outro",   label:"Outro",    icon:Calendar, color:"#8A929B", bg:"rgba(149,165,166,0.12)" },
 ];
 
 const DIAS_SEMANA = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
@@ -145,7 +144,7 @@ function EmailsConvidadosField({ emails, setEmails, contatos, empresaNome, dropd
 
   return (
     <div style={{ marginTop:10 }}>
-      <label style={{ fontSize:10, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"rgba(20,45,70,0.5)", display:"block", marginBottom:6 }}>
+      <label style={{ fontSize:10, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"#5B6570", display:"block", marginBottom:6 }}>
         E-mails dos convidados (opcional)
       </label>
 
@@ -153,11 +152,11 @@ function EmailsConvidadosField({ emails, setEmails, contatos, empresaNome, dropd
       {emails.length > 0 && (
         <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:8 }}>
           {emails.map(email => (
-            <div key={email} style={{ display:"flex", alignItems:"center", gap:5, padding:"4px 10px 4px 8px", borderRadius:20, background:"rgba(41,128,185,0.1)", border:"1px solid rgba(41,128,185,0.28)" }}>
-              <Mail style={{ width:11, height:11, color:"#2980b9", flexShrink:0 }}/>
-              <span style={{ fontSize:12, fontWeight:600, color:"#2980b9", maxWidth:200, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{email}</span>
+            <div key={email} style={{ display:"flex", alignItems:"center", gap:5, padding:"4px 10px 4px 8px", borderRadius:8, background:"#EFF4FE", border:"1px solid #2563EB" }}>
+              <Mail style={{ width:11, height:11, color:"#2563EB", flexShrink:0 }}/>
+              <span style={{ fontSize:12, fontWeight:600, color:"#2563EB", maxWidth:200, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{email}</span>
               <button type="button" onClick={() => removeEmail(email)} style={{ background:"none", border:"none", cursor:"pointer", padding:0, display:"flex", flexShrink:0 }}>
-                <X style={{ width:11, height:11, color:"#2980b9" }}/>
+                <X style={{ width:11, height:11, color:"#2563EB" }}/>
               </button>
             </div>
           ))}
@@ -181,13 +180,13 @@ function EmailsConvidadosField({ emails, setEmails, contatos, empresaNome, dropd
           />
           {input.trim() && (
             <button type="button" onClick={() => addEmail(input)}
-              style={{ height:44, padding:"0 14px", borderRadius:10, border:"none", background:"#2980b9", color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer", flexShrink:0 }}>
+              style={{ height:44, padding:"0 14px", borderRadius:8, border:"none", background:"#2563EB", color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer", flexShrink:0 }}>
               + Adicionar
             </button>
           )}
           {contatosDisponiveis.length > 0 && (
             <button type="button" onClick={e => { e.stopPropagation(); setShowDropdown(!showDropdown); }}
-              style={{ height:44, padding:"0 12px", borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.85)", cursor:"pointer", display:"flex", alignItems:"center", gap:6, fontSize:12, fontWeight:600, color:"#2980b9", flexShrink:0 }}>
+              style={{ height:44, padding:"0 12px", borderRadius:8, border:"1px solid #E3E6E9", background:"#ffffff", cursor:"pointer", display:"flex", alignItems:"center", gap:6, fontSize:12, fontWeight:600, color:"#2563EB", flexShrink:0 }}>
               <Users2 style={{ width:13, height:13 }}/>Contatos<ChevronDown style={{ width:12, height:12 }}/>
             </button>
           )}
@@ -197,15 +196,15 @@ function EmailsConvidadosField({ emails, setEmails, contatos, empresaNome, dropd
           {showDropdown && filtrados.length > 0 && (
             <motion.div initial={{ opacity:0, y:-4 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-4 }} transition={{ duration:0.15 }}
               onClick={e => e.stopPropagation()}
-              style={{ position:"absolute", top:"calc(100% + 6px)", left:0, right:0, zIndex:300, background:"rgba(240,250,255,0.98)", backdropFilter:"blur(16px)", border:"1px solid rgba(200,225,240,0.9)", borderRadius:12, boxShadow:"0 8px 32px rgba(41,128,185,0.15)", overflow:"hidden", maxHeight:200, overflowY:"auto" }}>
+              style={{ position:"absolute", top:"calc(100% + 6px)", left:0, right:0, zIndex:300, background:"rgba(240,250,255,0.98)",  border:"1px solid #E3E6E9", borderRadius:8, boxShadow:"none", overflow:"hidden", maxHeight:200, overflowY:"auto" }}>
               {empresaNome && (
-                <div style={{ padding:"8px 14px 4px", fontSize:10, fontWeight:700, color:"rgba(20,45,70,0.4)", letterSpacing:"0.06em", textTransform:"uppercase" }}>{empresaNome}</div>
+                <div style={{ padding:"8px 14px 4px", fontSize:10, fontWeight:700, color:"#5B6570", letterSpacing:"0.06em", textTransform:"uppercase" }}>{empresaNome}</div>
               )}
               {filtrados.map(c => (
                 <div key={c.contato_id} className="email-option"
                   onMouseDown={e => { e.preventDefault(); e.stopPropagation(); addEmail(c.email!); }}>
-                  <span style={{ fontWeight:600, color:"#0f2133" }}>{c.nome}</span>
-                  <span style={{ fontSize:12, color:"#2980b9" }}>{c.email}</span>
+                  <span style={{ fontWeight:600, color:"#16191D" }}>{c.nome}</span>
+                  <span style={{ fontSize:12, color:"#2563EB" }}>{c.email}</span>
                 </div>
               ))}
             </motion.div>
@@ -213,7 +212,7 @@ function EmailsConvidadosField({ emails, setEmails, contatos, empresaNome, dropd
         </AnimatePresence>
 
         {emails.length === 0 && !input && (
-          <div style={{ marginTop:6, fontSize:11, color:"rgba(20,45,70,0.4)" }}>
+          <div style={{ marginTop:6, fontSize:11, color:"#5B6570" }}>
             Pressione Enter ou vírgula para adicionar. Múltiplos convidados permitidos.
           </div>
         )}
@@ -446,26 +445,25 @@ export default function Calendario() {
     <div style={{display:"flex",height:"100vh",overflow:"hidden",position:"relative"}}>
       <style>{css}</style>
       <div style={{position:"fixed",inset:0,zIndex:0,pointerEvents:"none"}}>
-        <div style={{position:"absolute",inset:0,background:"linear-gradient(145deg,#c8e8f5 0%,#d6eef5 30%,#cceee8 65%,#c5eae0 100%)"}}/>
-        <div style={{position:"absolute",inset:0,opacity:0.4,backgroundImage:"radial-gradient(circle,rgba(41,128,185,0.2) 1px,transparent 1px)",backgroundSize:"22px 22px"}}/>
+        <div style={{position:"absolute",inset:0,background:"#F6F7F8"}}/>
       </div>
 
       {/* Sidebar */}
       {isMobile && menuOpen && (
         <div onClick={()=>setMenuOpen(false)} style={{position:"fixed",inset:0,background:"rgba(10,31,51,0.45)",zIndex:999}}/>
       )}
-      <div style={{width:220,flexShrink:0,height:"100vh",overflowY:"auto",zIndex:1000,background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)",boxShadow:"4px 0 24px rgba(0,0,0,0.18)",display:"flex",flexDirection:"column",padding:"0 12px 20px",
+      <div style={{width:220,flexShrink:0,height:"100vh",overflowY:"auto",zIndex:1000,background:"#1a3a5c",boxShadow:"none",display:"flex",flexDirection:"column",padding:"0 12px 20px",
         position: isMobile ? "fixed" : "relative", top:0, left:0,
         transform: isMobile && !menuOpen ? "translateX(-100%)" : "translateX(0)",
         transition:"transform 0.28s ease"}}>
-        <div style={{padding:"22px 4px 24px",borderBottom:"1px solid rgba(255,255,255,0.08)",marginBottom:16}}>
+        <div style={{padding:"22px 4px 24px",borderBottom:"1px solid #ffffff",marginBottom:16}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#2980b9,#1abc9c)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <div style={{width:36,height:36,borderRadius:8,background:"#2563EB",display:"flex",alignItems:"center",justifyContent:"center"}}>
               <BarChart3 style={{width:18,height:18,color:"#fff"}}/>
             </div>
             <div>
               <div style={{fontSize:14,fontWeight:800,color:"#fff"}}>Prospecção</div>
-              <div style={{fontSize:11,fontWeight:700,background:"linear-gradient(90deg,#2980b9,#1abc9c,#2ecc71,#2980b9)",backgroundSize:"200% 200%",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"gradientShift 4s ease infinite"}}>CRM</div>
+              <div style={{fontSize:11,fontWeight:700,background:"#2563EB",backgroundSize:"200% 200%",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"gradientShift 4s ease infinite"}}>CRM</div>
             </div>
           </div>
         </div>
@@ -492,52 +490,52 @@ export default function Calendario() {
 
       {/* Main */}
       <div style={{flex:1,height:"100vh",overflowY:"auto",position:"relative",zIndex:5,display:"flex",flexDirection:"column"}}>
-        <div style={{position:"sticky",top:0,zIndex:20,padding:isMobile?"12px 14px":"14px 28px",background:"rgba(210,238,248,0.85)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,0.6)",display:"flex",alignItems:"center",gap:isMobile?10:14,flexShrink:0}}>
+        <div style={{position:"sticky",top:0,zIndex:20,padding:isMobile?"12px 14px":"14px 28px",background:"rgba(210,238,248,0.85)", borderBottom:"1px solid #ffffff",display:"flex",alignItems:"center",gap:isMobile?10:14,flexShrink:0}}>
           {isMobile && (
-            <button onClick={()=>setMenuOpen(true)} style={{width:36,height:36,borderRadius:10,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.75)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-              <Menu style={{width:18,height:18,color:"#2980b9"}}/>
+            <button onClick={()=>setMenuOpen(true)} style={{width:36,height:36,borderRadius:8,border:"1px solid #E3E6E9",background:"#ffffff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <Menu style={{width:18,height:18,color:"#2563EB"}}/>
             </button>
           )}
           <div style={{flex:1,minWidth:0}}>
-            <h1 style={{fontSize:18,fontWeight:800,color:"#0f2133"}}>Calendário</h1>
-            <p style={{fontSize:12,color:"rgba(20,45,70,0.5)",marginTop:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Agenda e planejamento de atividades</p>
+            <h1 style={{fontSize:18,fontWeight:800,color:"#16191D"}}>Calendário</h1>
+            <p style={{fontSize:12,color:"#5B6570",marginTop:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Agenda e planejamento de atividades</p>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <button type="button" onClick={prev} style={{width:32,height:32,borderRadius:8,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.75)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><ChevronLeft style={{width:15,height:15,color:"#2980b9"}}/></button>
-            <span style={{fontSize:14,fontWeight:700,color:"#0f2133",minWidth:200,textAlign:"center"}}>{headerLabel()}</span>
-            <button type="button" onClick={next} style={{width:32,height:32,borderRadius:8,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.75)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><ChevronRight style={{width:15,height:15,color:"#2980b9"}}/></button>
-            <button type="button" onClick={()=>setCurrentDate(new Date())} style={{padding:"6px 12px",borderRadius:8,border:"1px solid rgba(41,128,185,0.3)",background:"rgba(41,128,185,0.08)",color:"#2980b9",fontSize:12,fontWeight:600,cursor:"pointer"}}>Hoje</button>
+            <button type="button" onClick={prev} style={{width:32,height:32,borderRadius:8,border:"1px solid #E3E6E9",background:"#ffffff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><ChevronLeft style={{width:15,height:15,color:"#2563EB"}}/></button>
+            <span style={{fontSize:14,fontWeight:700,color:"#16191D",minWidth:200,textAlign:"center"}}>{headerLabel()}</span>
+            <button type="button" onClick={next} style={{width:32,height:32,borderRadius:8,border:"1px solid #E3E6E9",background:"#ffffff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><ChevronRight style={{width:15,height:15,color:"#2563EB"}}/></button>
+            <button type="button" onClick={()=>setCurrentDate(new Date())} style={{padding:"6px 12px",borderRadius:8,border:"1px solid #2563EB",background:"#EFF4FE",color:"#2563EB",fontSize:12,fontWeight:600,cursor:"pointer"}}>Hoje</button>
           </div>
-          <div style={{display:"flex",gap:4,background:"rgba(255,255,255,0.6)",borderRadius:10,padding:4}}>
+          <div style={{display:"flex",gap:4,background:"#ffffff",borderRadius:8,padding:4}}>
             {(["mes","semana","dia"] as const).map(v=>(
-              <button type="button" key={v} className="view-btn" onClick={()=>setView(v)} style={{background:view===v?"#2980b9":"transparent",color:view===v?"#fff":"rgba(20,45,70,0.6)"}}>
+              <button type="button" key={v} className="view-btn" onClick={()=>setView(v)} style={{background:view===v?"#2563EB":"transparent",color:view===v?"#fff":"#5B6570"}}>
                 {v==="mes"?"Mês":v==="semana"?"Semana":"Dia"}
               </button>
             ))}
           </div>
-          <button type="button" onClick={()=>openNew(toDateStr(today.getFullYear(),today.getMonth(),today.getDate()))} style={{height:38,padding:"0 16px",borderRadius:10,border:"none",cursor:"pointer",background:"linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)",backgroundSize:"200% 200%",animation:"gradientShift 4s ease infinite",color:"#fff",fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
+          <button type="button" onClick={()=>openNew(toDateStr(today.getFullYear(),today.getMonth(),today.getDate()))} style={{height:38,padding:"0 16px",borderRadius:8,border:"none",cursor:"pointer",background:"#2563EB",backgroundSize:"200% 200%",animation:"gradientShift 4s ease infinite",color:"#fff",fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
             <Plus style={{width:15,height:15}}/> Novo evento
           </button>
         </div>
 
         {/* Integration Bar */}
-        <div style={{padding:"10px 28px",background:"rgba(210,238,248,0.6)",borderBottom:"1px solid rgba(200,225,240,0.5)",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
-          <span style={{fontSize:11,fontWeight:700,color:"rgba(20,45,70,0.45)",letterSpacing:"0.05em",textTransform:"uppercase",marginRight:4}}>Calendários</span>
+        <div style={{padding:"10px 28px",background:"rgba(210,238,248,0.6)",borderBottom:"1px solid #E3E6E9",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+          <span style={{fontSize:11,fontWeight:700,color:"#5B6570",letterSpacing:"0.05em",textTransform:"uppercase",marginRight:4}}>Calendários</span>
           <div className="connect-card" onClick={outlookConectado?desconectarOutlook:conectarOutlook}
-            style={{borderColor:outlookConectado?"rgba(0,120,212,0.4)":"rgba(200,225,240,0.9)",background:outlookConectado?"rgba(0,120,212,0.07)":"rgba(255,255,255,0.7)"}}>
+            style={{borderColor:outlookConectado?"rgba(0,120,212,0.4)":"#E3E6E9",background:outlookConectado?"rgba(0,120,212,0.07)":"#ffffff"}}>
             <OutlookIcon size={16}/>
-            <span style={{fontSize:12,fontWeight:600,color:outlookConectado?"#0078D4":"rgba(20,45,70,0.6)"}}>
+            <span style={{fontSize:12,fontWeight:600,color:outlookConectado?"#0078D4":"#5B6570"}}>
               {conectandoOutlook?"Conectando...":outlookConectado?"Outlook conectado":"Conectar Outlook"}
             </span>
-            {outlookConectado?<CheckCircle2 style={{width:13,height:13,color:"#0078D4"}}/>:<Link2 style={{width:13,height:13,color:"rgba(20,45,70,0.35)"}}/>}
+            {outlookConectado?<CheckCircle2 style={{width:13,height:13,color:"#0078D4"}}/>:<Link2 style={{width:13,height:13,color:"#5B6570"}}/>}
           </div>
           <div className="connect-card" onClick={googleConectado?desconectarGoogle:conectarGoogle}
-            style={{borderColor:googleConectado?"rgba(66,133,244,0.4)":"rgba(200,225,240,0.9)",background:googleConectado?"rgba(66,133,244,0.07)":"rgba(255,255,255,0.7)"}}>
+            style={{borderColor:googleConectado?"rgba(66,133,244,0.4)":"#E3E6E9",background:googleConectado?"rgba(66,133,244,0.07)":"#ffffff"}}>
             <GoogleIcon size={16}/>
-            <span style={{fontSize:12,fontWeight:600,color:googleConectado?"#4285F4":"rgba(20,45,70,0.6)"}}>
+            <span style={{fontSize:12,fontWeight:600,color:googleConectado?"#4285F4":"#5B6570"}}>
               {conectandoGoogle?"Conectando...":googleConectado?"Google conectado":"Conectar Google"}
             </span>
-            {googleConectado?<CheckCircle2 style={{width:13,height:13,color:"#4285F4"}}/>:<Link2 style={{width:13,height:13,color:"rgba(20,45,70,0.35)"}}/>}
+            {googleConectado?<CheckCircle2 style={{width:13,height:13,color:"#4285F4"}}/>:<Link2 style={{width:13,height:13,color:"#5B6570"}}/>}
           </div>
         </div>
 
@@ -546,8 +544,8 @@ export default function Calendario() {
 
             {view==="mes"&&(
               <>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",borderBottom:"1px solid rgba(200,225,240,0.5)"}}>
-                  {DIAS_SEMANA.map(d=><div key={d} style={{padding:"10px 0",textAlign:"center",fontSize:11,fontWeight:700,letterSpacing:"0.06em",textTransform:"uppercase",color:"rgba(20,45,70,0.45)"}}>{d}</div>)}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",borderBottom:"1px solid #E3E6E9"}}>
+                  {DIAS_SEMANA.map(d=><div key={d} style={{padding:"10px 0",textAlign:"center",fontSize:11,fontWeight:700,letterSpacing:"0.06em",textTransform:"uppercase",color:"#5B6570"}}>{d}</div>)}
                 </div>
                 <div style={{flex:1,display:"grid",gridTemplateColumns:"repeat(7,1fr)",gridAutoRows:"1fr",overflow:"auto"}}>
                   {buildMonth().map((day,i)=>{
@@ -556,9 +554,9 @@ export default function Calendario() {
                     const tod=isToday(day.y,day.m,day.d);
                     return (
                       <div key={i} className={`day-cell${!day.cur?" other-month":""}${tod?" today":""}`} onClick={()=>openNew(dateStr)}>
-                        <div style={{display:"flex",alignItems:"center",justifyContent:"center",width:26,height:26,borderRadius:"50%",background:tod?"#2980b9":"transparent",color:tod?"#fff":day.cur?"#0f2133":"rgba(20,45,70,0.4)",fontSize:13,fontWeight:700,marginBottom:4}}>{day.d}</div>
+                        <div style={{display:"flex",alignItems:"center",justifyContent:"center",width:26,height:26,borderRadius:"50%",background:tod?"#2563EB":"transparent",color:tod?"#fff":day.cur?"#16191D":"#5B6570",fontSize:13,fontWeight:700,marginBottom:4}}>{day.d}</div>
                         {evs.slice(0,3).map(ev=><EventChip key={ev.evento_id} ev={ev} onClick={e=>openEdit(ev,e)}/>)}
-                        {evs.length>3&&<div style={{fontSize:9,color:"rgba(20,45,70,0.4)",fontWeight:600}}>+{evs.length-3} mais</div>}
+                        {evs.length>3&&<div style={{fontSize:9,color:"#5B6570",fontWeight:600}}>+{evs.length-3} mais</div>}
                       </div>
                     );
                   })}
@@ -568,14 +566,14 @@ export default function Calendario() {
 
             {view==="semana"&&(
               <div style={{flex:1,overflow:"auto",display:"flex",flexDirection:"column"}}>
-                <div style={{display:"grid",gridTemplateColumns:"60px repeat(7,1fr)",borderBottom:"1px solid rgba(200,225,240,0.5)",flexShrink:0}}>
+                <div style={{display:"grid",gridTemplateColumns:"60px repeat(7,1fr)",borderBottom:"1px solid #E3E6E9",flexShrink:0}}>
                   <div/>
                   {buildWeek().map((d,i)=>{
                     const tod=isToday(d.getFullYear(),d.getMonth(),d.getDate());
                     return (
-                      <div key={i} style={{padding:"10px 0",textAlign:"center",borderLeft:"1px solid rgba(200,225,240,0.4)"}}>
-                        <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",color:"rgba(20,45,70,0.45)"}}>{DIAS_SEMANA[d.getDay()]}</div>
-                        <div style={{width:28,height:28,borderRadius:"50%",background:tod?"#2980b9":"transparent",color:tod?"#fff":"#0f2133",fontSize:14,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",margin:"4px auto 0"}}>{d.getDate()}</div>
+                      <div key={i} style={{padding:"10px 0",textAlign:"center",borderLeft:"1px solid #E3E6E9"}}>
+                        <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",color:"#5B6570"}}>{DIAS_SEMANA[d.getDay()]}</div>
+                        <div style={{width:28,height:28,borderRadius:"50%",background:tod?"#2563EB":"transparent",color:tod?"#fff":"#16191D",fontSize:14,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",margin:"4px auto 0"}}>{d.getDate()}</div>
                       </div>
                     );
                   })}
@@ -583,12 +581,12 @@ export default function Calendario() {
                 <div style={{flex:1,overflow:"auto"}}>
                   {HORAS.map(hora=>(
                     <div key={hora} style={{display:"grid",gridTemplateColumns:"60px repeat(7,1fr)",minHeight:56}}>
-                      <div style={{padding:"6px 8px 0",fontSize:11,fontWeight:600,color:"rgba(20,45,70,0.4)",textAlign:"right",borderRight:"1px solid rgba(200,225,240,0.4)",flexShrink:0}}>{padZero(hora)}:00</div>
+                      <div style={{padding:"6px 8px 0",fontSize:11,fontWeight:600,color:"#5B6570",textAlign:"right",borderRight:"1px solid #E3E6E9",flexShrink:0}}>{padZero(hora)}:00</div>
                       {buildWeek().map((d,i)=>{
                         const dateStr=toDateStr(d.getFullYear(),d.getMonth(),d.getDate());
                         const evs=eventosNaHora(dateStr,hora);
                         return (
-                          <div key={i} className="hour-slot" style={{borderLeft:"1px solid rgba(200,225,240,0.4)",padding:"3px",flexDirection:"column",alignItems:"stretch",justifyContent:"flex-start"}} onClick={()=>openNew(dateStr,`${padZero(hora)}:00`)}>
+                          <div key={i} className="hour-slot" style={{borderLeft:"1px solid #E3E6E9",padding:"3px",flexDirection:"column",alignItems:"stretch",justifyContent:"flex-start"}} onClick={()=>openNew(dateStr,`${padZero(hora)}:00`)}>
                             {evs.map(ev=><EventChip key={ev.evento_id} ev={ev} onClick={e=>openEdit(ev,e)}/>)}
                           </div>
                         );
@@ -601,11 +599,11 @@ export default function Calendario() {
 
             {view==="dia"&&(
               <div style={{flex:1,overflow:"auto",display:"flex",flexDirection:"column"}}>
-                <div style={{padding:"14px 20px",borderBottom:"1px solid rgba(200,225,240,0.5)",display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
-                  <div style={{width:40,height:40,borderRadius:12,background:isToday(currentDate.getFullYear(),currentDate.getMonth(),currentDate.getDate())?"#2980b9":"rgba(41,128,185,0.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:900,color:isToday(currentDate.getFullYear(),currentDate.getMonth(),currentDate.getDate())?"#fff":"#2980b9"}}>{currentDate.getDate()}</div>
+                <div style={{padding:"14px 20px",borderBottom:"1px solid #E3E6E9",display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
+                  <div style={{width:40,height:40,borderRadius:8,background:isToday(currentDate.getFullYear(),currentDate.getMonth(),currentDate.getDate())?"#2563EB":"#EFF4FE",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:900,color:isToday(currentDate.getFullYear(),currentDate.getMonth(),currentDate.getDate())?"#fff":"#2563EB"}}>{currentDate.getDate()}</div>
                   <div>
-                    <div style={{fontSize:14,fontWeight:700,color:"#0f2133"}}>{DIAS_SEMANA[currentDate.getDay()]}, {currentDate.getDate()} de {MESES[currentDate.getMonth()]}</div>
-                    <div style={{fontSize:11,color:"rgba(20,45,70,0.45)"}}>{eventosNoDia(toDateStr(currentDate.getFullYear(),currentDate.getMonth(),currentDate.getDate())).length} evento(s)</div>
+                    <div style={{fontSize:14,fontWeight:700,color:"#16191D"}}>{DIAS_SEMANA[currentDate.getDay()]}, {currentDate.getDate()} de {MESES[currentDate.getMonth()]}</div>
+                    <div style={{fontSize:11,color:"#5B6570"}}>{eventosNoDia(toDateStr(currentDate.getFullYear(),currentDate.getMonth(),currentDate.getDate())).length} evento(s)</div>
                   </div>
                 </div>
                 <div style={{flex:1,overflow:"auto"}}>
@@ -614,17 +612,17 @@ export default function Calendario() {
                     const evs=eventosNaHora(dateStr,hora);
                     const isNow=new Date().getHours()===hora&&isToday(currentDate.getFullYear(),currentDate.getMonth(),currentDate.getDate());
                     return (
-                      <div key={hora} style={{display:"flex",minHeight:72,borderBottom:"1px solid rgba(200,225,240,0.3)",background:isNow?"rgba(41,128,185,0.03)":"transparent"}} onClick={()=>openNew(dateStr,`${padZero(hora)}:00`)}>
-                        <div style={{width:72,padding:"10px 12px 0",fontSize:12,fontWeight:600,color:isNow?"#2980b9":"rgba(20,45,70,0.4)",textAlign:"right",flexShrink:0,borderRight:"2px solid "+(isNow?"#2980b9":"rgba(200,225,240,0.4)")}}>{padZero(hora)}:00</div>
+                      <div key={hora} style={{display:"flex",minHeight:72,borderBottom:"1px solid #E3E6E9",background:isNow?"#2563EB":"transparent"}} onClick={()=>openNew(dateStr,`${padZero(hora)}:00`)}>
+                        <div style={{width:72,padding:"10px 12px 0",fontSize:12,fontWeight:600,color:isNow?"#2563EB":"#5B6570",textAlign:"right",flexShrink:0,borderRight:"2px solid "+(isNow?"#2563EB":"#E3E6E9")}}>{padZero(hora)}:00</div>
                         <div style={{flex:1,padding:"6px 12px",display:"flex",flexDirection:"column",gap:4,cursor:"pointer"}}>
                           {evs.map(ev=>{
                             const t=tipoInfo(ev.tipo);
                             return (
-                              <motion.div key={ev.evento_id} initial={{opacity:0,x:-8}} animate={{opacity:1,x:0}} onClick={e=>openEdit(ev,e)} style={{padding:"8px 14px",borderRadius:10,background:t.bg,border:`1.5px solid ${t.color}30`,display:"flex",alignItems:"center",gap:10,cursor:"pointer"}}>
+                              <motion.div key={ev.evento_id} initial={{opacity:0,x:-8}} animate={{opacity:1,x:0}} onClick={e=>openEdit(ev,e)} style={{padding:"8px 14px",borderRadius:8,background:t.bg,border:`1.5px solid ${t.color}30`,display:"flex",alignItems:"center",gap:10,cursor:"pointer"}}>
                                 <div style={{width:28,height:28,borderRadius:8,background:t.color,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><t.icon style={{width:13,height:13,color:"#fff"}}/></div>
                                 <div style={{flex:1}}>
-                                  <div style={{fontSize:13,fontWeight:700,color:"#0f2133"}}>{ev.titulo}</div>
-                                  <div style={{fontSize:11,color:"rgba(20,45,70,0.5)",display:"flex",gap:8}}>
+                                  <div style={{fontSize:13,fontWeight:700,color:"#16191D"}}>{ev.titulo}</div>
+                                  <div style={{fontSize:11,color:"#5B6570",display:"flex",gap:8}}>
                                     <span><Clock style={{width:10,height:10,display:"inline",marginRight:3}}/>{ev.hora_inicio?.slice(0,5)}{ev.hora_fim?` – ${ev.hora_fim.slice(0,5)}`:""}</span>
                                     {ev.empresa_nome&&<span>· {ev.empresa_nome}</span>}
                                   </div>
@@ -649,34 +647,34 @@ export default function Calendario() {
         {showModal&&(
           <motion.div
             initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
-            style={{position:"fixed",inset:0,zIndex:100,background:"rgba(10,30,50,0.45)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}
+            style={{position:"fixed",inset:0,zIndex:100,background:"rgba(10,30,50,0.45)", display:"flex",alignItems:"center",justifyContent:"center",padding:20}}
             onMouseDown={e=>{ if(e.target === e.currentTarget) setShowModal(false); }}
           >
             <motion.div
               initial={{opacity:0,scale:0.94,y:20}} animate={{opacity:1,scale:1,y:0}} exit={{opacity:0,scale:0.94}} transition={{duration:0.22}}
               onMouseDown={e=>e.stopPropagation()}
               onClick={e=>e.stopPropagation()}
-              style={{width:"100%",maxWidth:540,borderRadius:20,background:"rgba(230,245,252,0.97)",backdropFilter:"blur(24px)",border:"1px solid rgba(255,255,255,0.9)",boxShadow:"0 24px 80px rgba(41,128,185,0.2)",padding:28,maxHeight:"90vh",overflowY:"auto"}}
+              style={{width:"100%",maxWidth:540,borderRadius:8,background:"rgba(230,245,252,0.97)", border:"1px solid #ffffff",boxShadow:"none",padding:28,maxHeight:"90vh",overflowY:"auto"}}
             >
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
-                <div style={{fontSize:16,fontWeight:800,color:"#0f2133"}}>{editEvento?"Editar evento":"Novo evento"}</div>
+                <div style={{fontSize:16,fontWeight:800,color:"#16191D"}}>{editEvento?"Editar evento":"Novo evento"}</div>
                 <div style={{display:"flex",gap:8}}>
                   {editEvento&&(
                     <button type="button" onClick={()=>handleDelete(editEvento.evento_id)} style={{width:34,height:34,borderRadius:8,border:"1px solid rgba(231,76,60,0.3)",background:"rgba(231,76,60,0.08)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
-                      <Trash2 style={{width:14,height:14,color:"#e74c3c"}}/>
+                      <Trash2 style={{width:14,height:14,color:"#B42318"}}/>
                     </button>
                   )}
-                  <button type="button" onClick={()=>setShowModal(false)} style={{width:34,height:34,borderRadius:8,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.7)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
-                    <X style={{width:14,height:14,color:"rgba(20,45,70,0.5)"}}/>
+                  <button type="button" onClick={()=>setShowModal(false)} style={{width:34,height:34,borderRadius:8,border:"1px solid #E3E6E9",background:"#ffffff",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+                    <X style={{width:14,height:14,color:"#5B6570"}}/>
                   </button>
                 </div>
               </div>
 
               <div style={{marginBottom:16}}>
-                <label style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(20,45,70,0.5)",display:"block",marginBottom:8}}>Tipo</label>
+                <label style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"#5B6570",display:"block",marginBottom:8}}>Tipo</label>
                 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                   {TIPOS.map(t=>(
-                    <button type="button" key={t.key} className={`tipo-btn${form.tipo===t.key?" selected":""}`} style={{background:form.tipo===t.key?t.bg:"rgba(255,255,255,0.6)",color:t.color,borderColor:form.tipo===t.key?t.color:"transparent"}} onClick={()=>setForm({...form,tipo:t.key})}>
+                    <button type="button" key={t.key} className={`tipo-btn${form.tipo===t.key?" selected":""}`} style={{background:form.tipo===t.key?t.bg:"#ffffff",color:t.color,borderColor:form.tipo===t.key?t.color:"transparent"}} onClick={()=>setForm({...form,tipo:t.key})}>
                       <t.icon style={{width:13,height:13}}/>{t.label}
                     </button>
                   ))}
@@ -684,7 +682,7 @@ export default function Calendario() {
               </div>
 
               <div style={{marginBottom:14}}>
-                <label style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(20,45,70,0.5)",display:"block",marginBottom:6}}>Título *</label>
+                <label style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"#5B6570",display:"block",marginBottom:6}}>Título *</label>
                 <input
                   className="input-field"
                   value={form.titulo}
@@ -696,21 +694,21 @@ export default function Calendario() {
 
               <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:10,marginBottom:14}}>
                 <div>
-                  <label style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(20,45,70,0.5)",display:"block",marginBottom:6}}>Data *</label>
+                  <label style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"#5B6570",display:"block",marginBottom:6}}>Data *</label>
                   <input type="date" className="input-field" value={form.data} onChange={e=>setForm({...form,data:e.target.value})}/>
                 </div>
                 <div>
-                  <label style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(20,45,70,0.5)",display:"block",marginBottom:6}}>Início</label>
+                  <label style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"#5B6570",display:"block",marginBottom:6}}>Início</label>
                   <input type="time" className="input-field" value={form.hora_inicio} onChange={e=>setForm({...form,hora_inicio:e.target.value})}/>
                 </div>
                 <div>
-                  <label style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(20,45,70,0.5)",display:"block",marginBottom:6}}>Fim</label>
+                  <label style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"#5B6570",display:"block",marginBottom:6}}>Fim</label>
                   <input type="time" className="input-field" value={form.hora_fim} onChange={e=>setForm({...form,hora_fim:e.target.value})}/>
                 </div>
               </div>
 
               <div style={{marginBottom:14}}>
-                <label style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(20,45,70,0.5)",display:"block",marginBottom:6}}>Empresa (opcional)</label>
+                <label style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"#5B6570",display:"block",marginBottom:6}}>Empresa (opcional)</label>
                 <select className="select-field" value={form.empresa_id} onChange={e=>{
                   const emp=empresas.find(em=>em.empresa_id===e.target.value);
                   setForm({...form,empresa_id:e.target.value,empresa_nome:emp?.nome||""});
@@ -722,7 +720,7 @@ export default function Calendario() {
               </div>
 
               <div style={{marginBottom:16}}>
-                <label style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(20,45,70,0.5)",display:"block",marginBottom:6}}>Descrição</label>
+                <label style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"#5B6570",display:"block",marginBottom:6}}>Descrição</label>
                 <textarea
                   className="textarea-field"
                   value={form.descricao}
@@ -733,17 +731,17 @@ export default function Calendario() {
 
               {/* Seção agendar em */}
               <div style={{marginBottom:20}}>
-                <label style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(20,45,70,0.5)",display:"block",marginBottom:8}}>
+                <label style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"#5B6570",display:"block",marginBottom:8}}>
                   <Mail style={{width:11,height:11,display:"inline",marginRight:4}}/>Também agendar em
                 </label>
 
                 <div className={`toggle-box${agendarOutlook?" active":""}`} onClick={()=>{if(!outlookConectado){conectarOutlook();return;}setAgendarOutlook(!agendarOutlook);}}>
                   <OutlookIcon size={18}/>
                   <div style={{flex:1}}>
-                    <div style={{fontSize:13,fontWeight:600,color:outlookConectado?"#0f2133":"rgba(20,45,70,0.4)"}}>Outlook Calendar</div>
-                    <div style={{fontSize:11,color:"rgba(20,45,70,0.4)"}}>{outlookConectado?"Cria o evento e envia convite ao cliente":"Clique para conectar primeiro"}</div>
+                    <div style={{fontSize:13,fontWeight:600,color:outlookConectado?"#16191D":"#5B6570"}}>Outlook Calendar</div>
+                    <div style={{fontSize:11,color:"#5B6570"}}>{outlookConectado?"Cria o evento e envia convite ao cliente":"Clique para conectar primeiro"}</div>
                   </div>
-                  <div style={{width:20,height:20,borderRadius:6,border:`2px solid ${agendarOutlook&&outlookConectado?"#0078D4":"rgba(200,225,240,0.9)"}`,background:agendarOutlook&&outlookConectado?"#0078D4":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  <div style={{width:20,height:20,borderRadius:6,border:`2px solid ${agendarOutlook&&outlookConectado?"#0078D4":"#E3E6E9"}`,background:agendarOutlook&&outlookConectado?"#0078D4":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                     {agendarOutlook&&outlookConectado&&<CheckCircle2 style={{width:12,height:12,color:"#fff"}}/>}
                   </div>
                 </div>
@@ -751,10 +749,10 @@ export default function Calendario() {
                 <div className={`toggle-box${agendarGoogle?" active":""}`} onClick={()=>{if(!googleConectado){conectarGoogle();return;}setAgendarGoogle(!agendarGoogle);}}>
                   <GoogleIcon size={18}/>
                   <div style={{flex:1}}>
-                    <div style={{fontSize:13,fontWeight:600,color:googleConectado?"#0f2133":"rgba(20,45,70,0.4)"}}>Google Calendar</div>
-                    <div style={{fontSize:11,color:"rgba(20,45,70,0.4)"}}>{googleConectado?"Cria o evento e envia convite ao cliente":"Clique para conectar primeiro"}</div>
+                    <div style={{fontSize:13,fontWeight:600,color:googleConectado?"#16191D":"#5B6570"}}>Google Calendar</div>
+                    <div style={{fontSize:11,color:"#5B6570"}}>{googleConectado?"Cria o evento e envia convite ao cliente":"Clique para conectar primeiro"}</div>
                   </div>
-                  <div style={{width:20,height:20,borderRadius:6,border:`2px solid ${agendarGoogle&&googleConectado?"#4285F4":"rgba(200,225,240,0.9)"}`,background:agendarGoogle&&googleConectado?"#4285F4":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  <div style={{width:20,height:20,borderRadius:6,border:`2px solid ${agendarGoogle&&googleConectado?"#4285F4":"#E3E6E9"}`,background:agendarGoogle&&googleConectado?"#4285F4":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                     {agendarGoogle&&googleConectado&&<CheckCircle2 style={{width:12,height:12,color:"#fff"}}/>}
                   </div>
                 </div>
@@ -774,7 +772,7 @@ export default function Calendario() {
                 type="button"
                 onClick={handleSave}
                 disabled={saving||!form.titulo||!form.data}
-                style={{width:"100%",height:48,borderRadius:12,border:"none",cursor:saving||!form.titulo||!form.data?"not-allowed":"pointer",background:saving||!form.titulo||!form.data?"rgba(41,128,185,0.4)":"linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)",backgroundSize:"200% 200%",animation:"gradientShift 4s ease infinite",color:"#fff",fontSize:14,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}
+                style={{width:"100%",height:48,borderRadius:8,border:"none",cursor:saving||!form.titulo||!form.data?"not-allowed":"pointer",background:saving||!form.titulo||!form.data?"#2563EB":"#2563EB",backgroundSize:"200% 200%",animation:"gradientShift 4s ease infinite",color:"#fff",fontSize:14,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}
               >
                 {salvarLabel()}
               </button>

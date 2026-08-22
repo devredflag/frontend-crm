@@ -91,19 +91,19 @@ export default function EmpresasProximasDaEmpresa({
   if (!temLocalizacao) {
     return (
       <div className="glass-card" style={{ padding: "34px 24px", textAlign: "center" }}>
-        <div style={{ width: 48, height: 48, borderRadius: 14, margin: "0 auto 14px", display: "grid", placeItems: "center", background: "rgba(230,126,34,0.12)" }}>
-          <AlertTriangle style={{ width: 22, height: 22, color: "#e67e22" }} />
+        <div style={{ width: 48, height: 48, borderRadius: 8, margin: "0 auto 14px", display: "grid", placeItems: "center", background: "rgba(230,126,34,0.12)" }}>
+          <AlertTriangle style={{ width: 22, height: 22, color: "#8A5A00" }} />
         </div>
-        <h3 style={{ fontSize: 15, fontWeight: 800, color: "#0f2133" }}>
+        <h3 style={{ fontSize: 15, fontWeight: 800, color: "#16191D" }}>
           Localização incompleta
         </h3>
-        <p style={{ fontSize: 13, color: "rgba(20,45,70,0.6)", marginTop: 6, maxWidth: 460, marginInline: "auto", lineHeight: 1.5 }}>
+        <p style={{ fontSize: 13, color: "#5B6570", marginTop: 6, maxWidth: 460, marginInline: "auto", lineHeight: 1.5 }}>
           Para listar empresas próximas precisamos das coordenadas de <strong>{nome}</strong>.
           Complete o endereço no cadastro (rua, cidade e CEP) e a localização é calculada automaticamente.
         </p>
         <button
           onClick={() => navigate(`/clientes/${empresaId}/editar`)}
-          style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 40, padding: "0 20px", marginTop: 18, borderRadius: 10, border: "none", cursor: "pointer", background: "linear-gradient(135deg,#2980b9,#1abc9c)", color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: "inherit", boxShadow: "0 4px 14px rgba(41,128,185,0.35)" }}>
+          style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 40, padding: "0 20px", marginTop: 18, borderRadius: 8, border: "none", cursor: "pointer", background: "#2563EB", color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: "inherit", boxShadow:"none" }}>
           <Edit3 style={{ width: 15, height: 15 }} /> Completar endereço
         </button>
       </div>
@@ -112,8 +112,8 @@ export default function EmpresasProximasDaEmpresa({
 
   if (carregando) {
     return (
-      <div className="glass-card" style={{ padding: "44px 20px", textAlign: "center", color: "rgba(20,45,70,0.55)" }}>
-        <Loader2 style={{ width: 22, height: 22, color: "#2980b9", animation: "spin 1s linear infinite" }} />
+      <div className="glass-card" style={{ padding: "44px 20px", textAlign: "center", color: "#5B6570" }}>
+        <Loader2 style={{ width: 22, height: 22, color: "#2563EB", animation: "spin 1s linear infinite" }} />
         <p style={{ fontSize: 13, fontWeight: 600, marginTop: 10 }}>Procurando empresas por perto…</p>
       </div>
     );
@@ -122,11 +122,11 @@ export default function EmpresasProximasDaEmpresa({
   if (erro) {
     return (
       <div className="glass-card" style={{ padding: "34px 24px", textAlign: "center" }}>
-        <AlertTriangle style={{ width: 24, height: 24, color: "#e67e22" }} />
+        <AlertTriangle style={{ width: 24, height: 24, color: "#8A5A00" }} />
         <p style={{ fontSize: 13, fontWeight: 700, color: "#b9651a", marginTop: 10 }}>
           Não foi possível carregar as empresas da sua carteira agora.
         </p>
-        <p style={{ fontSize: 12, color: "rgba(20,45,70,0.5)", marginTop: 4 }}>
+        <p style={{ fontSize: 12, color: "#5B6570", marginTop: 4 }}>
           Tente recarregar a página em instantes.
         </p>
       </div>
@@ -138,30 +138,30 @@ export default function EmpresasProximasDaEmpresa({
       {/* Referência + filtros */}
       <div className="glass-card" style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: 1 }}>
-          <span style={{ width: 32, height: 32, borderRadius: 9, display: "grid", placeItems: "center", background: "rgba(41,128,185,0.12)", flexShrink: 0 }}>
-            <MapPin style={{ width: 15, height: 15, color: "#2980b9" }} />
+          <span style={{ width: 32, height: 32, borderRadius: 9, display: "grid", placeItems: "center", background: "#EFF4FE", flexShrink: 0 }}>
+            <MapPin style={{ width: 15, height: 15, color: "#2563EB" }} />
           </span>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color: "rgba(20,45,70,0.45)" }}>
+            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color: "#5B6570" }}>
               Ponto de referência
             </div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#0f2133", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#16191D", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {nome}{cidade ? ` · ${cidade}` : ""}
             </div>
           </div>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-          <Filter style={{ width: 12, height: 12, color: "rgba(20,45,70,0.4)" }} />
+          <Filter style={{ width: 12, height: 12, color: "#5B6570" }} />
           {RAIOS.map(r => (
             <button key={r} onClick={() => setRaioKm(r)}
               aria-pressed={raioKm === r}
               style={{
-                padding: "4px 11px", borderRadius: 20, cursor: "pointer", fontFamily: "inherit",
+                padding: "4px 11px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit",
                 fontSize: 11, fontWeight: 700,
-                border: `1.5px solid ${raioKm === r ? "rgba(41,128,185,0.55)" : "rgba(200,225,240,0.85)"}`,
-                background: raioKm === r ? "rgba(41,128,185,0.12)" : "rgba(255,255,255,0.7)",
-                color: raioKm === r ? "#2980b9" : "rgba(20,45,70,0.55)",
+                border: `1.5px solid ${raioKm === r ? "#2563EB" : "#E3E6E9"}`,
+                background: raioKm === r ? "#EFF4FE" : "#ffffff",
+                color: raioKm === r ? "#2563EB" : "#5B6570",
               }}>
               {r} km
             </button>
@@ -170,11 +170,11 @@ export default function EmpresasProximasDaEmpresa({
             <button onClick={() => setSoMesmoSegmento(v => !v)}
               aria-pressed={soMesmoSegmento}
               style={{
-                padding: "4px 11px", borderRadius: 20, cursor: "pointer", fontFamily: "inherit",
+                padding: "4px 11px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit",
                 fontSize: 11, fontWeight: 700,
-                border: `1.5px solid ${soMesmoSegmento ? "rgba(142,68,173,0.5)" : "rgba(200,225,240,0.85)"}`,
-                background: soMesmoSegmento ? "rgba(142,68,173,0.1)" : "rgba(255,255,255,0.7)",
-                color: soMesmoSegmento ? "#7d3c98" : "rgba(20,45,70,0.55)",
+                border: `1.5px solid ${soMesmoSegmento ? "rgba(142,68,173,0.5)" : "#E3E6E9"}`,
+                background: soMesmoSegmento ? "rgba(142,68,173,0.1)" : "#ffffff",
+                color: soMesmoSegmento ? "#7d3c98" : "#5B6570",
               }}>
               {segmento}
             </button>
@@ -183,26 +183,26 @@ export default function EmpresasProximasDaEmpresa({
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(20,45,70,0.6)" }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: "#5B6570" }}>
           {visiveis.length} empresa{visiveis.length === 1 ? "" : "s"} da carteira num raio de {raioKm} km
         </span>
         <button onClick={prospectarAqui} className="send-btn"
-          style={{ marginLeft: "auto", background: "rgba(41,128,185,0.08)", borderColor: "rgba(41,128,185,0.3)", color: "#2980b9" }}>
+          style={{ marginLeft: "auto", background: "#EFF4FE", borderColor: "#2563EB", color: "#2563EB" }}>
           <Search style={{ width: 11, height: 11 }} /> Prospectar novas aqui
         </button>
       </div>
 
       {visiveis.length === 0 ? (
         <div className="glass-card" style={{ padding: "34px 24px", textAlign: "center" }}>
-          <Building2 style={{ width: 26, height: 26, color: "rgba(20,45,70,0.3)" }} />
-          <p style={{ fontSize: 13, fontWeight: 700, color: "rgba(20,45,70,0.55)", marginTop: 10 }}>
+          <Building2 style={{ width: 26, height: 26, color: "#5B6570" }} />
+          <p style={{ fontSize: 13, fontWeight: 700, color: "#5B6570", marginTop: 10 }}>
             Nenhuma empresa da carteira {soMesmoSegmento ? `do segmento “${segmento}” ` : ""}num raio de {raioKm} km.
           </p>
-          <p style={{ fontSize: 12, color: "rgba(20,45,70,0.45)", marginTop: 4 }}>
+          <p style={{ fontSize: 12, color: "#5B6570", marginTop: 4 }}>
             Aumente o raio ou busque empresas novas na região.
           </p>
           <button onClick={prospectarAqui}
-            style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 38, padding: "0 18px", marginTop: 16, borderRadius: 10, border: "none", cursor: "pointer", background: "linear-gradient(135deg,#2980b9,#1abc9c)", color: "#fff", fontSize: 12.5, fontWeight: 700, fontFamily: "inherit" }}>
+            style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 38, padding: "0 18px", marginTop: 16, borderRadius: 8, border: "none", cursor: "pointer", background: "#2563EB", color: "#fff", fontSize: 12.5, fontWeight: 700, fontFamily: "inherit" }}>
             <Search style={{ width: 14, height: 14 }} /> Prospectar empresas perto de {nome}
           </button>
         </div>
@@ -214,18 +214,18 @@ export default function EmpresasProximasDaEmpresa({
               <button
                 onClick={() => navigate(`/clientes/${emp.empresa_id}`, { state: { from: `/clientes/${empresaId}?tab=proximas` } })}
                 style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0, border: "none", background: "none", cursor: "pointer", textAlign: "left", fontFamily: "inherit", padding: 0 }}>
-                <span style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, display: "grid", placeItems: "center", background: "rgba(41,128,185,0.1)" }}>
-                  <Building2 style={{ width: 15, height: 15, color: "#2980b9" }} />
+                <span style={{ width: 34, height: 34, borderRadius: 8, flexShrink: 0, display: "grid", placeItems: "center", background: "#EFF4FE" }}>
+                  <Building2 style={{ width: 15, height: 15, color: "#2563EB" }} />
                 </span>
                 <span style={{ minWidth: 0, flex: 1 }}>
-                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#0f2133", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#16191D", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {emp.nome}
                   </span>
-                  <span style={{ display: "block", fontSize: 11.5, color: "rgba(20,45,70,0.55)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  <span style={{ display: "block", fontSize: 11.5, color: "#5B6570", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {[emp.segmento, emp.cidade, emp.status].filter(Boolean).join(" · ") || "Sem detalhes"}
                   </span>
                 </span>
-                <span style={{ fontSize: 13, fontWeight: 800, color: "#2980b9", flexShrink: 0 }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: "#2563EB", flexShrink: 0 }}>
                   {formatarDistancia(emp.distanciaKm)}
                 </span>
               </button>
@@ -233,7 +233,7 @@ export default function EmpresasProximasDaEmpresa({
                 href={`https://waze.com/ul?ll=${emp.latitude},${emp.longitude}&navigate=yes`}
                 target="_blank" rel="noreferrer"
                 title={`Abrir rota até ${emp.nome} no Waze`}
-                style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 700, color: "#1abc9c", textDecoration: "none", flexShrink: 0, padding: "6px 8px", borderRadius: 8 }}>
+                style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 700, color: "#2563EB", textDecoration: "none", flexShrink: 0, padding: "6px 8px", borderRadius: 8 }}>
                 <Navigation style={{ width: 13, height: 13 }} /> Waze
               </a>
             </div>

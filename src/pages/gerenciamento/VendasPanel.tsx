@@ -13,44 +13,44 @@ const API = "https://backend-crm-production-157b.up.railway.app";
 // Fluxo do orçamento, na ordem em que acontece.
 const STATUS_INFO: Record<string, { label: string; color: string; bg: string }> = {
   rascunho:      { label: "Rascunho",      color: "#566573", bg: "rgba(86,101,115,0.12)"  },
-  enviado:       { label: "Enviado",       color: "#2980b9", bg: "rgba(41,128,185,0.12)"  },
+  enviado:       { label: "Enviado",       color: "#2563EB", bg: "#EFF4FE"  },
   em_negociacao: { label: "Em negociação", color: "#d68910", bg: "rgba(214,137,16,0.13)"  },
   aprovado:      { label: "Aprovado",      color: "#1e8449", bg: "rgba(39,174,96,0.13)"   },
-  recusado:      { label: "Recusado",      color: "#c0392b", bg: "rgba(220,38,38,0.1)"    },
+  recusado:      { label: "Recusado",      color: "#B42318", bg: "rgba(220,38,38,0.1)"    },
 };
 const STATUS_ORDEM = ["rascunho", "enviado", "em_negociacao", "aprovado", "recusado"];
 
 const css = `
-  .vp-card { background:rgba(255,255,255,0.72); backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.9); border-radius:16px; }
-  .vp-inner { background:rgba(255,255,255,0.55); border:1px solid rgba(200,225,240,0.7); border-radius:12px; }
+  .vp-card { background:#ffffff; border:1px solid #ffffff; border-radius:8px; }
+  .vp-inner { background:#ffffff; border:1px solid #E3E6E9; border-radius:8px; }
   .vp-num { font-variant-numeric:tabular-nums; }
   .vp-table { width:100%; border-collapse:collapse; font-size:12.5px; }
-  .vp-table thead th { text-align:left; padding:10px 14px; font-size:10px; letter-spacing:0.07em; text-transform:uppercase; color:rgba(20,45,70,0.45); font-weight:800; border-bottom:1px solid rgba(200,225,240,0.7); white-space:nowrap; }
-  .vp-table tbody td { padding:11px 14px; border-bottom:1px solid rgba(200,225,240,0.45); color:#0f2133; }
+  .vp-table thead th { text-align:left; padding:10px 14px; font-size:10px; letter-spacing:0.07em; text-transform:uppercase; color:#5B6570; font-weight:800; border-bottom:1px solid #E3E6E9; white-space:nowrap; }
+  .vp-table tbody td { padding:11px 14px; border-bottom:1px solid #E3E6E9; color:#16191D; }
   .vp-table tbody tr:last-child td { border-bottom:0; }
   .vp-table tbody tr { transition:background 0.14s; }
-  .vp-table tbody tr:hover { background:rgba(41,128,185,0.05); }
+  .vp-table tbody tr:hover { background:#EFF4FE; }
   .vp-table .r { text-align:right; }
   .vp-row-link { cursor:pointer; }
-  .vp-ghost { display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:700; color:rgba(20,45,70,0.6); border:1px solid rgba(200,225,240,0.9); border-radius:9px; padding:6px 11px; background:rgba(255,255,255,0.7); cursor:pointer; transition:all 0.15s; font-family:inherit; }
-  .vp-ghost:hover { color:#0f2133; border-color:rgba(41,128,185,0.4); }
+  .vp-ghost { display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:700; color:#5B6570; border:1px solid #E3E6E9; border-radius:9px; padding:6px 11px; background:#ffffff; cursor:pointer; transition:all 0.15s; font-family:inherit; }
+  .vp-ghost:hover { color:#16191D; border-color:#2563EB; }
   .vp-icon-btn { display:flex; align-items:center; justify-content:center; border:none; cursor:pointer; border-radius:8px; transition:all 0.15s; }
   .vp-icon-btn:hover { filter:brightness(0.94); }
-  .vp-chip { padding:5px 12px; border-radius:20px; border:1.5px solid rgba(200,225,240,0.8); background:rgba(255,255,255,0.65); font-size:11px; font-weight:700; cursor:pointer; transition:all 0.15s; color:rgba(20,45,70,0.6); font-family:inherit; }
-  .vp-chip:hover { border-color:rgba(41,128,185,0.35); }
+  .vp-chip { padding:5px 12px; border-radius:8px; border:1.5px solid #E3E6E9; background:#ffffff; font-size:11px; font-weight:700; cursor:pointer; transition:all 0.15s; color:#5B6570; font-family:inherit; }
+  .vp-chip:hover { border-color:#2563EB; }
   .vp-tab { display:flex; align-items:center; gap:6px; padding:10px 4px; margin-right:18px; border:none; background:none; cursor:pointer; font-family:inherit; font-size:13px; border-bottom:2.5px solid transparent; margin-bottom:-1px; transition:color 0.15s; }
-  .vp-bar { border-radius:5px 5px 0 0; background:rgba(41,128,185,0.22); transition:background 0.15s; }
-  .vp-bar.hi { background:linear-gradient(180deg,#2980b9,#1abc9c); }
-  .vp-bar:hover { background:#1abc9c; }
-  .vp-facts > div { display:flex; justify-content:space-between; gap:10px; padding:7px 0; font-size:12.5px; border-bottom:1px solid rgba(200,225,240,0.45); }
+  .vp-bar { border-radius:5px 5px 0 0; background:#2563EB; transition:background 0.15s; }
+  .vp-bar.hi { background:#2563EB; }
+  .vp-bar:hover { background:#2563EB; }
+  .vp-facts > div { display:flex; justify-content:space-between; gap:10px; padding:7px 0; font-size:12.5px; border-bottom:1px solid #E3E6E9; }
   .vp-facts > div:last-child { border-bottom:0; }
-  .vp-catalogo-btn:hover:not(:disabled) { border-color:rgba(41,128,185,0.6) !important; box-shadow:0 4px 14px rgba(41,128,185,0.20) !important; transform:translateY(-1px); }
-  .vp-catalogo-btn:focus-visible { outline:2px solid #2980b9; outline-offset:2px; }
-  .vp-catalogo-item:hover { background:rgba(41,128,185,0.07); }
-  .vp-catalogo-item:focus-visible { outline:2px solid #2980b9; outline-offset:-2px; }
+  .vp-catalogo-btn:hover:not(:disabled) { border-color:#2563EB !important; box-shadow:0 4px 14px #2563EB !important; transform:translateY(-1px); }
+  .vp-catalogo-btn:focus-visible { outline:2px solid #2563EB; outline-offset:2px; }
+  .vp-catalogo-item:hover { background:#2563EB; }
+  .vp-catalogo-item:focus-visible { outline:2px solid #2563EB; outline-offset:-2px; }
   .vp-catalogo-item:last-child { border-bottom:0; }
-  .vp-avulso:focus-visible { outline:2px solid #2980b9; outline-offset:2px; }
-  .vp-import-row:nth-child(even) { background:rgba(41,128,185,0.035); }
+  .vp-avulso:focus-visible { outline:2px solid #2563EB; outline-offset:2px; }
+  .vp-import-row:nth-child(even) { background:#2563EB; }
 `;
 
 interface Equipamento {
@@ -263,10 +263,10 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
   });
 
   const kpis = [
-    { lab: "Valor aprovado", val: brlCurto(insights?.valor_aprovado), sub: `${aprovados.length} orçamento${aprovados.length === 1 ? "" : "s"} fechado${aprovados.length === 1 ? "" : "s"}`, icon: DollarSign, cor: "#27ae60" },
-    { lab: "Em aberto",      val: brlCurto(insights?.valor_em_aberto), sub: "enviados e em negociação",  icon: Wallet,        cor: "#8e44ad" },
+    { lab: "Valor aprovado", val: brlCurto(insights?.valor_aprovado), sub: `${aprovados.length} orçamento${aprovados.length === 1 ? "" : "s"} fechado${aprovados.length === 1 ? "" : "s"}`, icon: DollarSign, cor: "#0F7B4F" },
+    { lab: "Em aberto",      val: brlCurto(insights?.valor_em_aberto), sub: "enviados e em negociação",  icon: Wallet,        cor: "#5B6570" },
     { lab: "Ticket médio",   val: brlCurto(ticketMedio),               sub: "por orçamento aprovado",    icon: Target,        cor: "#d68910" },
-    { lab: "Último fechamento", val: formatDate(ultimaVenda),          sub: ultimaVenda ? "última aprovação" : "nada fechado ainda", icon: CalendarCheck, cor: "#2980b9" },
+    { lab: "Último fechamento", val: formatDate(ultimaVenda),          sub: ultimaVenda ? "última aprovação" : "nada fechado ainda", icon: CalendarCheck, cor: "#2563EB" },
   ];
 
   return (
@@ -277,15 +277,15 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
       <section className="vp-card" style={{ padding: isMobile ? 16 : 20 }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 16, flexWrap: "wrap", marginBottom: 18 }}>
           <div style={{ flex: 1, minWidth: 200 }}>
-            <h3 style={{ fontSize: 15, fontWeight: 800, color: "#0f2133", letterSpacing: "-0.01em" }}>Resumo da carteira</h3>
-            <p style={{ fontSize: 12.5, color: "rgba(20,45,70,0.5)", marginTop: 2 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 800, color: "#16191D", letterSpacing: "-0.01em" }}>Resumo da carteira</h3>
+            <p style={{ fontSize: 12.5, color: "#5B6570", marginTop: 2 }}>
               {orcamentos.length} orçamento{orcamentos.length === 1 ? "" : "s"}
               {insights ? ` · ${insights.taxa_conversao}% de conversão` : ""}
             </p>
           </div>
           <button
             onClick={abrirNovo}
-            style={{ display: "flex", alignItems: "center", gap: 6, height: 40, padding: "0 18px", borderRadius: 10, border: "none", cursor: "pointer", color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: "inherit", background: "linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)", backgroundSize: "200% 200%", animation: "gradientShift 4s ease infinite", boxShadow: "0 4px 14px rgba(41,128,185,0.35)" }}
+            style={{ display: "flex", alignItems: "center", gap: 6, height: 40, padding: "0 18px", borderRadius: 8, border: "none", cursor: "pointer", color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: "inherit", background: "#2563EB", backgroundSize: "200% 200%", animation: "gradientShift 4s ease infinite", boxShadow:"none" }}
           >
             <Plus style={{ width: 15, height: 15 }} /> Novo orçamento
           </button>
@@ -294,13 +294,13 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 12 }}>
           {kpis.map(k => (
             <div key={k.lab} className="vp-inner" style={{ padding: 14, display: "flex", gap: 12, alignItems: "flex-start" }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, display: "grid", placeItems: "center", flexShrink: 0, background: `${k.cor}1f` }}>
+              <div style={{ width: 36, height: 36, borderRadius: 8, display: "grid", placeItems: "center", flexShrink: 0, background: `${k.cor}1f` }}>
                 <k.icon style={{ width: 18, height: 18, color: k.cor }} />
               </div>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 10, letterSpacing: "0.07em", textTransform: "uppercase", color: "rgba(20,45,70,0.45)", fontWeight: 800, marginBottom: 3 }}>{k.lab}</div>
-                <div className="vp-num" style={{ fontSize: 18, fontWeight: 900, color: "#0f2133", letterSpacing: "-0.02em" }}>{k.val}</div>
-                <div style={{ fontSize: 11, color: "rgba(20,45,70,0.45)", marginTop: 2 }}>{k.sub}</div>
+                <div style={{ fontSize: 10, letterSpacing: "0.07em", textTransform: "uppercase", color: "#5B6570", fontWeight: 800, marginBottom: 3 }}>{k.lab}</div>
+                <div className="vp-num" style={{ fontSize: 18, fontWeight: 900, color: "#16191D", letterSpacing: "-0.02em" }}>{k.val}</div>
+                <div style={{ fontSize: 11, color: "#5B6570", marginTop: 2 }}>{k.sub}</div>
               </div>
             </div>
           ))}
@@ -308,7 +308,7 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
       </section>
 
       {/* Abas do módulo */}
-      <div style={{ display: "flex", alignItems: "center", borderBottom: "1px solid rgba(200,225,240,0.7)" }}>
+      <div style={{ display: "flex", alignItems: "center", borderBottom: "1px solid #E3E6E9" }}>
         {([
           { key: "orcamentos" as const, label: "Orçamentos", icon: FileText },
           { key: "equipamentos" as const, label: "Equipamentos", icon: Package },
@@ -316,7 +316,7 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
           const on = sub === t.key;
           return (
             <button key={t.key} onClick={() => setSub(t.key)} className="vp-tab"
-              style={{ color: on ? "#2980b9" : "rgba(20,45,70,0.5)", fontWeight: on ? 800 : 600, borderBottomColor: on ? "#2980b9" : "transparent" }}>
+              style={{ color: on ? "#2563EB" : "#5B6570", fontWeight: on ? 800 : 600, borderBottomColor: on ? "#2563EB" : "transparent" }}>
               <t.icon style={{ width: 15, height: 15 }} />
               {t.label}
             </button>
@@ -333,17 +333,17 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
       )}
 
       {erro && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 10, background: "rgba(220,38,38,0.07)", border: "1px solid rgba(220,38,38,0.25)" }}>
-          <AlertCircle style={{ width: 15, height: 15, color: "#c0392b", flexShrink: 0 }} />
-          <span style={{ fontSize: 12, fontWeight: 600, color: "#c0392b", flex: 1 }}>{erro}</span>
-          <button onClick={() => setErro(null)} className="vp-icon-btn" style={{ background: "none", color: "#c0392b", width: 24, height: 24 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 8, background: "rgba(220,38,38,0.07)", border: "1px solid rgba(220,38,38,0.25)" }}>
+          <AlertCircle style={{ width: 15, height: 15, color: "#B42318", flexShrink: 0 }} />
+          <span style={{ fontSize: 12, fontWeight: 600, color: "#B42318", flex: 1 }}>{erro}</span>
+          <button onClick={() => setErro(null)} className="vp-icon-btn" style={{ background: "none", color: "#B42318", width: 24, height: 24 }}>
             <X style={{ width: 13, height: 13 }} />
           </button>
         </div>
       )}
 
       {loading ? (
-        <div className="skeleton" style={{ height: 260, borderRadius: 16 }} />
+        <div className="skeleton" style={{ height: 260, borderRadius: 8 }} />
       ) : sub === "equipamentos" ? (
         <CatalogoEquipamentos equipamentos={equipamentos} hdrs={hdrs} onMudou={fetchTudo} onErro={setErro} />
       ) : (
@@ -351,8 +351,8 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
 
           {/* Tabela de orçamentos */}
           <section className="vp-card" style={{ overflow: "hidden" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "15px 18px", borderBottom: "1px solid rgba(200,225,240,0.7)", flexWrap: "wrap" }}>
-              <h3 style={{ fontSize: 14.5, fontWeight: 800, color: "#0f2133", letterSpacing: "-0.01em" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "15px 18px", borderBottom: "1px solid #E3E6E9", flexWrap: "wrap" }}>
+              <h3 style={{ fontSize: 14.5, fontWeight: 800, color: "#16191D", letterSpacing: "-0.01em" }}>
                 {filtroStatus === "todos" ? "Todos os orçamentos" : STATUS_INFO[filtroStatus].label}
               </h3>
               <button className="vp-ghost" onClick={() => setMostrarFiltros(v => !v)}>
@@ -361,14 +361,14 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
             </div>
 
             {mostrarFiltros && (
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", padding: "12px 18px", borderBottom: "1px solid rgba(200,225,240,0.7)" }}>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", padding: "12px 18px", borderBottom: "1px solid #E3E6E9" }}>
                 {["todos", ...STATUS_ORDEM].map(s => {
                   const info = STATUS_INFO[s];
                   const on = filtroStatus === s;
                   const qtd = s === "todos" ? orcamentos.length : orcamentos.filter(o => o.status === s).length;
                   return (
                     <button key={s} onClick={() => setFiltroStatus(s)} className="vp-chip"
-                      style={on ? { borderColor: info ? info.color : "#2980b9", background: info ? info.bg : "rgba(41,128,185,0.1)", color: info ? info.color : "#2980b9" } : undefined}>
+                      style={on ? { borderColor: info ? info.color : "#2563EB", background: info ? info.bg : "#EFF4FE", color: info ? info.color : "#2563EB" } : undefined}>
                       {info ? info.label : "Todos"} ({qtd})
                     </button>
                   );
@@ -377,7 +377,7 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
             )}
 
             {visiveis.length === 0 ? (
-              <div style={{ padding: "56px 20px", textAlign: "center", color: "rgba(20,45,70,0.42)" }}>
+              <div style={{ padding: "56px 20px", textAlign: "center", color: "#5B6570" }}>
                 <FileText style={{ width: 30, height: 30, marginBottom: 8 }} />
                 <p style={{ fontSize: 13, fontWeight: 700 }}>Nenhum orçamento aqui.</p>
                 <p style={{ fontSize: 11.5, marginTop: 4 }}>Clique em "Novo orçamento" para começar.</p>
@@ -403,29 +403,29 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
                         const info = STATUS_INFO[o.status] || STATUS_INFO.rascunho;
                         return (
                           <tr key={o.orcamento_id}>
-                            <td className="vp-num" style={{ color: "rgba(20,45,70,0.42)" }}>{i + 1}</td>
-                            <td className="vp-num vp-row-link" onClick={() => abrirExistente(o.orcamento_id)} style={{ color: "rgba(20,45,70,0.6)", whiteSpace: "nowrap" }}>
+                            <td className="vp-num" style={{ color: "#5B6570" }}>{i + 1}</td>
+                            <td className="vp-num vp-row-link" onClick={() => abrirExistente(o.orcamento_id)} style={{ color: "#5B6570", whiteSpace: "nowrap" }}>
                               {numeroOrcamento(o)}
                             </td>
                             <td className="vp-row-link" onClick={() => abrirExistente(o.orcamento_id)} style={{ fontWeight: 700 }}>
                               {o.empresa_nome || "—"}
                             </td>
-                            <td className="vp-row-link" onClick={() => abrirExistente(o.orcamento_id)} style={{ color: "rgba(20,45,70,0.6)" }}>
+                            <td className="vp-row-link" onClick={() => abrirExistente(o.orcamento_id)} style={{ color: "#5B6570" }}>
                               {o.titulo || "Orçamento"}
                               {o.motivo_recusa && (
-                                <span style={{ display: "block", fontSize: 10.5, color: "#c0392b", marginTop: 1, fontWeight: 600 }}>
+                                <span style={{ display: "block", fontSize: 10.5, color: "#B42318", marginTop: 1, fontWeight: 600 }}>
                                   Recusa: {o.motivo_recusa}
                                 </span>
                               )}
                             </td>
-                            <td className="vp-num" style={{ color: "rgba(20,45,70,0.6)", whiteSpace: "nowrap" }}>{formatDate(o.data_envio)}</td>
+                            <td className="vp-num" style={{ color: "#5B6570", whiteSpace: "nowrap" }}>{formatDate(o.data_envio)}</td>
                             <td className="vp-num r" style={{ fontWeight: 800, whiteSpace: "nowrap" }}>{brl(o.total)}</td>
                             <td>
                               <select
                                 value={o.status}
                                 onChange={e => mudarStatus(o.orcamento_id, e.target.value)}
                                 aria-label={`Status do orçamento ${numeroOrcamento(o)}`}
-                                style={{ height: 28, padding: "0 8px", borderRadius: 20, border: `1.5px solid ${info.color}40`, background: info.bg, fontSize: 10.5, fontWeight: 800, color: info.color, cursor: "pointer", fontFamily: "inherit", appearance: "none", textAlign: "center" }}
+                                style={{ height: 28, padding: "0 8px", borderRadius: 8, border: `1.5px solid ${info.color}40`, background: info.bg, fontSize: 10.5, fontWeight: 800, color: info.color, cursor: "pointer", fontFamily: "inherit", appearance: "none", textAlign: "center" }}
                               >
                                 {STATUS_ORDEM.map(s => <option key={s} value={s}>{STATUS_INFO[s].label}</option>)}
                               </select>
@@ -434,13 +434,13 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
                               <div style={{ display: "flex", gap: 5, justifyContent: "flex-end" }}>
                                 <button onClick={() => enviar(o.orcamento_id)} disabled={enviandoId === o.orcamento_id}
                                   title="Enviar por email ao contato da empresa" className="vp-icon-btn"
-                                  style={{ width: 28, height: 28, background: "rgba(41,128,185,0.12)", color: "#2980b9", cursor: enviandoId === o.orcamento_id ? "wait" : "pointer" }}>
+                                  style={{ width: 28, height: 28, background: "#EFF4FE", color: "#2563EB", cursor: enviandoId === o.orcamento_id ? "wait" : "pointer" }}>
                                   {enviandoId === o.orcamento_id
                                     ? <Loader2 style={{ width: 13, height: 13, animation: "spin 1s linear infinite" }} />
                                     : <Send style={{ width: 13, height: 13 }} />}
                                 </button>
                                 <button onClick={() => excluir(o.orcamento_id)} title="Excluir orçamento" className="vp-icon-btn"
-                                  style={{ width: 28, height: 28, background: "rgba(220,38,38,0.08)", color: "#c0392b" }}>
+                                  style={{ width: 28, height: 28, background: "rgba(220,38,38,0.08)", color: "#B42318" }}>
                                   <Trash2 style={{ width: 13, height: 13 }} />
                                 </button>
                               </div>
@@ -451,9 +451,9 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
                     </tbody>
                   </table>
                 </div>
-                <div style={{ padding: "12px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, color: "rgba(20,45,70,0.5)", borderTop: "1px solid rgba(200,225,240,0.7)" }}>
+                <div style={{ padding: "12px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, color: "#5B6570", borderTop: "1px solid #E3E6E9" }}>
                   <span>Mostrando {visiveis.length} de {orcamentos.length} orçamento{orcamentos.length === 1 ? "" : "s"}</span>
-                  <span className="vp-num" style={{ fontWeight: 800, color: "#0f2133" }}>
+                  <span className="vp-num" style={{ fontWeight: 800, color: "#16191D" }}>
                     {brl(visiveis.reduce((s, o) => s + Number(o.total || 0), 0))}
                   </span>
                 </div>
@@ -466,13 +466,13 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
 
             {/* Conversão */}
             <div className="vp-card" style={{ padding: 16 }}>
-              <h4 style={{ fontSize: 12.5, fontWeight: 800, color: "#0f2133", marginBottom: 14 }}>Taxa de conversão</h4>
+              <h4 style={{ fontSize: 12.5, fontWeight: 800, color: "#16191D", marginBottom: 14 }}>Taxa de conversão</h4>
               <Donut pct={insights?.taxa_conversao || 0} />
               <div style={{ textAlign: "center", marginTop: 10 }}>
-                <div className="vp-num" style={{ fontSize: 13, fontWeight: 800, color: "#0f2133" }}>
+                <div className="vp-num" style={{ fontSize: 13, fontWeight: 800, color: "#16191D" }}>
                   {insights?.por_status?.aprovado?.total || 0} aprovado{(insights?.por_status?.aprovado?.total || 0) === 1 ? "" : "s"}
                 </div>
-                <div className="vp-num" style={{ fontSize: 11, color: "rgba(20,45,70,0.45)" }}>
+                <div className="vp-num" style={{ fontSize: 11, color: "#5B6570" }}>
                   de {(insights?.por_status?.aprovado?.total || 0) + (insights?.por_status?.recusado?.total || 0)} decidido(s)
                 </div>
               </div>
@@ -480,7 +480,7 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
 
             {/* Série mensal */}
             <div className="vp-card" style={{ padding: 16 }}>
-              <h4 style={{ fontSize: 12.5, fontWeight: 800, color: "#0f2133", marginBottom: 14 }}>Aprovado — últimos 6 meses</h4>
+              <h4 style={{ fontSize: 12.5, fontWeight: 800, color: "#16191D", marginBottom: 14 }}>Aprovado — últimos 6 meses</h4>
               {(() => {
                 const max = Math.max(1, ...serieMensal.map(m => m.valor));
                 return (
@@ -494,7 +494,7 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
                     </div>
                     <div style={{ display: "flex", gap: 7, marginTop: 7 }}>
                       {serieMensal.map((m, i) => (
-                        <span key={i} style={{ flex: 1, textAlign: "center", fontSize: 10.5, color: "rgba(20,45,70,0.45)" }}>{m.rotulo}</span>
+                        <span key={i} style={{ flex: 1, textAlign: "center", fontSize: 10.5, color: "#5B6570" }}>{m.rotulo}</span>
                       ))}
                     </div>
                   </>
@@ -504,15 +504,15 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
 
             {/* Equipamentos mais orçados */}
             <div className="vp-card" style={{ padding: 16 }}>
-              <h4 style={{ fontSize: 12.5, fontWeight: 800, color: "#0f2133", marginBottom: 10 }}>Mais orçados</h4>
+              <h4 style={{ fontSize: 12.5, fontWeight: 800, color: "#16191D", marginBottom: 10 }}>Mais orçados</h4>
               {!insights || insights.equipamentos_mais_orcados.length === 0 ? (
-                <p style={{ fontSize: 11.5, color: "rgba(20,45,70,0.42)", fontWeight: 600, padding: "12px 0" }}>Nada orçado ainda.</p>
+                <p style={{ fontSize: 11.5, color: "#5B6570", fontWeight: 600, padding: "12px 0" }}>Nada orçado ainda.</p>
               ) : (
                 <dl className="vp-facts">
                   {insights.equipamentos_mais_orcados.slice(0, 5).map(e => (
                     <div key={e.nome}>
-                      <dt style={{ color: "rgba(20,45,70,0.6)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.nome}</dt>
-                      <dd className="vp-num" style={{ fontWeight: 800, color: "#2980b9", flexShrink: 0 }}>{e.quantidade}x</dd>
+                      <dt style={{ color: "#5B6570", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.nome}</dt>
+                      <dd className="vp-num" style={{ fontWeight: 800, color: "#2563EB", flexShrink: 0 }}>{e.quantidade}x</dd>
                     </div>
                   ))}
                 </dl>
@@ -548,18 +548,18 @@ function Donut({ pct }: { pct: number }) {
   return (
     <div style={{ display: "grid", placeItems: "center" }}>
       <svg width="132" height="132" viewBox="0 0 132 132" role="img" aria-label={`${pct}% de conversão`}>
-        <circle cx="66" cy="66" r={r} fill="none" stroke="rgba(200,225,240,0.75)" strokeWidth="12" />
+        <circle cx="66" cy="66" r={r} fill="none" stroke="#E3E6E9" strokeWidth="12" />
         <circle cx="66" cy="66" r={r} fill="none" stroke="url(#vpGrad)" strokeWidth="12" strokeLinecap="round"
           strokeDasharray={circ} strokeDashoffset={off} transform="rotate(-90 66 66)"
           style={{ transition: "stroke-dashoffset 0.6s ease" }} />
         <defs>
           <linearGradient id="vpGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#2980b9" />
-            <stop offset="100%" stopColor="#1abc9c" />
+            <stop offset="0%" stopColor="#2563EB" />
+            <stop offset="100%" stopColor="#2563EB" />
           </linearGradient>
         </defs>
         <text x="66" y="66" textAnchor="middle" dominantBaseline="central"
-          fill="#0f2133" fontSize="26" fontWeight="800" style={{ fontVariantNumeric: "tabular-nums" }}>
+          fill="#16191D" fontSize="26" fontWeight="800" style={{ fontVariantNumeric: "tabular-nums" }}>
           {Math.round(pct)}%
         </text>
       </svg>
@@ -635,14 +635,14 @@ function CatalogoEquipamentos({
     } catch { onErro("Erro ao desativar."); }
   };
 
-  const inputStyle = { height: 40, padding: "0 14px", borderRadius: 10, border: "1.5px solid rgba(200,225,240,0.8)", background: "rgba(255,255,255,0.75)", fontSize: 13, outline: "none", fontFamily: "inherit", color: "#0f2133" } as const;
+  const inputStyle = { height: 40, padding: "0 14px", borderRadius: 8, border: "1.5px solid #E3E6E9", background: "#ffffff", fontSize: 13, outline: "none", fontFamily: "inherit", color: "#16191D" } as const;
 
   return (
     <section className="vp-card" style={{ overflow: "hidden" }}>
-      <div style={{ padding: "15px 18px", borderBottom: "1px solid rgba(200,225,240,0.7)", display: "flex", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
+      <div style={{ padding: "15px 18px", borderBottom: "1px solid #E3E6E9", display: "flex", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 200 }}>
-          <h3 style={{ fontSize: 14.5, fontWeight: 800, color: "#0f2133", letterSpacing: "-0.01em" }}>Catálogo de equipamentos</h3>
-          <p style={{ fontSize: 12, color: "rgba(20,45,70,0.5)", marginTop: 2 }}>Itens reutilizáveis na montagem dos orçamentos.</p>
+          <h3 style={{ fontSize: 14.5, fontWeight: 800, color: "#16191D", letterSpacing: "-0.01em" }}>Catálogo de equipamentos</h3>
+          <p style={{ fontSize: 12, color: "#5B6570", marginTop: 2 }}>Itens reutilizáveis na montagem dos orçamentos.</p>
         </div>
         {/* Estoque/catálogo em Excel: baixar o modelo oficial e importar de volta */}
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -653,13 +653,13 @@ function CatalogoEquipamentos({
             Baixar modelo
           </button>
           <button onClick={() => setImportando(true)}
-            style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 9, border: "1.5px solid rgba(41,128,185,0.35)", background: "linear-gradient(135deg,rgba(41,128,185,0.12),rgba(26,188,156,0.10))", color: "#15547f", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 9, border: "1.5px solid #2563EB", background: "#EFF4FE", color: "#15547f", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
             <Upload style={{ width: 13, height: 13 }} /> Importar Excel
           </button>
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", padding: "14px 18px", borderBottom: "1px solid rgba(200,225,240,0.7)" }}>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", padding: "14px 18px", borderBottom: "1px solid #E3E6E9" }}>
         <input value={codigo} onChange={e => setCodigo(e.target.value)} onKeyDown={e => e.key === "Enter" && adicionar()}
           placeholder="Código / SKU" aria-label="Código ou SKU do equipamento" style={{ ...inputStyle, width: 130 }} />
         <input value={nome} onChange={e => setNome(e.target.value)} onKeyDown={e => e.key === "Enter" && adicionar()}
@@ -669,13 +669,13 @@ function CatalogoEquipamentos({
         <input value={preco} onChange={e => setPreco(e.target.value.replace(/[^\d.,]/g, ""))} onKeyDown={e => e.key === "Enter" && adicionar()}
           placeholder="Preço base" aria-label="Preço base" className="vp-num" style={{ ...inputStyle, width: 130 }} />
         <button onClick={adicionar} disabled={salvando || !nome.trim()}
-          style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 18px", height: 40, borderRadius: 10, border: "none", color: "#fff", fontSize: 12.5, fontWeight: 700, fontFamily: "inherit", background: "linear-gradient(135deg,#2980b9,#1abc9c)", cursor: salvando || !nome.trim() ? "not-allowed" : "pointer", opacity: salvando || !nome.trim() ? 0.5 : 1 }}>
+          style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 18px", height: 40, borderRadius: 8, border: "none", color: "#fff", fontSize: 12.5, fontWeight: 700, fontFamily: "inherit", background: "#2563EB", cursor: salvando || !nome.trim() ? "not-allowed" : "pointer", opacity: salvando || !nome.trim() ? 0.5 : 1 }}>
           <Plus style={{ width: 14, height: 14 }} /> Cadastrar
         </button>
       </div>
 
       {equipamentos.length === 0 ? (
-        <div style={{ padding: "56px 20px", textAlign: "center", color: "rgba(20,45,70,0.42)" }}>
+        <div style={{ padding: "56px 20px", textAlign: "center", color: "#5B6570" }}>
           <Package style={{ width: 30, height: 30, marginBottom: 8 }} />
           <p style={{ fontSize: 13, fontWeight: 700 }}>Nenhum equipamento no catálogo.</p>
           <p style={{ fontSize: 11.5, marginTop: 4 }}>Cadastre os itens que você costuma orçar.</p>
@@ -689,24 +689,24 @@ function CatalogoEquipamentos({
             <tbody>
               {equipamentos.map(e => (
                 <tr key={e.equipamento_id}>
-                  <td className="vp-num" style={{ color: e.codigo ? "rgba(20,45,70,0.7)" : "rgba(20,45,70,0.3)", fontWeight: 700, whiteSpace: "nowrap" }}>
+                  <td className="vp-num" style={{ color: e.codigo ? "#16191D" : "#5B6570", fontWeight: 700, whiteSpace: "nowrap" }}>
                     {e.codigo || "—"}
                   </td>
                   <td style={{ fontWeight: 700 }}>
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                      <Package style={{ width: 14, height: 14, color: "#2980b9", flexShrink: 0 }} />
+                      <Package style={{ width: 14, height: 14, color: "#2563EB", flexShrink: 0 }} />
                       {e.nome}
                     </span>
                   </td>
-                  <td style={{ color: "rgba(20,45,70,0.6)" }}>{e.descricao || "—"}</td>
-                  <td className="vp-num r" style={{ fontWeight: 700, color: e.quantidade > 0 ? "#1e8449" : "rgba(20,45,70,0.35)" }}>
+                  <td style={{ color: "#5B6570" }}>{e.descricao || "—"}</td>
+                  <td className="vp-num r" style={{ fontWeight: 700, color: e.quantidade > 0 ? "#1e8449" : "#5B6570" }}>
                     {e.quantidade ?? 0}
                   </td>
                   <td className="vp-num r" style={{ fontWeight: 800, whiteSpace: "nowrap" }}>{brl(e.preco_base)}</td>
                   <td className="r">
                     <button onClick={() => desativar(e.equipamento_id)} className="vp-icon-btn"
                       title="Desativar — orçamentos antigos continuam intactos"
-                      style={{ width: 28, height: 28, background: "rgba(220,38,38,0.08)", color: "#c0392b", marginLeft: "auto" }}>
+                      style={{ width: 28, height: 28, background: "rgba(220,38,38,0.08)", color: "#B42318", marginLeft: "auto" }}>
                       <Trash2 style={{ width: 13, height: 13 }} />
                     </button>
                   </td>
@@ -807,22 +807,22 @@ function ImportarCatalogo({
 
   return (
     <div onClick={onFechar}
-      style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(10,31,51,0.42)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(10,31,51,0.42)",  display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div onClick={e => e.stopPropagation()}
-        style={{ width: "100%", maxWidth: 720, maxHeight: "90vh", overflowY: "auto", background: "rgba(255,255,255,0.98)", borderRadius: 18, padding: 24, boxShadow: "0 24px 64px rgba(10,31,51,0.32)" }}>
+        style={{ width: "100%", maxWidth: 720, maxHeight: "90vh", overflowY: "auto", background: "#ffffff", borderRadius: 8, padding: 24, boxShadow:"none" }}>
 
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-          <div style={{ width: 34, height: 34, borderRadius: 10, background: "rgba(39,174,96,0.14)", display: "grid", placeItems: "center" }}>
+          <div style={{ width: 34, height: 34, borderRadius: 8, background: "rgba(39,174,96,0.14)", display: "grid", placeItems: "center" }}>
             <FileSpreadsheet style={{ width: 17, height: 17, color: "#1e8449" }} />
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 16, fontWeight: 900, color: "#0f2133" }}>Importar catálogo do Excel</div>
-            <div style={{ fontSize: 11.5, color: "rgba(20,45,70,0.55)", marginTop: 1 }}>
+            <div style={{ fontSize: 16, fontWeight: 900, color: "#16191D" }}>Importar catálogo do Excel</div>
+            <div style={{ fontSize: 11.5, color: "#5B6570", marginTop: 1 }}>
               As colunas são reconhecidas pelo nome do cabeçalho — pode reordená-las à vontade.
             </div>
           </div>
           <button onClick={onFechar} className="vp-icon-btn" aria-label="Fechar"
-            style={{ width: 30, height: 30, background: "rgba(200,225,240,0.4)", color: "rgba(20,45,70,0.6)" }}>
+            style={{ width: 30, height: 30, background: "#E3E6E9", color: "#5B6570" }}>
             <X style={{ width: 15, height: 15 }} />
           </button>
         </div>
@@ -832,16 +832,16 @@ function ImportarCatalogo({
           onClick={() => inputRef.current?.click()}
           disabled={ocupado}
           style={{
-            width: "100%", padding: "22px 16px", borderRadius: 12, cursor: ocupado ? "wait" : "pointer",
-            border: "1.5px dashed rgba(41,128,185,0.45)", background: "rgba(41,128,185,0.05)",
+            width: "100%", padding: "22px 16px", borderRadius: 8, cursor: ocupado ? "wait" : "pointer",
+            border: "1.5px dashed #2563EB", background: "#EFF4FE",
             fontFamily: "inherit", textAlign: "center",
           }}
         >
-          <Upload style={{ width: 20, height: 20, color: "#2980b9" }} />
+          <Upload style={{ width: 20, height: 20, color: "#2563EB" }} />
           <div style={{ fontSize: 13, fontWeight: 800, color: "#15547f", marginTop: 6 }}>
             {arquivo ? arquivo.name : "Escolher planilha (.xlsx)"}
           </div>
-          <div style={{ fontSize: 11, color: "rgba(20,45,70,0.5)", marginTop: 2 }}>
+          <div style={{ fontSize: 11, color: "#5B6570", marginTop: 2 }}>
             {arquivo ? "Clique para trocar o arquivo" : "Use o modelo de importação para garantir os nomes das colunas"}
           </div>
         </button>
@@ -849,21 +849,21 @@ function ImportarCatalogo({
           onChange={e => escolher(e.target.files?.[0] || null)} />
 
         {ocupado && !sucesso && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14, fontSize: 12.5, fontWeight: 700, color: "rgba(20,45,70,0.6)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14, fontSize: 12.5, fontWeight: 700, color: "#5B6570" }}>
             <Loader2 style={{ width: 14, height: 14, animation: "spin 1s linear infinite" }} />
             Lendo e validando a planilha…
           </div>
         )}
 
         {erro && (
-          <div style={{ display: "flex", gap: 8, marginTop: 14, padding: "11px 13px", borderRadius: 10, background: "rgba(220,38,38,0.07)", border: "1px solid rgba(220,38,38,0.2)" }}>
-            <AlertTriangle style={{ width: 15, height: 15, color: "#c0392b", flexShrink: 0, marginTop: 1 }} />
+          <div style={{ display: "flex", gap: 8, marginTop: 14, padding: "11px 13px", borderRadius: 8, background: "rgba(220,38,38,0.07)", border: "1px solid rgba(220,38,38,0.2)" }}>
+            <AlertTriangle style={{ width: 15, height: 15, color: "#B42318", flexShrink: 0, marginTop: 1 }} />
             <span style={{ fontSize: 12.5, fontWeight: 600, color: "#a93226", lineHeight: 1.45 }}>{erro}</span>
           </div>
         )}
 
         {sucesso && (
-          <div style={{ display: "flex", gap: 8, marginTop: 14, padding: "11px 13px", borderRadius: 10, background: "rgba(39,174,96,0.09)", border: "1px solid rgba(39,174,96,0.25)" }}>
+          <div style={{ display: "flex", gap: 8, marginTop: 14, padding: "11px 13px", borderRadius: 8, background: "rgba(39,174,96,0.09)", border: "1px solid rgba(39,174,96,0.25)" }}>
             <Check style={{ width: 15, height: 15, color: "#1e8449", flexShrink: 0, marginTop: 1 }} />
             <span style={{ fontSize: 12.5, fontWeight: 700, color: "#1e8449" }}>{sucesso}</span>
           </div>
@@ -876,28 +876,28 @@ function ImportarCatalogo({
               {[
                 { rotulo: "Linhas lidas", valor: previa.total_linhas, cor: "#566573" },
                 { rotulo: "Válidas", valor: previa.resumo.validos, cor: "#1e8449" },
-                { rotulo: "Com erro", valor: previa.resumo.com_erro, cor: previa.resumo.com_erro ? "#c0392b" : "#566573" },
-                { rotulo: "Novos", valor: previa.resumo.criar, cor: "#2980b9" },
+                { rotulo: "Com erro", valor: previa.resumo.com_erro, cor: previa.resumo.com_erro ? "#B42318" : "#566573" },
+                { rotulo: "Novos", valor: previa.resumo.criar, cor: "#2563EB" },
                 { rotulo: "Atualizados", valor: previa.resumo.atualizar, cor: "#d68910" },
               ].map(c => (
-                <div key={c.rotulo} style={{ flex: "1 1 96px", padding: "9px 11px", borderRadius: 10, background: "rgba(255,255,255,0.8)", border: "1px solid rgba(200,225,240,0.8)" }}>
-                  <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: "0.05em", textTransform: "uppercase", color: "rgba(20,45,70,0.45)" }}>{c.rotulo}</div>
+                <div key={c.rotulo} style={{ flex: "1 1 96px", padding: "9px 11px", borderRadius: 8, background: "#ffffff", border: "1px solid #E3E6E9" }}>
+                  <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: "0.05em", textTransform: "uppercase", color: "#5B6570" }}>{c.rotulo}</div>
                   <div className="vp-num" style={{ fontSize: 18, fontWeight: 900, color: c.cor }}>{c.valor}</div>
                 </div>
               ))}
             </div>
 
             {/* Prova de que o servidor casou cada coluna pelo cabeçalho */}
-            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 12, fontSize: 11, color: "rgba(20,45,70,0.55)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 12, fontSize: 11, color: "#5B6570" }}>
               <Hash style={{ width: 12, height: 12 }} />
               <span style={{ fontWeight: 700 }}>Colunas reconhecidas:</span>
               {Object.keys(previa.colunas_reconhecidas).map(nome => (
-                <span key={nome} style={{ padding: "2px 8px", borderRadius: 20, background: "rgba(41,128,185,0.1)", color: "#2980b9", fontWeight: 700 }}>{nome}</span>
+                <span key={nome} style={{ padding: "2px 8px", borderRadius: 8, background: "#EFF4FE", color: "#2563EB", fontWeight: 700 }}>{nome}</span>
               ))}
             </div>
 
             {previa.erros.length > 0 && (
-              <div style={{ marginBottom: 12, padding: "11px 13px", borderRadius: 10, background: "rgba(220,38,38,0.06)", border: "1px solid rgba(220,38,38,0.2)" }}>
+              <div style={{ marginBottom: 12, padding: "11px 13px", borderRadius: 8, background: "rgba(220,38,38,0.06)", border: "1px solid rgba(220,38,38,0.2)" }}>
                 <div style={{ fontSize: 12, fontWeight: 800, color: "#a93226", marginBottom: 6 }}>
                   {previa.resumo.com_erro} problema(s) — corrija na planilha e envie de novo:
                 </div>
@@ -910,7 +910,7 @@ function ImportarCatalogo({
             )}
 
             {previa.validos.length > 0 && (
-              <div style={{ maxHeight: 240, overflowY: "auto", borderRadius: 10, border: "1px solid rgba(200,225,240,0.8)" }}>
+              <div style={{ maxHeight: 240, overflowY: "auto", borderRadius: 8, border: "1px solid #E3E6E9" }}>
                 <table className="vp-table">
                   <thead>
                     <tr><th>Linha</th><th>Código</th><th>Nome</th><th className="r">Qtd</th><th className="r">Preço</th><th>Ação</th></tr>
@@ -918,15 +918,15 @@ function ImportarCatalogo({
                   <tbody>
                     {previa.validos.map(l => (
                       <tr key={l.linha} className="vp-import-row">
-                        <td className="vp-num" style={{ color: "rgba(20,45,70,0.45)" }}>{l.linha}</td>
+                        <td className="vp-num" style={{ color: "#5B6570" }}>{l.linha}</td>
                         <td className="vp-num">{l.codigo || "—"}</td>
                         <td style={{ fontWeight: 700 }}>{l.nome}</td>
                         <td className="vp-num r">{l.quantidade}</td>
                         <td className="vp-num r" style={{ whiteSpace: "nowrap" }}>{brl(l.preco_base)}</td>
                         <td>
-                          <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 8px", borderRadius: 20,
-                            background: l.acao === "criar" ? "rgba(41,128,185,0.12)" : "rgba(214,137,16,0.14)",
-                            color: l.acao === "criar" ? "#2980b9" : "#a9700c" }}>
+                          <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 8px", borderRadius: 8,
+                            background: l.acao === "criar" ? "#EFF4FE" : "rgba(214,137,16,0.14)",
+                            color: l.acao === "criar" ? "#2563EB" : "#a9700c" }}>
                             {l.acao === "criar" ? "novo" : "atualiza"}
                           </span>
                         </td>
@@ -938,14 +938,14 @@ function ImportarCatalogo({
             )}
 
             {previa.resumo.validos === 0 && previa.resumo.com_erro === 0 && (
-              <div style={{ padding: "26px 14px", textAlign: "center", fontSize: 12.5, fontWeight: 700, color: "rgba(20,45,70,0.45)" }}>
+              <div style={{ padding: "26px 14px", textAlign: "center", fontSize: 12.5, fontWeight: 700, color: "#5B6570" }}>
                 A planilha não tem nenhuma linha preenchida.
               </div>
             )}
           </div>
         )}
 
-        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 18, paddingTop: 14, borderTop: "1px solid rgba(200,225,240,0.7)" }}>
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 18, paddingTop: 14, borderTop: "1px solid #E3E6E9" }}>
           <button onClick={onFechar} className="vp-ghost" style={{ height: 40, padding: "0 16px", fontSize: 13 }}>
             {sucesso ? "Fechar" : "Cancelar"}
           </button>
@@ -954,9 +954,9 @@ function ImportarCatalogo({
             disabled={!podeGravar || ocupado || !!sucesso}
             title={previa && previa.resumo.com_erro > 0 ? "Corrija os erros antes de importar" : undefined}
             style={{
-              display: "flex", alignItems: "center", gap: 6, height: 40, padding: "0 20px", borderRadius: 10,
+              display: "flex", alignItems: "center", gap: 6, height: 40, padding: "0 20px", borderRadius: 8,
               border: "none", color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: "inherit",
-              background: "linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)", backgroundSize: "200% 200%",
+              background: "#2563EB", backgroundSize: "200% 200%",
               animation: "gradientShift 4s ease infinite",
               cursor: podeGravar && !ocupado && !sucesso ? "pointer" : "not-allowed",
               opacity: podeGravar && !ocupado && !sucesso ? 1 : 0.5,
@@ -1032,22 +1032,22 @@ function EditorOrcamento({
     setSalvando(false);
   };
 
-  const label = { fontSize: 10, fontWeight: 800, letterSpacing: "0.06em", color: "rgba(15,33,51,0.45)", textTransform: "uppercase" } as const;
-  const field = { width: "100%", height: 42, padding: "0 12px", borderRadius: 10, border: "1.5px solid rgba(200,225,240,0.8)", background: "rgba(255,255,255,0.85)", fontSize: 13, marginTop: 5, outline: "none", fontFamily: "inherit", color: "#0f2133" } as const;
+  const label = { fontSize: 10, fontWeight: 800, letterSpacing: "0.06em", color: "#5B6570", textTransform: "uppercase" } as const;
+  const field = { width: "100%", height: 42, padding: "0 12px", borderRadius: 8, border: "1.5px solid #E3E6E9", background: "#ffffff", fontSize: 13, marginTop: 5, outline: "none", fontFamily: "inherit", color: "#16191D" } as const;
 
   return (
     <div onClick={onFechar}
-      style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(10,31,51,0.42)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(10,31,51,0.42)",  display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div onClick={e => e.stopPropagation()}
-        style={{ width: "100%", maxWidth: 660, maxHeight: "90vh", overflowY: "auto", background: "rgba(255,255,255,0.97)", borderRadius: 18, padding: 24, boxShadow: "0 24px 64px rgba(10,31,51,0.32)" }}>
+        style={{ width: "100%", maxWidth: 660, maxHeight: "90vh", overflowY: "auto", background: "#ffffff", borderRadius: 8, padding: 24, boxShadow:"none" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
-          <div style={{ width: 34, height: 34, borderRadius: 10, background: "rgba(41,128,185,0.12)", display: "grid", placeItems: "center" }}>
-            <FileText style={{ width: 17, height: 17, color: "#2980b9" }} />
+          <div style={{ width: 34, height: 34, borderRadius: 8, background: "#EFF4FE", display: "grid", placeItems: "center" }}>
+            <FileText style={{ width: 17, height: 17, color: "#2563EB" }} />
           </div>
-          <div style={{ flex: 1, fontSize: 16, fontWeight: 900, color: "#0f2133" }}>
+          <div style={{ flex: 1, fontSize: 16, fontWeight: 900, color: "#16191D" }}>
             {novo ? "Novo orçamento" : "Editar orçamento"}
           </div>
-          <button onClick={onFechar} className="vp-icon-btn" style={{ width: 30, height: 30, background: "rgba(200,225,240,0.4)", color: "rgba(20,45,70,0.6)" }}>
+          <button onClick={onFechar} className="vp-icon-btn" style={{ width: 30, height: 30, background: "#E3E6E9", color: "#5B6570" }}>
             <X style={{ width: 15, height: 15 }} />
           </button>
         </div>
@@ -1075,7 +1075,7 @@ function EditorOrcamento({
             <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
               <span style={label}>Itens do orçamento</span>
               {itens.length > 0 && (
-                <span style={{ fontSize: 10, fontWeight: 800, color: "#2980b9", background: "rgba(41,128,185,0.1)", padding: "2px 8px", borderRadius: 20 }}>
+                <span style={{ fontSize: 10, fontWeight: 800, color: "#2563EB", background: "#EFF4FE", padding: "2px 8px", borderRadius: 8 }}>
                   {itens.length}
                 </span>
               )}
@@ -1089,19 +1089,19 @@ function EditorOrcamento({
                   className="vp-ghost vp-avulso" style={{ height: 38, padding: "0 14px", whiteSpace: "nowrap" }}>
                   <Plus style={{ width: 13, height: 13 }} /> Item avulso
                 </button>
-                <span style={{ fontSize: 9.5, fontWeight: 600, color: "rgba(20,45,70,0.4)", textAlign: "center" }}>
+                <span style={{ fontSize: 9.5, fontWeight: 600, color: "#5B6570", textAlign: "center" }}>
                   fora do catálogo
                 </span>
               </div>
             </div>
 
             {itens.length === 0 ? (
-              <div style={{ padding: "18px 12px", textAlign: "center", borderRadius: 10, border: "1.5px dashed rgba(200,225,240,0.95)", background: "rgba(255,255,255,0.5)" }}>
-                <Package style={{ width: 22, height: 22, color: "rgba(41,128,185,0.45)" }} />
-                <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(20,45,70,0.55)", marginTop: 6 }}>
+              <div style={{ padding: "18px 12px", textAlign: "center", borderRadius: 8, border: "1.5px dashed #E3E6E9", background: "#ffffff" }}>
+                <Package style={{ width: 22, height: 22, color: "#2563EB" }} />
+                <p style={{ fontSize: 12, fontWeight: 700, color: "#5B6570", marginTop: 6 }}>
                   Nenhum item ainda.
                 </p>
-                <p style={{ fontSize: 11, color: "rgba(20,45,70,0.42)", marginTop: 2 }}>
+                <p style={{ fontSize: 11, color: "#5B6570", marginTop: 2 }}>
                   {equipamentos.length > 0
                     ? "Comece por “Adicionar do catálogo” — os preços já vêm preenchidos."
                     : "Cadastre equipamentos no catálogo para reaproveitá-los aqui."}
@@ -1117,13 +1117,13 @@ function EditorOrcamento({
                       title={it.equipamento_id ? "Item do catálogo" : "Item avulso"}
                       style={{
                         width: 24, height: 24, borderRadius: 7, flexShrink: 0, display: "grid", placeItems: "center",
-                        background: it.equipamento_id ? "rgba(41,128,185,0.12)" : "transparent",
-                        border: it.equipamento_id ? "none" : "1.5px dashed rgba(200,225,240,0.95)",
+                        background: it.equipamento_id ? "#EFF4FE" : "transparent",
+                        border: it.equipamento_id ? "none" : "1.5px dashed #E3E6E9",
                       }}
                     >
                       {it.equipamento_id
-                        ? <Package style={{ width: 12, height: 12, color: "#2980b9" }} />
-                        : <Plus style={{ width: 11, height: 11, color: "rgba(20,45,70,0.35)" }} />}
+                        ? <Package style={{ width: 12, height: 12, color: "#2563EB" }} />
+                        : <Plus style={{ width: 11, height: 11, color: "#5B6570" }} />}
                     </span>
                     <input value={it.descricao} onChange={e => mudarItem(idx, { descricao: e.target.value })}
                       placeholder="Descrição" aria-label="Descrição do item"
@@ -1136,7 +1136,7 @@ function EditorOrcamento({
                       style={{ ...field, marginTop: 0, width: 104, height: 36, fontSize: 12, textAlign: "right", padding: "0 8px" }} />
                     <button onClick={() => setItens(prev => prev.filter((_, i) => i !== idx))} className="vp-icon-btn"
                       aria-label="Remover item"
-                      style={{ width: 32, height: 36, background: "rgba(220,38,38,0.08)", color: "#c0392b", flexShrink: 0 }}>
+                      style={{ width: 32, height: 36, background: "rgba(220,38,38,0.08)", color: "#B42318", flexShrink: 0 }}>
                       <X style={{ width: 12, height: 12 }} />
                     </button>
                   </div>
@@ -1152,14 +1152,14 @@ function EditorOrcamento({
               style={{ ...field, height: "auto", minHeight: 70, padding: "10px 12px", resize: "vertical" }} />
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 12, paddingTop: 10, borderTop: "1px solid rgba(200,225,240,0.7)", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, paddingTop: 10, borderTop: "1px solid #E3E6E9", flexWrap: "wrap" }}>
             <div style={{ flex: 1, minWidth: 120 }}>
-              <div style={{ fontSize: 10, fontWeight: 800, color: "rgba(20,45,70,0.45)", textTransform: "uppercase", letterSpacing: "0.07em" }}>Total</div>
-              <div className="vp-num" style={{ fontSize: 21, fontWeight: 900, color: "#0f2133", letterSpacing: "-0.02em" }}>{brl(total)}</div>
+              <div style={{ fontSize: 10, fontWeight: 800, color: "#5B6570", textTransform: "uppercase", letterSpacing: "0.07em" }}>Total</div>
+              <div className="vp-num" style={{ fontSize: 21, fontWeight: 900, color: "#16191D", letterSpacing: "-0.02em" }}>{brl(total)}</div>
             </div>
             <button onClick={onFechar} className="vp-ghost" style={{ height: 42, padding: "0 18px", fontSize: 13 }}>Cancelar</button>
             <button onClick={salvar} disabled={salvando}
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 20px", height: 42, borderRadius: 10, border: "none", color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: "inherit", background: "linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)", backgroundSize: "200% 200%", animation: "gradientShift 4s ease infinite", cursor: salvando ? "wait" : "pointer", opacity: salvando ? 0.7 : 1 }}>
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 20px", height: 42, borderRadius: 8, border: "none", color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: "inherit", background: "#2563EB", backgroundSize: "200% 200%", animation: "gradientShift 4s ease infinite", cursor: salvando ? "wait" : "pointer", opacity: salvando ? 0.7 : 1 }}>
               {salvando
                 ? <Loader2 style={{ width: 14, height: 14, animation: "spin 1s linear infinite" }} />
                 : <Check style={{ width: 14, height: 14 }} />}
@@ -1222,17 +1222,17 @@ function SeletorCatalogo({
         className="vp-catalogo-btn"
         style={{
           width: "100%", display: "flex", alignItems: "center", gap: 10,
-          height: 52, padding: "0 14px", borderRadius: 12, cursor: vazio ? "not-allowed" : "pointer",
+          height: 52, padding: "0 14px", borderRadius: 8, cursor: vazio ? "not-allowed" : "pointer",
           fontFamily: "inherit", textAlign: "left", opacity: vazio ? 0.6 : 1,
-          border: `1.5px solid ${aberto ? "rgba(41,128,185,0.65)" : "rgba(41,128,185,0.35)"}`,
-          background: "linear-gradient(135deg, rgba(41,128,185,0.12), rgba(26,188,156,0.10))",
-          boxShadow: aberto ? "0 0 0 3px rgba(41,128,185,0.14)" : "0 2px 8px rgba(41,128,185,0.10)",
+          border: `1.5px solid ${aberto ? "#2563EB" : "#2563EB"}`,
+          background: "#EFF4FE",
+          boxShadow: aberto ? "0 0 0 3px #2563EB" : "0 2px 8px #2563EB",
           transition: "all 0.16s ease",
         }}
       >
         <span aria-hidden style={{
           width: 32, height: 32, borderRadius: 9, flexShrink: 0, display: "grid", placeItems: "center",
-          background: "linear-gradient(135deg,#2980b9,#1abc9c)", boxShadow: "0 3px 10px rgba(41,128,185,0.35)",
+          background: "#2563EB", boxShadow:"none",
         }}>
           <Package style={{ width: 16, height: 16, color: "#fff" }} />
         </span>
@@ -1246,27 +1246,27 @@ function SeletorCatalogo({
               : `${equipamentos.length} ${equipamentos.length === 1 ? "item disponível" : "itens disponíveis"} — preço já preenchido`}
           </span>
         </span>
-        <ChevronDown style={{ width: 15, height: 15, color: "#2980b9", flexShrink: 0, transform: aberto ? "rotate(180deg)" : "none", transition: "transform 0.16s" }} />
+        <ChevronDown style={{ width: 15, height: 15, color: "#2563EB", flexShrink: 0, transform: aberto ? "rotate(180deg)" : "none", transition: "transform 0.16s" }} />
       </button>
 
       {aberto && (
         <div role="listbox" aria-label="Itens do catálogo" style={{
           position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 20,
-          maxHeight: 300, overflowY: "auto", borderRadius: 12, background: "#fff",
-          border: "1px solid rgba(200,225,240,0.95)", boxShadow: "0 14px 40px rgba(10,31,51,0.22)",
+          maxHeight: 300, overflowY: "auto", borderRadius: 8, background: "#fff",
+          border: "1px solid #E3E6E9", boxShadow:"none",
         }}>
-          <div style={{ position: "sticky", top: 0, background: "#fff", padding: 8, borderBottom: "1px solid rgba(200,225,240,0.7)" }}>
+          <div style={{ position: "sticky", top: 0, background: "#fff", padding: 8, borderBottom: "1px solid #E3E6E9" }}>
             <input
               autoFocus value={busca} onChange={e => setBusca(e.target.value)}
               placeholder="Buscar no catálogo…" aria-label="Buscar no catálogo"
               style={{
                 width: "100%", height: 34, padding: "0 12px", borderRadius: 8, fontSize: 12,
-                border: "1.5px solid rgba(200,225,240,0.9)", outline: "none", fontFamily: "inherit", color: "#0f2133",
+                border: "1.5px solid #E3E6E9", outline: "none", fontFamily: "inherit", color: "#16191D",
               }}
             />
           </div>
           {filtrados.length === 0 ? (
-            <div style={{ padding: "22px 14px", textAlign: "center", fontSize: 12, fontWeight: 600, color: "rgba(20,45,70,0.45)" }}>
+            <div style={{ padding: "22px 14px", textAlign: "center", fontSize: 12, fontWeight: 600, color: "#5B6570" }}>
               Nenhum item encontrado para “{busca}”.
             </div>
           ) : filtrados.map(eq => (
@@ -1276,20 +1276,20 @@ function SeletorCatalogo({
               className="vp-catalogo-item"
               style={{
                 width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
-                border: "none", borderBottom: "1px solid rgba(200,225,240,0.45)", background: "none",
+                border: "none", borderBottom: "1px solid #E3E6E9", background: "none",
                 cursor: "pointer", textAlign: "left", fontFamily: "inherit",
               }}
             >
-              <Package style={{ width: 14, height: 14, color: "#2980b9", flexShrink: 0 }} />
+              <Package style={{ width: 14, height: 14, color: "#2563EB", flexShrink: 0 }} />
               <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: "block", fontSize: 12.5, fontWeight: 700, color: "#0f2133", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                <span style={{ display: "block", fontSize: 12.5, fontWeight: 700, color: "#16191D", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   {eq.nome}
                   {eq.codigo && (
-                    <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(20,45,70,0.4)", marginLeft: 6 }}>{eq.codigo}</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "#5B6570", marginLeft: 6 }}>{eq.codigo}</span>
                   )}
                 </span>
                 {eq.descricao && (
-                  <span style={{ display: "block", fontSize: 11, color: "rgba(20,45,70,0.55)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  <span style={{ display: "block", fontSize: 11, color: "#5B6570", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {eq.descricao}
                   </span>
                 )}
@@ -1329,14 +1329,14 @@ function FalhaEnvioOrcamento({
   };
 
   return (
-    <div style={{ padding: "13px 15px", borderRadius: 12, background: "rgba(217,119,6,0.07)", border: "1px solid rgba(217,119,6,0.3)" }}>
+    <div style={{ padding: "13px 15px", borderRadius: 8, background: "rgba(217,119,6,0.07)", border: "1px solid rgba(217,119,6,0.3)" }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 9 }}>
         <AlertTriangle style={{ width: 16, height: 16, color: "#b45309", flexShrink: 0, marginTop: 1 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 800, color: "#b45309" }}>
             O email automático não saiu — o orçamento continua intacto
           </div>
-          <div style={{ fontSize: 12, color: "rgba(20,45,70,0.65)", marginTop: 4, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 12, color: "#5B6570", marginTop: 4, lineHeight: 1.5 }}>
             {falha.motivo}
           </div>
         </div>
@@ -1348,7 +1348,7 @@ function FalhaEnvioOrcamento({
 
       {p && (
         <>
-          <div style={{ fontSize: 11.5, fontWeight: 700, color: "rgba(20,45,70,0.6)", margin: "12px 0 7px" }}>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: "#5B6570", margin: "12px 0 7px" }}>
             Enviar você mesmo para {p.empresa_nome}:
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -1371,7 +1371,7 @@ function FalhaEnvioOrcamento({
               <Check style={{ width: 12, height: 12 }} /> Já enviei — marcar como enviado
             </button>
           </div>
-          <pre style={{ marginTop: 10, padding: "10px 12px", borderRadius: 9, background: "rgba(255,255,255,0.85)", border: "1px solid rgba(200,225,240,0.8)", fontSize: 11.5, lineHeight: 1.55, color: "#0f2133", whiteSpace: "pre-wrap", fontFamily: "inherit", maxHeight: 180, overflowY: "auto" }}>
+          <pre style={{ marginTop: 10, padding: "10px 12px", borderRadius: 9, background: "#ffffff", border: "1px solid #E3E6E9", fontSize: 11.5, lineHeight: 1.55, color: "#16191D", whiteSpace: "pre-wrap", fontFamily: "inherit", maxHeight: 180, overflowY: "auto" }}>
             {p.texto}
           </pre>
         </>

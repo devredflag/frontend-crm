@@ -20,37 +20,30 @@ import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGe
     const css = `
       @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
       * { font-family: 'Plus Jakarta Sans', sans-serif; box-sizing: border-box; margin: 0; padding: 0; }
-      @keyframes float1 { 0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(40px,-30px) scale(1.05)}66%{transform:translate(-20px,20px) scale(0.97)} }
-      @keyframes float2 { 0%,100%{transform:translate(0,0) scale(1)}40%{transform:translate(-50px,25px) scale(1.08)}70%{transform:translate(30px,-15px) scale(0.95)} }
-      @keyframes float3 { 0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(25px,40px) scale(1.03)} }
-      @keyframes float4 { 0%,100%{transform:translate(0,0)}30%{transform:translate(-30px,-40px)}60%{transform:translate(20px,15px)} }
-      @keyframes float5 { 0%,100%{transform:translate(0,0) scale(1)}45%{transform:translate(35px,-20px) scale(1.06)}80%{transform:translate(-15px,30px) scale(0.96)} }
-      @keyframes gradientShift { 0%,100%{background-position:0% 50%}50%{background-position:100% 50%} }
-      @keyframes shimmer { 0%{background-position:-200% 0}100%{background-position:200% 0} }
       @keyframes pulseDraft { 0%,100%{opacity:1} 50%{opacity:0.55} }
       @keyframes bellShake { 0%,100%{transform:rotate(0)}20%{transform:rotate(-12deg)}40%{transform:rotate(12deg)}60%{transform:rotate(-8deg)}80%{transform:rotate(8deg)} }
-      .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:10px; cursor:pointer; font-size:13.5px; font-weight:500; color:rgba(255,255,255,0.65); transition:all 0.18s; user-select:none; }
-      .nav-item:hover { background:rgba(255,255,255,0.08); color:#fff; }
-      .nav-item.active { background:rgba(255,255,255,0.14); color:#fff; font-weight:600; }
-      .glass-card { background:rgba(255,255,255,0.72); backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.9); border-radius:16px; }
-      .metric-card { background:rgba(255,255,255,0.72); backdrop-filter:blur(16px); border:1.5px solid rgba(255,255,255,0.9); border-radius:16px; padding:16px 14px; transition:all 0.2s; cursor:pointer; user-select:none; }
-      .metric-card:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(41,128,185,0.15); }
-      .preview-row { display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr; align-items:center; padding:11px 18px; border-bottom:1px solid rgba(200,225,240,0.35); cursor:pointer; transition:background 0.13s; }
-      .preview-row:hover { background:rgba(41,128,185,0.04); }
+      .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:8px; cursor:pointer; font-size:13.5px; font-weight:500; color:#ffffff; transition:all 0.18s; user-select:none; }
+      .nav-item:hover { background:#ffffff; color:#fff; }
+      .nav-item.active { background:#ffffff; color:#fff; font-weight:600; }
+      .glass-card { background:#ffffff; border:1px solid #ffffff; border-radius:8px; }
+      .metric-card { background:#ffffff; border:1.5px solid #ffffff; border-radius:8px; padding:16px 14px; transition:all 0.2s; cursor:pointer; user-select:none; }
+      .metric-card:hover { transform:translateY(-2px); box-shadow:0 8px 28px #EFF4FE; }
+      .preview-row { display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr; align-items:center; padding:11px 18px; border-bottom:1px solid #E3E6E9; cursor:pointer; transition:background 0.13s; }
+      .preview-row:hover { background:#2563EB; }
       .preview-row.draft-row { background:rgba(142,68,173,0.03); border-left:3px solid rgba(142,68,173,0.3); }
       .preview-row.draft-row:hover { background:rgba(142,68,173,0.07); }
       .preview-row:last-child { border-bottom:none; }
-      .preview-th { display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr; align-items:center; padding:8px 18px; border-bottom:1px solid rgba(200,225,240,0.5); }
-      .chip { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:20px; font-size:10px; font-weight:700; white-space:nowrap; }
-      .action-item { padding:12px 14px; border-radius:12px; background:rgba(255,255,255,0.55); border:1px solid rgba(200,225,240,0.6); cursor:pointer; transition:all 0.18s; }
-      .action-item:hover { background:rgba(255,255,255,0.85); border-color:rgba(41,128,185,0.3); transform:translateY(-1px); }
-      .notif-item { padding:12px 14px; border-bottom:1px solid rgba(200,225,240,0.3); transition:background 0.13s; display:flex; gap:10px; align-items:flex-start; }
-      .notif-item:hover { background:rgba(41,128,185,0.03); }
+      .preview-th { display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr; align-items:center; padding:8px 18px; border-bottom:1px solid #E3E6E9; }
+      .chip { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:8px; font-size:10px; font-weight:700; white-space:nowrap; }
+      .action-item { padding:12px 14px; border-radius:8px; background:#ffffff; border:1px solid #E3E6E9; cursor:pointer; transition:all 0.18s; }
+      .action-item:hover { background:#ffffff; border-color:#2563EB; transform:translateY(-1px); }
+      .notif-item { padding:12px 14px; border-bottom:1px solid #E3E6E9; transition:background 0.13s; display:flex; gap:10px; align-items:flex-start; }
+      .notif-item:hover { background:#2563EB; }
       .notif-item:last-child { border-bottom:none; }
-      .skeleton { background:linear-gradient(90deg,rgba(200,225,240,0.4) 25%,rgba(220,240,252,0.7) 50%,rgba(200,225,240,0.4) 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:6px; }
+      .skeleton { background:#E3E6E9; background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:6px; }
       ::-webkit-scrollbar { width:4px; height:4px; }
       ::-webkit-scrollbar-track { background:transparent; }
-      ::-webkit-scrollbar-thumb { background:rgba(41,128,185,0.25); border-radius:4px; }
+      ::-webkit-scrollbar-thumb { background:#EFF4FE; border-radius:4px; }
     `;
 
     const API = "https://backend-crm-production-157b.up.railway.app";
@@ -82,7 +75,7 @@ import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGe
     ];
 
     function avatarColor(n: string) {
-      const c=["#2980b9","#1abc9c","#8e44ad","#e67e22","#27ae60","#e74c3c"];
+      const c=["#2563EB","#2563EB","#5B6570","#8A5A00","#0F7B4F","#B42318"];
       return c[(n?.charCodeAt(0)||0)%c.length];
     }
     function initials(n: string) { return n?.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase()||"?"; }
@@ -93,11 +86,11 @@ import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGe
       if(s==="Negociação")      return { bg:"rgba(217,119,6,0.12)",   text:"#b45309",  border:"rgba(217,119,6,0.3)"   };
       if(s==="Proposta")        return { bg:"rgba(142,68,173,0.12)",  text:"#7d3c98",  border:"rgba(142,68,173,0.3)"  };
       if(s==="Visita agendada") return { bg:"rgba(20,184,166,0.12)",  text:"#0f766e",  border:"rgba(20,184,166,0.3)"  };
-      if(s==="Em contato")      return { bg:"rgba(41,128,185,0.12)",  text:"#1a5276",  border:"rgba(41,128,185,0.3)"  };
+      if(s==="Em contato")      return { bg:"#EFF4FE",  text:"#1a5276",  border:"#2563EB"  };
       return                           { bg:"rgba(149,165,166,0.15)", text:"#566573",  border:"rgba(149,165,166,0.3)" };
     }
     function tempIcon(t: string) { if(t==="Quente")return"🔥"; if(t==="Morno")return"🌡️"; return"❄️"; }
-    function tempColor(t: string) { if(t==="Quente")return"#c0392b"; if(t==="Morno")return"#d68910"; return"#2980b9"; }
+    function tempColor(t: string) { if(t==="Quente")return"#B42318"; if(t==="Morno")return"#d68910"; return"#2563EB"; }
 
     function Sparkline({ color }: { color: string }) {
       return (
@@ -108,22 +101,22 @@ import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGe
     }
 
     function notifIcon(tipo: string) {
-      if(tipo==="rascunho_aviso")    return <AlertTriangle style={{width:14,height:14,color:"#e67e22"}}/>;
-      if(tipo==="rascunho_excluido") return <Trash2 style={{width:14,height:14,color:"#e74c3c"}}/>;
-      if(tipo==="email_interaction") return <Mail style={{width:14,height:14,color:"#2980b9"}}/>;
-      if(tipo==="calendar_accepted") return <CheckCircle2 style={{width:14,height:14,color:"#27ae60"}}/>;
-      if(tipo==="calendar_declined") return <X style={{width:14,height:14,color:"#e74c3c"}}/>;
+      if(tipo==="rascunho_aviso")    return <AlertTriangle style={{width:14,height:14,color:"#8A5A00"}}/>;
+      if(tipo==="rascunho_excluido") return <Trash2 style={{width:14,height:14,color:"#B42318"}}/>;
+      if(tipo==="email_interaction") return <Mail style={{width:14,height:14,color:"#2563EB"}}/>;
+      if(tipo==="calendar_accepted") return <CheckCircle2 style={{width:14,height:14,color:"#0F7B4F"}}/>;
+      if(tipo==="calendar_declined") return <X style={{width:14,height:14,color:"#B42318"}}/>;
       if(tipo==="calendar_tentative")return <AlertTriangle style={{width:14,height:14,color:"#d68910"}}/>;
-      return <Info style={{width:14,height:14,color:"#2980b9"}}/>;
+      return <Info style={{width:14,height:14,color:"#2563EB"}}/>;
     }
     function notifColor(tipo: string) {
-      if(tipo==="rascunho_aviso")    return { bg:"rgba(230,126,34,0.08)",  border:"rgba(230,126,34,0.2)",  dot:"#e67e22" };
-      if(tipo==="rascunho_excluido") return { bg:"rgba(231,76,60,0.08)",   border:"rgba(231,76,60,0.2)",   dot:"#e74c3c" };
-      if(tipo==="email_interaction") return { bg:"rgba(41,128,185,0.08)",  border:"rgba(41,128,185,0.2)",  dot:"#2980b9" };
-      if(tipo==="calendar_accepted") return { bg:"rgba(39,174,96,0.08)",   border:"rgba(39,174,96,0.2)",   dot:"#27ae60" };
-      if(tipo==="calendar_declined") return { bg:"rgba(231,76,60,0.08)",   border:"rgba(231,76,60,0.2)",   dot:"#e74c3c" };
+      if(tipo==="rascunho_aviso")    return { bg:"rgba(230,126,34,0.08)",  border:"rgba(230,126,34,0.2)",  dot:"#8A5A00" };
+      if(tipo==="rascunho_excluido") return { bg:"rgba(231,76,60,0.08)",   border:"rgba(231,76,60,0.2)",   dot:"#B42318" };
+      if(tipo==="email_interaction") return { bg:"#EFF4FE",  border:"#EFF4FE",  dot:"#2563EB" };
+      if(tipo==="calendar_accepted") return { bg:"rgba(39,174,96,0.08)",   border:"rgba(39,174,96,0.2)",   dot:"#0F7B4F" };
+      if(tipo==="calendar_declined") return { bg:"rgba(231,76,60,0.08)",   border:"rgba(231,76,60,0.2)",   dot:"#B42318" };
       if(tipo==="calendar_tentative")return { bg:"rgba(214,137,16,0.08)",  border:"rgba(214,137,16,0.2)",  dot:"#d68910" };
-      return { bg:"rgba(41,128,185,0.08)", border:"rgba(41,128,185,0.2)", dot:"#2980b9" };
+      return { bg:"#EFF4FE", border:"#EFF4FE", dot:"#2563EB" };
     }
     function timeAgo(dateStr: string) {
       const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
@@ -250,14 +243,14 @@ import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGe
       const conversao   = total>0 ? ((fechados/total)*100).toFixed(1) : "0.0";
 
       const metricCards = [
-        { key:"total"      as FilterKey, icon:Building2,     label:"Total",            value:total,            color:"#2980b9", bg:"rgba(41,128,185,0.1)"  },
-        { key:"rascunho"   as FilterKey, icon:FileText,      label:"Rascunhos",        value:rascunhos.length, color:"#8e44ad", bg:"rgba(142,68,173,0.1)"  },
+        { key:"total"      as FilterKey, icon:Building2,     label:"Total",            value:total,            color:"#2563EB", bg:"#EFF4FE"  },
+        { key:"rascunho"   as FilterKey, icon:FileText,      label:"Rascunhos",        value:rascunhos.length, color:"#5B6570", bg:"rgba(142,68,173,0.1)"  },
         { key:"lead"       as FilterKey, icon:Users,         label:"Leads",            value:leads,            color:"#64748b", bg:"rgba(100,116,139,0.1)" },
-        { key:"em_contato" as FilterKey, icon:MessageCircle, label:"Em contato",       value:emContato,        color:"#e67e22", bg:"rgba(230,126,34,0.1)"  },
+        { key:"em_contato" as FilterKey, icon:MessageCircle, label:"Em contato",       value:emContato,        color:"#8A5A00", bg:"rgba(230,126,34,0.1)"  },
         { key:"visita"     as FilterKey, icon:CalendarCheck, label:"Visita agendada",  value:visitas,          color:"#0d9488", bg:"rgba(13,148,136,0.1)"   },
-        { key:"proposta"   as FilterKey, icon:Send,          label:"Propostas",        value:propostas,        color:"#8e44ad", bg:"rgba(142,68,173,0.1)"  },
+        { key:"proposta"   as FilterKey, icon:Send,          label:"Propostas",        value:propostas,        color:"#5B6570", bg:"rgba(142,68,173,0.1)"  },
         { key:"negociacao" as FilterKey, icon:Repeat,        label:"Negociação",       value:negociacao,       color:"#d97706", bg:"rgba(217,119,6,0.1)"   },
-        { key:"fechado"    as FilterKey, icon:Handshake,     label:"Fechados",         value:fechados,         color:"#27ae60", bg:"rgba(39,174,96,0.1)"   },
+        { key:"fechado"    as FilterKey, icon:Handshake,     label:"Fechados",         value:fechados,         color:"#0F7B4F", bg:"rgba(39,174,96,0.1)"   },
       ];
 
       const filterMap: Record<FilterKey, Empresa[]> = {
@@ -288,17 +281,8 @@ import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGe
 
           {/* Background */}
           <div style={{position:"fixed",inset:0,zIndex:0,overflow:"hidden",pointerEvents:"none"}}>
-            <div style={{position:"absolute",inset:0,background:"linear-gradient(145deg,#c8e8f5 0%,#d6eef5 30%,#cceee8 65%,#c5eae0 100%)"}}/>
-            <div style={{position:"absolute",inset:0,opacity:0.4,backgroundImage:"radial-gradient(circle,rgba(41,128,185,0.2) 1px,transparent 1px)",backgroundSize:"22px 22px"}}/>
-            {[
-              {w:420,h:420,top:"-80px",left:"10%",anim:"float1 18s ease-in-out infinite",op:0.1,c1:"#2980b9",c2:"#1abc9c"},
-              {w:280,h:280,top:"40%",left:"-60px",anim:"float2 22s ease-in-out infinite",op:0.08,c1:"#1abc9c",c2:"#2ecc71"},
-              {w:360,h:360,top:"60%",left:"55%",anim:"float3 26s ease-in-out infinite",op:0.07,c1:"#2980b9",c2:"#8e44ad"},
-              {w:200,h:200,top:"20%",left:"75%",anim:"float4 20s ease-in-out infinite",op:0.09,c1:"#27ae60",c2:"#1abc9c"},
-              {w:300,h:300,top:"75%",left:"20%",anim:"float5 24s ease-in-out infinite",op:0.07,c1:"#e67e22",c2:"#f39c12"},
-            ].map((c,i)=>(
-              <div key={i} style={{position:"absolute",width:c.w,height:c.h,top:c.top,left:c.left,borderRadius:"50%",background:`radial-gradient(circle at 40% 40%,${c.c1},${c.c2})`,opacity:c.op,animation:c.anim,filter:"blur(2px)"}}/>
-            ))}
+            <div style={{position:"absolute",inset:0,background:"#F6F7F8"}}/>
+            
           </div>
 
           {/* Backdrop mobile */}
@@ -307,18 +291,18 @@ import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGe
           )}
 
           {/* Sidebar */}
-          <div style={{width:220,flexShrink:0,height:"100vh",overflowY:"auto",zIndex:1000,background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)",boxShadow:"4px 0 24px rgba(0,0,0,0.18)",display:"flex",flexDirection:"column",padding:"0 12px 20px",
+          <div style={{width:220,flexShrink:0,height:"100vh",overflowY:"auto",zIndex:1000,background:"#1a3a5c",boxShadow:"none",display:"flex",flexDirection:"column",padding:"0 12px 20px",
             position: isMobile ? "fixed" : "relative", top:0, left:0,
             transform: isMobile && !menuOpen ? "translateX(-100%)" : "translateX(0)",
             transition:"transform 0.28s ease"}}>
-            <div style={{padding:"22px 4px 24px",borderBottom:"1px solid rgba(255,255,255,0.08)",marginBottom:16}}>
+            <div style={{padding:"22px 4px 24px",borderBottom:"1px solid #ffffff",marginBottom:16}}>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#2980b9,#1abc9c)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 12px rgba(41,128,185,0.4)"}}>
+                <div style={{width:36,height:36,borderRadius:8,background:"#2563EB",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"none"}}>
                   <BarChart3 style={{width:18,height:18,color:"#fff"}}/>
                 </div>
                 <div>
                   <div style={{fontSize:14,fontWeight:800,color:"#fff"}}>Prospecção</div>
-                  <div style={{fontSize:11,fontWeight:700,background:"linear-gradient(90deg,#2980b9,#1abc9c,#2ecc71,#2980b9)",backgroundSize:"200% 200%",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"gradientShift 4s ease infinite"}}>CRM</div>
+                  <div style={{fontSize:11,fontWeight:700,background:"#2563EB",backgroundSize:"200% 200%",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"gradientShift 4s ease infinite"}}>CRM</div>
                 </div>
               </div>
             </div>
@@ -347,36 +331,36 @@ import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGe
           <div style={{flex:1,height:"100vh",overflowY:"auto",position:"relative",zIndex:5}}>
 
             {/* Topbar */}
-            <div style={{position:"sticky",top:0,zIndex:20,padding:isMobile?"12px 14px":"14px 28px",background:"rgba(210,238,248,0.75)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,0.6)",display:"flex",alignItems:"center",gap:isMobile?10:16}}>
+            <div style={{position:"sticky",top:0,zIndex:20,padding:isMobile?"12px 14px":"14px 28px",background:"rgba(210,238,248,0.75)", borderBottom:"1px solid #ffffff",display:"flex",alignItems:"center",gap:isMobile?10:16}}>
               {isMobile && (
-                <button onClick={()=>setMenuOpen(true)} style={{width:36,height:36,borderRadius:10,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.75)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                  <Menu style={{width:18,height:18,color:"#2980b9"}}/>
+                <button onClick={()=>setMenuOpen(true)} style={{width:36,height:36,borderRadius:8,border:"1px solid #E3E6E9",background:"#ffffff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  <Menu style={{width:18,height:18,color:"#2563EB"}}/>
                 </button>
               )}
               <div style={{flex:1,minWidth:0}}>
-                <h1 style={{fontSize:18,fontWeight:800,color:"#0f2133",letterSpacing:"-0.02em"}}>Dashboard</h1>
-                <p style={{fontSize:12,color:"rgba(20,45,70,0.5)",marginTop:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Bem-vindo de volta, {usuario?.nome?.split(" ")[0]||"..."}! 👋</p>
+                <h1 style={{fontSize:18,fontWeight:800,color:"#16191D",letterSpacing:"-0.02em"}}>Dashboard</h1>
+                <p style={{fontSize:12,color:"#5B6570",marginTop:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Bem-vindo de volta, {usuario?.nome?.split(" ")[0]||"..."}! 👋</p>
               </div>
               {!isMobile && (
-              <div style={{display:"flex",alignItems:"center",gap:8,background:"rgba(255,255,255,0.75)",border:"1px solid rgba(200,225,240,0.9)",borderRadius:10,padding:"0 14px",height:38,width:260}}>
-                <Search style={{width:14,height:14,color:"rgba(20,45,70,0.35)",flexShrink:0}}/>
-                <input value={searchValue} onChange={e=>setSearchValue(e.target.value)} placeholder="Buscar leads, empresas..." style={{flex:1,border:"none",background:"transparent",fontSize:13,color:"#1a2e40",outline:"none"}}/>
+              <div style={{display:"flex",alignItems:"center",gap:8,background:"#ffffff",border:"1px solid #E3E6E9",borderRadius:8,padding:"0 14px",height:38,width:260}}>
+                <Search style={{width:14,height:14,color:"#5B6570",flexShrink:0}}/>
+                <input value={searchValue} onChange={e=>setSearchValue(e.target.value)} placeholder="Buscar leads, empresas..." style={{flex:1,border:"none",background:"transparent",fontSize:13,color:"#16191D",outline:"none"}}/>
               </div>
               )}
               <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                <button onClick={()=>{fetchData();fetchNotificacoes();}} style={{width:38,height:38,borderRadius:10,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.75)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                  <RefreshCw style={{width:15,height:15,color:"#2980b9"}}/>
+                <button onClick={()=>{fetchData();fetchNotificacoes();}} style={{width:38,height:38,borderRadius:8,border:"1px solid #E3E6E9",background:"#ffffff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  <RefreshCw style={{width:15,height:15,color:"#2563EB"}}/>
                 </button>
 
                 {/* ── SINO DE NOTIFICAÇÕES ── */}
                 <div ref={notifRef} style={{position:"relative"}}>
                   <button
                     onClick={()=>setShowNotif(!showNotif)}
-                    style={{width:38,height:38,borderRadius:10,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.75)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}
+                    style={{width:38,height:38,borderRadius:8,border:"1px solid #E3E6E9",background:"#ffffff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}
                   >
-                    <Bell style={{width:16,height:16,color:"#2980b9",animation:naoLidas>0?"bellShake 1.5s ease infinite":"none"}}/>
+                    <Bell style={{width:16,height:16,color:"#2563EB",animation:naoLidas>0?"bellShake 1.5s ease infinite":"none"}}/>
                     {naoLidas > 0 && (
-                      <span style={{position:"absolute",top:-4,right:-4,width:18,height:18,borderRadius:"50%",background:"#e74c3c",color:"#fff",fontSize:10,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",border:"2px solid rgba(210,238,248,0.9)"}}>
+                      <span style={{position:"absolute",top:-4,right:-4,width:18,height:18,borderRadius:"50%",background:"#B42318",color:"#fff",fontSize:10,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",border:"2px solid rgba(210,238,248,0.9)"}}>
                         {naoLidas > 9 ? "9+" : naoLidas}
                       </span>
                     )}
@@ -388,21 +372,21 @@ import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGe
                       <motion.div
                         initial={{opacity:0,y:-8,scale:0.96}} animate={{opacity:1,y:0,scale:1}} exit={{opacity:0,y:-8,scale:0.96}}
                         transition={{duration:0.18}}
-                        style={{position:"absolute",top:"calc(100% + 10px)",right:0,width:360,background:"rgba(240,250,255,0.98)",backdropFilter:"blur(20px)",border:"1px solid rgba(200,225,240,0.9)",borderRadius:16,boxShadow:"0 12px 48px rgba(41,128,185,0.18)",overflow:"hidden",zIndex:200}}
+                        style={{position:"absolute",top:"calc(100% + 10px)",right:0,width:360,background:"rgba(240,250,255,0.98)", border:"1px solid #E3E6E9",borderRadius:8,boxShadow:"none",overflow:"hidden",zIndex:200}}
                       >
                         {/* Header */}
-                        <div style={{padding:"14px 16px",borderBottom:"1px solid rgba(200,225,240,0.5)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                        <div style={{padding:"14px 16px",borderBottom:"1px solid #E3E6E9",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                           <div style={{display:"flex",alignItems:"center",gap:8}}>
-                            <Bell style={{width:14,height:14,color:"#2980b9"}}/>
-                            <span style={{fontSize:13,fontWeight:700,color:"#0f2133"}}>Notificações</span>
+                            <Bell style={{width:14,height:14,color:"#2563EB"}}/>
+                            <span style={{fontSize:13,fontWeight:700,color:"#16191D"}}>Notificações</span>
                             {naoLidas > 0 && (
-                              <span style={{fontSize:10,fontWeight:800,padding:"2px 7px",borderRadius:10,background:"rgba(231,76,60,0.12)",color:"#e74c3c"}}>
+                              <span style={{fontSize:10,fontWeight:800,padding:"2px 7px",borderRadius:8,background:"rgba(231,76,60,0.12)",color:"#B42318"}}>
                                 {naoLidas} nova{naoLidas!==1?"s":""}
                               </span>
                             )}
                           </div>
                           {naoLidas > 0 && (
-                            <button onClick={marcarTodasLidas} style={{display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:600,color:"#2980b9",background:"none",border:"none",cursor:"pointer"}}>
+                            <button onClick={marcarTodasLidas} style={{display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:600,color:"#2563EB",background:"none",border:"none",cursor:"pointer"}}>
                               <CheckCheck style={{width:12,height:12}}/> Marcar todas como lidas
                             </button>
                           )}
@@ -412,8 +396,8 @@ import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGe
                         <div style={{maxHeight:380,overflowY:"auto"}}>
                           {notificacoes.length === 0 ? (
                             <div style={{padding:"32px 20px",textAlign:"center"}}>
-                              <Bell style={{width:28,height:28,color:"rgba(41,128,185,0.25)",margin:"0 auto 10px"}}/>
-                              <p style={{fontSize:12,color:"rgba(20,45,70,0.45)",fontWeight:500}}>Nenhuma notificação</p>
+                              <Bell style={{width:28,height:28,color:"#EFF4FE",margin:"0 auto 10px"}}/>
+                              <p style={{fontSize:12,color:"#5B6570",fontWeight:500}}>Nenhuma notificação</p>
                             </div>
                           ) : (
                             notificacoes.map(n => {
@@ -429,25 +413,25 @@ import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGe
                                   }
                                 }}>
                                   {/* Ícone */}
-                                  <div style={{width:32,height:32,borderRadius:9,background:n.lida?"rgba(200,225,240,0.3)":nc.bg,border:`1px solid ${nc.border}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>
+                                  <div style={{width:32,height:32,borderRadius:9,background:n.lida?"#E3E6E9":nc.bg,border:`1px solid ${nc.border}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>
                                     {notifIcon(n.tipo)}
                                   </div>
                                   <div style={{flex:1,minWidth:0}}>
                                     <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:6}}>
-                                      <div style={{fontSize:12,fontWeight:n.lida?500:700,color:"#0f2133",lineHeight:1.4}}>{n.titulo}</div>
+                                      <div style={{fontSize:12,fontWeight:n.lida?500:700,color:"#16191D",lineHeight:1.4}}>{n.titulo}</div>
                                       <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
                                         {!n.lida && <div style={{width:6,height:6,borderRadius:"50%",background:nc.dot,flexShrink:0}}/>}
-                                        <span style={{fontSize:10,color:"rgba(20,45,70,0.4)",whiteSpace:"nowrap"}}>{timeAgo(n.criado_em)}</span>
+                                        <span style={{fontSize:10,color:"#5B6570",whiteSpace:"nowrap"}}>{timeAgo(n.criado_em)}</span>
                                       </div>
                                     </div>
-                                    <div style={{fontSize:11,color:"rgba(20,45,70,0.55)",marginTop:3,lineHeight:1.5}}>{n.mensagem}</div>
+                                    <div style={{fontSize:11,color:"#5B6570",marginTop:3,lineHeight:1.5}}>{n.mensagem}</div>
                                     {n.empresa_nome && (
-                                      <div style={{marginTop:4,fontSize:10,fontWeight:600,color:"#2980b9"}}>{n.empresa_nome}</div>
+                                      <div style={{marginTop:4,fontSize:10,fontWeight:600,color:"#2563EB"}}>{n.empresa_nome}</div>
                                     )}
                                   </div>
                                   <button
                                     onClick={e=>{e.stopPropagation();deletarNotificacao(n.notificacao_id,n.lida);}}
-                                    style={{background:"none",border:"none",cursor:"pointer",padding:2,color:"rgba(20,45,70,0.3)",flexShrink:0,marginTop:2}}
+                                    style={{background:"none",border:"none",cursor:"pointer",padding:2,color:"#5B6570",flexShrink:0,marginTop:2}}
                                   >
                                     <X style={{width:13,height:13}}/>
                                   </button>
@@ -461,7 +445,7 @@ import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGe
                   </AnimatePresence>
                 </div>
 
-                <button onClick={()=>navigate("/empresas/nova")} style={{height:38,padding:"0 14px",borderRadius:10,border:"none",cursor:"pointer",background:"linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9)",backgroundSize:"200% 200%",animation:"gradientShift 4s ease infinite",color:"#fff",fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:6,boxShadow:"0 4px 14px rgba(41,128,185,0.35)"}}>
+                <button onClick={()=>navigate("/empresas/nova")} style={{height:38,padding:"0 14px",borderRadius:8,border:"none",cursor:"pointer",background:"#2563EB",backgroundSize:"200% 200%",animation:"gradientShift 4s ease infinite",color:"#fff",fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:6,boxShadow:"none"}}>
                   <Plus style={{width:15,height:15}}/> Novo
                 </button>
               </div>
@@ -479,16 +463,16 @@ import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGe
               <AnimatePresence>
                 {rascunhos.length > 0 && (
                   <motion.div initial={{opacity:0,y:-8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}}
-                    style={{display:"flex",alignItems:"center",gap:14,padding:"14px 20px",borderRadius:14,background:"rgba(142,68,173,0.07)",border:"1.5px solid rgba(142,68,173,0.22)",backdropFilter:"blur(8px)"}}>
-                    <div style={{width:40,height:40,borderRadius:11,background:"rgba(142,68,173,0.12)",border:"1px solid rgba(142,68,173,0.2)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,animation:"pulseDraft 2.5s ease infinite"}}>
-                      <FileText style={{width:18,height:18,color:"#8e44ad"}}/>
+                    style={{display:"flex",alignItems:"center",gap:14,padding:"14px 20px",borderRadius:8,background:"rgba(142,68,173,0.07)",border:"1.5px solid rgba(142,68,173,0.22)"}}>
+                    <div style={{width:40,height:40,borderRadius:8,background:"rgba(142,68,173,0.12)",border:"1px solid rgba(142,68,173,0.2)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,animation:"pulseDraft 2.5s ease infinite"}}>
+                      <FileText style={{width:18,height:18,color:"#5B6570"}}/>
                     </div>
                     <div style={{flex:1}}>
-                      <div style={{fontSize:13,fontWeight:700,color:"#0f2133"}}>{rascunhos.length} rascunho{rascunhos.length!==1?"s":""} pendente{rascunhos.length!==1?"s":""}</div>
-                      <div style={{fontSize:11,color:"rgba(20,45,70,0.5)",marginTop:1}}>Complete as informações obrigatórias para transformar em lead</div>
+                      <div style={{fontSize:13,fontWeight:700,color:"#16191D"}}>{rascunhos.length} rascunho{rascunhos.length!==1?"s":""} pendente{rascunhos.length!==1?"s":""}</div>
+                      <div style={{fontSize:11,color:"#5B6570",marginTop:1}}>Complete as informações obrigatórias para transformar em lead</div>
                     </div>
                     <button onClick={()=>setActiveFilter("rascunho")}
-                      style={{padding:"7px 14px",borderRadius:8,border:"1.5px solid rgba(142,68,173,0.3)",background:"rgba(142,68,173,0.1)",color:"#8e44ad",fontSize:12,fontWeight:700,cursor:"pointer",flexShrink:0}}
+                      style={{padding:"7px 14px",borderRadius:8,border:"1.5px solid rgba(142,68,173,0.3)",background:"rgba(142,68,173,0.1)",color:"#5B6570",fontSize:12,fontWeight:700,cursor:"pointer",flexShrink:0}}
                       onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(142,68,173,0.18)";}}
                       onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(142,68,173,0.1)";}}>
                       Ver rascunhos
@@ -511,15 +495,15 @@ import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGe
                       </div>
                       <div style={{display:"flex",alignItems:"center",gap:5}}>
                         {m.key==="rascunho"&&m.value>0&&(
-                          <span style={{fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:4,background:"rgba(142,68,173,0.12)",color:"#8e44ad",border:"1px solid rgba(142,68,173,0.2)",animation:"pulseDraft 2s ease infinite"}}>PENDENTE</span>
+                          <span style={{fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:4,background:"rgba(142,68,173,0.12)",color:"#5B6570",border:"1px solid rgba(142,68,173,0.2)",animation:"pulseDraft 2s ease infinite"}}>PENDENTE</span>
                         )}
                         {activeFilter===m.key&&<div style={{width:8,height:8,borderRadius:"50%",background:m.color}}/>}
                       </div>
                     </div>
                     {loading?<div className="skeleton" style={{height:24,width:"50%",marginBottom:4}}/>:(
-                      <div style={{fontSize:24,fontWeight:900,color:"#0f2133",letterSpacing:"-0.03em"}}>{m.value}</div>
+                      <div style={{fontSize:24,fontWeight:900,color:"#16191D",letterSpacing:"-0.03em"}}>{m.value}</div>
                     )}
-                    <div style={{fontSize:10,color:"rgba(20,45,70,0.5)",fontWeight:600,marginTop:2}}>{m.label}</div>
+                    <div style={{fontSize:10,color:"#5B6570",fontWeight:600,marginTop:2}}>{m.label}</div>
                     <div style={{marginTop:8}}><Sparkline color={m.color}/></div>
                   </motion.div>
                 ))}
@@ -527,14 +511,14 @@ import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGe
 
               {/* Painel preview */}
               <motion.div className="glass-card" style={{overflow:"hidden"}} initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.4,delay:0.3}}>
-                <div style={{padding:"16px 20px",borderBottom:"1px solid rgba(200,225,240,0.5)",display:"flex",alignItems:"center",justifyContent:"space-between",background:`linear-gradient(90deg,${activeCard.bg},transparent)`}}>
+                <div style={{padding:"16px 20px",borderBottom:"1px solid #E3E6E9",display:"flex",alignItems:"center",justifyContent:"space-between",background:`${activeCard.bg}`}}>
                   <div style={{display:"flex",alignItems:"center",gap:10}}>
                     <div style={{width:30,height:30,borderRadius:8,background:activeCard.bg,display:"flex",alignItems:"center",justifyContent:"center"}}>
                       <activeCard.icon style={{width:14,height:14,color:activeCard.color}}/>
                     </div>
                     <div>
-                      <div style={{fontSize:13,fontWeight:700,color:"#0f2133"}}>{filterLabels[activeFilter]}</div>
-                      <div style={{fontSize:11,color:"rgba(20,45,70,0.45)"}}>{previewList.length} empresa{previewList.length!==1?"s":""}</div>
+                      <div style={{fontSize:13,fontWeight:700,color:"#16191D"}}>{filterLabels[activeFilter]}</div>
+                      <div style={{fontSize:11,color:"#5B6570"}}>{previewList.length} empresa{previewList.length!==1?"s":""}</div>
                     </div>
                   </div>
                   <button onClick={()=>navigate(activeFilter==="rascunho" ? "/clientes" : "/gerenciamento")}
@@ -549,11 +533,11 @@ import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGe
                   </div>
                 ):previewList.length===0?(
                   <div style={{padding:"40px 20px",textAlign:"center"}}>
-                    <Building2 style={{width:32,height:32,color:"rgba(41,128,185,0.25)",margin:"0 auto 10px"}}/>
-                    <p style={{fontSize:13,fontWeight:600,color:"rgba(20,45,70,0.4)"}}>
+                    <Building2 style={{width:32,height:32,color:"#EFF4FE",margin:"0 auto 10px"}}/>
+                    <p style={{fontSize:13,fontWeight:600,color:"#5B6570"}}>
                       {activeFilter==="rascunho" ? "Nenhum rascunho pendente" : "Nenhuma empresa nesta categoria"}
                     </p>
-                    <button onClick={()=>navigate("/empresas/nova")} style={{marginTop:12,padding:"7px 16px",borderRadius:8,border:"none",background:"linear-gradient(135deg,#2980b9,#1abc9c)",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer"}}>
+                    <button onClick={()=>navigate("/empresas/nova")} style={{marginTop:12,padding:"7px 16px",borderRadius:8,border:"none",background:"#2563EB",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer"}}>
                       + Cadastrar empresa
                     </button>
                   </div>
@@ -561,8 +545,8 @@ import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGe
                   <>
                     <div className="preview-th">
                       {activeFilter==="rascunho"
-                        ? ["Empresa","Segmento","Cidade","Status","Completar"].map(h=><span key={h} style={{fontSize:10,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:"rgba(20,45,70,0.45)"}}>{h}</span>)
-                        : ["Empresa","Status","Temperatura","Cidade","Ticket"].map(h=><span key={h} style={{fontSize:10,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:"rgba(20,45,70,0.45)"}}>{h}</span>)
+                        ? ["Empresa","Segmento","Cidade","Status","Completar"].map(h=><span key={h} style={{fontSize:10,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:"#5B6570"}}>{h}</span>)
+                        : ["Empresa","Status","Temperatura","Cidade","Ticket"].map(h=><span key={h} style={{fontSize:10,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:"#5B6570"}}>{h}</span>)
                       }
                     </div>
                     <div style={{maxHeight:220,overflowY:"auto"}}>
@@ -576,21 +560,21 @@ import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGe
                               transition={{duration:0.18,delay:idx*0.03}}
                               onClick={()=>navigate(isDraft?`/clientes/${emp.empresa_id}/editar`:`/clientes/${emp.empresa_id}`)}>
                               <div style={{display:"flex",alignItems:"center",gap:10}}>
-                                <div style={{width:28,height:28,borderRadius:8,background:isDraft?"rgba(142,68,173,0.15)":avatarColor(emp.nome),display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:isDraft?"#8e44ad":"#fff",flexShrink:0,border:isDraft?"1.5px dashed rgba(142,68,173,0.4)":"none"}}>
+                                <div style={{width:28,height:28,borderRadius:8,background:isDraft?"rgba(142,68,173,0.15)":avatarColor(emp.nome),display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:isDraft?"#5B6570":"#fff",flexShrink:0,border:isDraft?"1.5px dashed rgba(142,68,173,0.4)":"none"}}>
                                   {isDraft?<FileText style={{width:12,height:12}}/>:initials(emp.nome)}
                                 </div>
                                 <div>
-                                  <div style={{fontSize:12,fontWeight:700,color:"#0f2133"}}>{emp.nome}</div>
-                                  <div style={{fontSize:10,color:"rgba(20,45,70,0.4)"}}>{emp.segmento||"Segmento não definido"}</div>
+                                  <div style={{fontSize:12,fontWeight:700,color:"#16191D"}}>{emp.nome}</div>
+                                  <div style={{fontSize:10,color:"#5B6570"}}>{emp.segmento||"Segmento não definido"}</div>
                                 </div>
                               </div>
                               {isDraft?(
                                 <>
-                                  <span style={{fontSize:11,color:"rgba(20,45,70,0.5)"}}>{emp.segmento||"—"}</span>
-                                  <span style={{fontSize:11,color:"rgba(20,45,70,0.5)"}}>{emp.cidade||"—"}</span>
+                                  <span style={{fontSize:11,color:"#5B6570"}}>{emp.segmento||"—"}</span>
+                                  <span style={{fontSize:11,color:"#5B6570"}}>{emp.cidade||"—"}</span>
                                   <span className="chip" style={{background:sc.bg,color:sc.text,border:`1px solid ${sc.border}`,animation:"pulseDraft 2s ease infinite"}}>{emp.status}</span>
                                   <button onClick={e=>{e.stopPropagation();navigate(`/clientes/${emp.empresa_id}/editar`);}}
-                                    style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:7,border:"1.5px solid rgba(142,68,173,0.3)",background:"rgba(142,68,173,0.08)",color:"#8e44ad",fontSize:11,fontWeight:700,cursor:"pointer"}}
+                                    style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:7,border:"1.5px solid rgba(142,68,173,0.3)",background:"rgba(142,68,173,0.08)",color:"#5B6570",fontSize:11,fontWeight:700,cursor:"pointer"}}
                                     onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(142,68,173,0.16)";}}
                                     onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(142,68,173,0.08)";}}>
                                     <Edit3 style={{width:10,height:10}}/> Completar
@@ -600,8 +584,8 @@ import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGe
                                 <>
                                   <span className="chip" style={{background:sc.bg,color:sc.text,border:`1px solid ${sc.border}`}}>{emp.status||"—"}</span>
                                   <span style={{fontSize:12,color:tempColor(emp.temperatura)}}>{tempIcon(emp.temperatura)} {emp.temperatura||"—"}</span>
-                                  <span style={{fontSize:11,color:"rgba(20,45,70,0.6)"}}>{emp.cidade||"—"}</span>
-                                  <span style={{fontSize:12,fontWeight:700,color:"#0f2133"}}>{emp.ticket_medio_estimado?`R$ ${emp.ticket_medio_estimado.toLocaleString("pt-BR")}`:"—"}</span>
+                                  <span style={{fontSize:11,color:"#5B6570"}}>{emp.cidade||"—"}</span>
+                                  <span style={{fontSize:12,fontWeight:700,color:"#16191D"}}>{emp.ticket_medio_estimado?`R$ ${emp.ticket_medio_estimado.toLocaleString("pt-BR")}`:"—"}</span>
                                 </>
                               )}
                             </motion.div>
@@ -619,15 +603,15 @@ import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGe
                 {/* Próximas Ações */}
                 <motion.div className="glass-card" style={{padding:"18px"}} initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.4,delay:0.45}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-                    <div style={{fontSize:13,fontWeight:700,color:"#0f2133"}}>Próximas Ações</div>
-                    <button onClick={()=>navigate("/gerenciamento")} style={{display:"flex",alignItems:"center",gap:3,fontSize:10,fontWeight:600,color:"#2980b9",background:"none",border:"none",cursor:"pointer"}}>
+                    <div style={{fontSize:13,fontWeight:700,color:"#16191D"}}>Próximas Ações</div>
+                    <button onClick={()=>navigate("/gerenciamento")} style={{display:"flex",alignItems:"center",gap:3,fontSize:10,fontWeight:600,color:"#2563EB",background:"none",border:"none",cursor:"pointer"}}>
                       Ver todas <ArrowRight style={{width:10,height:10}}/>
                     </button>
                   </div>
                   {loading?(
                     <div style={{display:"flex",flexDirection:"column",gap:8}}>{[1,2,3].map(i=><div key={i} className="skeleton" style={{height:52}}/>)}</div>
                   ):proximasAcoes.length===0?(
-                    <div style={{textAlign:"center",padding:"16px 0",color:"rgba(20,45,70,0.4)",fontSize:12}}>Nenhuma ação pendente</div>
+                    <div style={{textAlign:"center",padding:"16px 0",color:"#5B6570",fontSize:12}}>Nenhuma ação pendente</div>
                   ):(
                     <div style={{display:"flex",flexDirection:"column",gap:8}}>
                       {proximasAcoes.map(emp=>{
@@ -639,66 +623,66 @@ import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGe
                               <div style={{display:"flex",alignItems:"center",gap:10}}>
                                 <div style={{width:32,height:32,borderRadius:9,background:avatarColor(emp.nome),display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:"#fff",flexShrink:0}}>{initials(emp.nome)}</div>
                                 <div style={{flex:1,minWidth:0}}>
-                                  <div style={{fontSize:12,fontWeight:700,color:"#0f2133",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{emp.nome}</div>
-                                  <div style={{fontSize:10,color:"rgba(20,45,70,0.5)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{emp.proxima_acao}</div>
+                                  <div style={{fontSize:12,fontWeight:700,color:"#16191D",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{emp.nome}</div>
+                                  <div style={{fontSize:10,color:"#5B6570",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{emp.proxima_acao}</div>
                                 </div>
-                                <ChevronRight style={{width:12,height:12,color:"rgba(20,45,70,0.3)",flexShrink:0,transform:isSelected?"rotate(90deg)":"rotate(0deg)",transition:"transform 0.2s"}}/>
+                                <ChevronRight style={{width:12,height:12,color:"#5B6570",flexShrink:0,transform:isSelected?"rotate(90deg)":"rotate(0deg)",transition:"transform 0.2s"}}/>
                               </div>
                             </div>
                             <AnimatePresence>
                               {isSelected&&(
                                 <motion.div initial={{opacity:0,height:0}} animate={{opacity:1,height:"auto"}} exit={{opacity:0,height:0}} transition={{duration:0.22}} style={{overflow:"hidden"}}>
-                                  <div style={{margin:"6px 0 2px",padding:"14px",borderRadius:12,background:"rgba(255,255,255,0.9)",border:"1px solid rgba(200,225,240,0.8)",boxShadow:"0 4px 16px rgba(41,128,185,0.08)"}}>
+                                  <div style={{margin:"6px 0 2px",padding:"14px",borderRadius:8,background:"#ffffff",border:"1px solid #E3E6E9",boxShadow:"none"}}>
                                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
                                       <div style={{display:"flex",alignItems:"center",gap:8}}>
-                                        <div style={{width:34,height:34,borderRadius:10,background:avatarColor(emp.nome),display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"#fff"}}>{initials(emp.nome)}</div>
+                                        <div style={{width:34,height:34,borderRadius:8,background:avatarColor(emp.nome),display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"#fff"}}>{initials(emp.nome)}</div>
                                         <div>
-                                          <div style={{fontSize:13,fontWeight:800,color:"#0f2133"}}>{emp.nome}</div>
+                                          <div style={{fontSize:13,fontWeight:800,color:"#16191D"}}>{emp.nome}</div>
                                           <div style={{display:"flex",gap:5,marginTop:2}}>
                                             <span className="chip" style={{background:sc.bg,color:sc.text,border:`1px solid ${sc.border}`}}>{emp.status}</span>
                                             <span style={{fontSize:10,color:tempColor(emp.temperatura),fontWeight:700}}>{tempIcon(emp.temperatura)} {emp.temperatura}</span>
                                           </div>
                                         </div>
                                       </div>
-                                      <button onClick={e=>{e.stopPropagation();setSelectedAction(null);setContatos([]);}} style={{background:"none",border:"none",cursor:"pointer",color:"rgba(20,45,70,0.3)"}}>
+                                      <button onClick={e=>{e.stopPropagation();setSelectedAction(null);setContatos([]);}} style={{background:"none",border:"none",cursor:"pointer",color:"#5B6570"}}>
                                         <X style={{width:14,height:14}}/>
                                       </button>
                                     </div>
                                     <div style={{display:"flex",flexDirection:"column",gap:5,marginBottom:10}}>
-                                      {emp.responsavel_principal&&<div style={{display:"flex",alignItems:"center",gap:6,fontSize:11}}><User style={{width:11,height:11,color:"#2980b9",flexShrink:0}}/><span style={{color:"rgba(20,45,70,0.5)"}}>Responsável:</span><span style={{fontWeight:600,color:"#0f2133"}}>{emp.responsavel_principal}</span></div>}
-                                      {emp.cidade&&<div style={{display:"flex",alignItems:"center",gap:6,fontSize:11}}><MapPin style={{width:11,height:11,color:"#2980b9",flexShrink:0}}/><span style={{color:"rgba(20,45,70,0.5)"}}>Cidade:</span><span style={{fontWeight:600,color:"#0f2133"}}>{emp.cidade}</span></div>}
-                                      {emp.ticket_medio_estimado&&<div style={{display:"flex",alignItems:"center",gap:6,fontSize:11}}><TrendingUp style={{width:11,height:11,color:"#27ae60",flexShrink:0}}/><span style={{color:"rgba(20,45,70,0.5)"}}>Ticket:</span><span style={{fontWeight:700,color:"#27ae60"}}>R$ {emp.ticket_medio_estimado.toLocaleString("pt-BR")}</span></div>}
+                                      {emp.responsavel_principal&&<div style={{display:"flex",alignItems:"center",gap:6,fontSize:11}}><User style={{width:11,height:11,color:"#2563EB",flexShrink:0}}/><span style={{color:"#5B6570"}}>Responsável:</span><span style={{fontWeight:600,color:"#16191D"}}>{emp.responsavel_principal}</span></div>}
+                                      {emp.cidade&&<div style={{display:"flex",alignItems:"center",gap:6,fontSize:11}}><MapPin style={{width:11,height:11,color:"#2563EB",flexShrink:0}}/><span style={{color:"#5B6570"}}>Cidade:</span><span style={{fontWeight:600,color:"#16191D"}}>{emp.cidade}</span></div>}
+                                      {emp.ticket_medio_estimado&&<div style={{display:"flex",alignItems:"center",gap:6,fontSize:11}}><TrendingUp style={{width:11,height:11,color:"#0F7B4F",flexShrink:0}}/><span style={{color:"#5B6570"}}>Ticket:</span><span style={{fontWeight:700,color:"#0F7B4F"}}>R$ {emp.ticket_medio_estimado.toLocaleString("pt-BR")}</span></div>}
                                       <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,padding:"5px 8px",borderRadius:7,background:"rgba(230,126,34,0.07)",border:"1px solid rgba(230,126,34,0.15)"}}>
-                                        <Calendar style={{width:11,height:11,color:"#e67e22",flexShrink:0}}/>
-                                        <span style={{color:"rgba(20,45,70,0.5)"}}>Próxima ação:</span>
-                                        <span style={{fontWeight:600,color:"#e67e22"}}>{emp.proxima_acao}</span>
+                                        <Calendar style={{width:11,height:11,color:"#8A5A00",flexShrink:0}}/>
+                                        <span style={{color:"#5B6570"}}>Próxima ação:</span>
+                                        <span style={{fontWeight:600,color:"#8A5A00"}}>{emp.proxima_acao}</span>
                                       </div>
                                     </div>
-                                    <div style={{borderTop:"1px solid rgba(200,225,240,0.5)",paddingTop:10}}>
-                                      <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",color:"rgba(20,45,70,0.45)",marginBottom:8}}>Contatos</div>
+                                    <div style={{borderTop:"1px solid #E3E6E9",paddingTop:10}}>
+                                      <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",color:"#5B6570",marginBottom:8}}>Contatos</div>
                                       {loadingContatos?(
                                         <div style={{display:"flex",flexDirection:"column",gap:6}}>{[1,2].map(i=><div key={i} className="skeleton" style={{height:36}}/>)}</div>
                                       ):contatos.length===0?(
-                                        <div style={{fontSize:11,color:"rgba(20,45,70,0.4)",padding:"6px 0",textAlign:"center"}}>Nenhum contato cadastrado</div>
+                                        <div style={{fontSize:11,color:"#5B6570",padding:"6px 0",textAlign:"center"}}>Nenhum contato cadastrado</div>
                                       ):(
                                         <div style={{display:"flex",flexDirection:"column",gap:6}}>
                                           {contatos.map(c=>(
-                                            <div key={c.contato_id} style={{padding:"8px 10px",borderRadius:8,background:"rgba(41,128,185,0.04)",border:"1px solid rgba(41,128,185,0.1)"}}>
+                                            <div key={c.contato_id} style={{padding:"8px 10px",borderRadius:8,background:"#2563EB",border:"1px solid #EFF4FE"}}>
                                               <div style={{marginBottom:4}}>
-                                                <span style={{fontSize:12,fontWeight:700,color:"#0f2133"}}>{c.nome}</span>
-                                                {c.funcao&&<span style={{fontSize:10,color:"rgba(20,45,70,0.45)",marginLeft:6}}>{c.funcao}</span>}
-                                                {c.decisor&&<span style={{fontSize:9,fontWeight:700,color:"#8e44ad",background:"rgba(142,68,173,0.1)",padding:"1px 5px",borderRadius:4,marginLeft:5}}>Decisor</span>}
+                                                <span style={{fontSize:12,fontWeight:700,color:"#16191D"}}>{c.nome}</span>
+                                                {c.funcao&&<span style={{fontSize:10,color:"#5B6570",marginLeft:6}}>{c.funcao}</span>}
+                                                {c.decisor&&<span style={{fontSize:9,fontWeight:700,color:"#5B6570",background:"rgba(142,68,173,0.1)",padding:"1px 5px",borderRadius:4,marginLeft:5}}>Decisor</span>}
                                               </div>
                                               <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
-                                                {(c.celular||c.whatsapp)&&<a href={`tel:${c.celular||c.whatsapp}`} onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:"#27ae60",fontWeight:600,textDecoration:"none"}}><Phone style={{width:11,height:11}}/>{c.celular||c.whatsapp}</a>}
-                                                {c.email&&<a href={`mailto:${c.email}`} onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:"#2980b9",fontWeight:600,textDecoration:"none"}}><Mail style={{width:11,height:11}}/>{c.email}</a>}
+                                                {(c.celular||c.whatsapp)&&<a href={`tel:${c.celular||c.whatsapp}`} onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:"#0F7B4F",fontWeight:600,textDecoration:"none"}}><Phone style={{width:11,height:11}}/>{c.celular||c.whatsapp}</a>}
+                                                {c.email&&<a href={`mailto:${c.email}`} onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:"#2563EB",fontWeight:600,textDecoration:"none"}}><Mail style={{width:11,height:11}}/>{c.email}</a>}
                                               </div>
                                             </div>
                                           ))}
                                         </div>
                                       )}
                                     </div>
-                                    <button onClick={()=>navigate(`/clientes/${emp.empresa_id}`)} style={{marginTop:10,width:"100%",height:32,borderRadius:8,border:"none",cursor:"pointer",background:"linear-gradient(135deg,#2980b9,#1abc9c)",color:"#fff",fontSize:11,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                                    <button onClick={()=>navigate(`/clientes/${emp.empresa_id}`)} style={{marginTop:10,width:"100%",height:32,borderRadius:8,border:"none",cursor:"pointer",background:"#2563EB",color:"#fff",fontSize:11,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
                                       <Eye style={{width:12,height:12}}/> Ver perfil completo
                                     </button>
                                   </div>
@@ -714,50 +698,50 @@ import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGe
 
                 {/* Por temperatura */}
                 <motion.div className="glass-card" style={{padding:"18px"}} initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.4,delay:0.5}}>
-                  <div style={{fontSize:13,fontWeight:700,color:"#0f2133",marginBottom:14}}>Por Temperatura</div>
+                  <div style={{fontSize:13,fontWeight:700,color:"#16191D",marginBottom:14}}>Por Temperatura</div>
                   <div style={{display:"flex",flexDirection:"column",gap:8}}>
                     {[
-                      {label:"Quente 🔥",value:empresas.filter(e=>e.temperatura==="Quente"&&e.status!=="Rascunho").length,color:"#c0392b",bg:"rgba(192,57,43,0.07)"},
+                      {label:"Quente 🔥",value:empresas.filter(e=>e.temperatura==="Quente"&&e.status!=="Rascunho").length,color:"#B42318",bg:"rgba(192,57,43,0.07)"},
                       {label:"Morno 🌡️", value:empresas.filter(e=>e.temperatura==="Morno"&&e.status!=="Rascunho").length, color:"#d68910",bg:"rgba(214,137,16,0.07)"},
-                      {label:"Frio ❄️",  value:empresas.filter(e=>e.temperatura==="Frio"&&e.status!=="Rascunho").length,  color:"#2980b9",bg:"rgba(41,128,185,0.07)"},
+                      {label:"Frio ❄️",  value:empresas.filter(e=>e.temperatura==="Frio"&&e.status!=="Rascunho").length,  color:"#2563EB",bg:"#2563EB"},
                     ].map(t=>(
-                      <div key={t.label} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:10,background:t.bg,border:`1px solid ${t.color}20`}}>
-                        <div style={{flex:1,fontSize:12,fontWeight:600,color:"#0f2133"}}>{t.label}</div>
+                      <div key={t.label} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:8,background:t.bg,border:`1px solid ${t.color}20`}}>
+                        <div style={{flex:1,fontSize:12,fontWeight:600,color:"#16191D"}}>{t.label}</div>
                         <span style={{fontSize:18,fontWeight:900,color:t.color}}>{t.value}</span>
                       </div>
                     ))}
                   </div>
-                  <div style={{marginTop:12,padding:"12px 14px",borderRadius:12,background:"rgba(41,128,185,0.06)",border:"1px solid rgba(41,128,185,0.12)"}}>
-                    <div style={{fontSize:10,color:"rgba(20,45,70,0.5)",fontWeight:600,marginBottom:4}}>TAXA DE CONVERSÃO</div>
-                    <div style={{fontSize:22,fontWeight:900,color:"#2980b9"}}>{conversao}%</div>
-                    <div style={{height:5,borderRadius:5,background:"rgba(41,128,185,0.12)",marginTop:6}}>
-                      <div style={{height:"100%",width:`${Math.min(parseFloat(conversao)*5,100)}%`,borderRadius:5,background:"linear-gradient(90deg,#2980b9,#1abc9c)"}}/>
+                  <div style={{marginTop:12,padding:"12px 14px",borderRadius:8,background:"#EFF4FE",border:"1px solid #EFF4FE"}}>
+                    <div style={{fontSize:10,color:"#5B6570",fontWeight:600,marginBottom:4}}>TAXA DE CONVERSÃO</div>
+                    <div style={{fontSize:22,fontWeight:900,color:"#2563EB"}}>{conversao}%</div>
+                    <div style={{height:5,borderRadius:5,background:"#EFF4FE",marginTop:6}}>
+                      <div style={{height:"100%",width:`${Math.min(parseFloat(conversao)*5,100)}%`,borderRadius:5,background:"#2563EB"}}/>
                     </div>
-                    <div style={{fontSize:10,color:"rgba(20,45,70,0.35)",marginTop:3}}>Meta: 20%</div>
+                    <div style={{fontSize:10,color:"#5B6570",marginTop:3}}>Meta: 20%</div>
                   </div>
-                  <div style={{marginTop:10,padding:"12px 14px",borderRadius:12,background:"rgba(39,174,96,0.06)",border:"1px solid rgba(39,174,96,0.15)"}}>
-                    <div style={{fontSize:10,color:"rgba(20,45,70,0.5)",fontWeight:600,marginBottom:4}}>TICKET MÉDIO</div>
-                    <div style={{fontSize:18,fontWeight:900,color:"#27ae60"}}>R$ {ticketMedio.toLocaleString("pt-BR")}</div>
+                  <div style={{marginTop:10,padding:"12px 14px",borderRadius:8,background:"rgba(39,174,96,0.06)",border:"1px solid rgba(39,174,96,0.15)"}}>
+                    <div style={{fontSize:10,color:"#5B6570",fontWeight:600,marginBottom:4}}>TICKET MÉDIO</div>
+                    <div style={{fontSize:18,fontWeight:900,color:"#0F7B4F"}}>R$ {ticketMedio.toLocaleString("pt-BR")}</div>
                   </div>
                 </motion.div>
 
                 {/* Funil */}
                 <motion.div className="glass-card" style={{padding:"18px"}} initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.4,delay:0.55}}>
-                  <div style={{fontSize:13,fontWeight:700,color:"#0f2133",marginBottom:14}}>Funil de Prospecção</div>
+                  <div style={{fontSize:13,fontWeight:700,color:"#16191D",marginBottom:14}}>Funil de Prospecção</div>
                   {([
-                    {label:"Total",           value:total,      color:"#2980b9", key:"total"      as FilterKey},
-                    {label:"Em contato",      value:emContato,  color:"#e67e22", key:"em_contato" as FilterKey},
+                    {label:"Total",           value:total,      color:"#2563EB", key:"total"      as FilterKey},
+                    {label:"Em contato",      value:emContato,  color:"#8A5A00", key:"em_contato" as FilterKey},
                     {label:"Visita agendada", value:visitas,    color:"#0d9488", key:"visita"     as FilterKey},
-                    {label:"Proposta",        value:propostas,  color:"#8e44ad", key:"proposta"   as FilterKey},
+                    {label:"Proposta",        value:propostas,  color:"#5B6570", key:"proposta"   as FilterKey},
                     {label:"Negociação",      value:negociacao, color:"#d97706", key:"negociacao" as FilterKey},
-                    {label:"Fechado",         value:fechados,   color:"#27ae60", key:"fechado"    as FilterKey},
+                    {label:"Fechado",         value:fechados,   color:"#0F7B4F", key:"fechado"    as FilterKey},
                   ] as {label:string;value:number;color:string;key:FilterKey}[]).map(f=>(
                     <div key={f.label} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,cursor:"pointer"}} onClick={()=>setActiveFilter(f.key)}>
                       <div style={{flex:1,position:"relative",height:28}}>
                         <div style={{position:"absolute",inset:0,borderRadius:6,background:`${f.color}15`}}/>
                         <div style={{position:"absolute",top:0,left:0,bottom:0,width:`${total>0?Math.max((f.value/total)*100,f.value>0?8:0):0}%`,borderRadius:6,background:f.color,transition:"width 0.6s ease"}}/>
                         <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",padding:"0 10px"}}>
-                          <span style={{fontSize:10,fontWeight:600,color:"#0f2133",whiteSpace:"nowrap"}}>{f.label}</span>
+                          <span style={{fontSize:10,fontWeight:600,color:"#16191D",whiteSpace:"nowrap"}}>{f.label}</span>
                         </div>
                       </div>
                       <span style={{fontSize:12,fontWeight:800,color:f.color,minWidth:20,textAlign:"right"}}>{f.value}</span>
@@ -769,10 +753,10 @@ import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGe
                         <div style={{flex:1,position:"relative",height:28}}>
                           <div style={{position:"absolute",inset:0,borderRadius:6,background:"rgba(142,68,173,0.08)",border:"1px dashed rgba(142,68,173,0.25)"}}/>
                           <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",padding:"0 10px"}}>
-                            <span style={{fontSize:10,fontWeight:600,color:"#8e44ad",whiteSpace:"nowrap"}}>Rascunhos</span>
+                            <span style={{fontSize:10,fontWeight:600,color:"#5B6570",whiteSpace:"nowrap"}}>Rascunhos</span>
                           </div>
                         </div>
-                        <span style={{fontSize:12,fontWeight:800,color:"#8e44ad",minWidth:20,textAlign:"right",animation:"pulseDraft 2s ease infinite"}}>{rascunhos.length}</span>
+                        <span style={{fontSize:12,fontWeight:800,color:"#5B6570",minWidth:20,textAlign:"right",animation:"pulseDraft 2s ease infinite"}}>{rascunhos.length}</span>
                       </div>
                     </div>
                   )}

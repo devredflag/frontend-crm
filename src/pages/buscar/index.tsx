@@ -20,24 +20,22 @@ const MAPS_ID  = "34faf6a32c6d946937cf70eb";
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
   * { font-family: 'Plus Jakarta Sans', sans-serif; box-sizing: border-box; margin: 0; padding: 0; }
-  @keyframes gradientShift { 0%,100%{background-position:0% 50%}50%{background-position:100% 50%} }
-  @keyframes shimmer { 0%{background-position:-200% 0}100%{background-position:200% 0} }
   @keyframes spin { from{transform:rotate(0deg)}to{transform:rotate(360deg)} }
-  .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:10px; cursor:pointer; font-size:13.5px; font-weight:500; color:rgba(255,255,255,0.65); transition:all 0.18s; user-select:none; }
-  .nav-item:hover { background:rgba(255,255,255,0.08); color:#fff; }
-  .nav-item.active { background:rgba(255,255,255,0.14); color:#fff; font-weight:600; }
-  .skeleton { background:linear-gradient(90deg,rgba(200,225,240,0.4) 25%,rgba(220,240,252,0.7) 50%,rgba(200,225,240,0.4) 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:8px; }
-  .result-card { background:rgba(255,255,255,0.82); border:1.5px solid rgba(200,225,240,0.7); border-radius:14px; padding:14px; cursor:pointer; transition:all 0.18s; }
-  .result-card:hover { border-color:rgba(41,128,185,0.45); box-shadow:0 6px 24px rgba(41,128,185,0.14); transform:translateY(-1px); }
-  .result-card.selected { border-color:rgba(41,128,185,0.6); background:rgba(41,128,185,0.05); box-shadow:0 6px 24px rgba(41,128,185,0.18); }
-  .chip-filter { padding:5px 12px; border-radius:20px; border:1.5px solid rgba(200,225,240,0.8); background:rgba(255,255,255,0.65); font-size:11px; font-weight:700; cursor:pointer; transition:all 0.15s; color:rgba(20,45,70,0.6); }
-  .chip-filter.active { border-color:rgba(41,128,185,0.5); background:rgba(41,128,185,0.1); color:#2980b9; }
-  .chip-filter:hover { border-color:rgba(41,128,185,0.35); }
-  .sugestao-chip { padding:7px 14px; border-radius:20px; border:1.5px solid rgba(200,225,240,0.8); background:rgba(255,255,255,0.7); font-size:12px; font-weight:600; cursor:pointer; transition:all 0.15s; color:rgba(20,45,70,0.7); white-space:nowrap; }
-  .sugestao-chip:hover { border-color:rgba(41,128,185,0.4); background:rgba(41,128,185,0.07); color:#2980b9; }
+  .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:8px; cursor:pointer; font-size:13.5px; font-weight:500; color:#ffffff; transition:all 0.18s; user-select:none; }
+  .nav-item:hover { background:#ffffff; color:#fff; }
+  .nav-item.active { background:#ffffff; color:#fff; font-weight:600; }
+  .skeleton { background:#E3E6E9; background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:8px; }
+  .result-card { background:#ffffff; border:1.5px solid #E3E6E9; border-radius:8px; padding:14px; cursor:pointer; transition:all 0.18s; }
+  .result-card:hover { border-color:#2563EB; box-shadow:0 6px 24px #2563EB; transform:translateY(-1px); }
+  .result-card.selected { border-color:#2563EB; background:#EFF4FE; box-shadow:0 6px 24px #EFF4FE; }
+  .chip-filter { padding:5px 12px; border-radius:8px; border:1.5px solid #E3E6E9; background:#ffffff; font-size:11px; font-weight:700; cursor:pointer; transition:all 0.15s; color:#5B6570; }
+  .chip-filter.active { border-color:#2563EB; background:#EFF4FE; color:#2563EB; }
+  .chip-filter:hover { border-color:#2563EB; }
+  .sugestao-chip { padding:7px 14px; border-radius:8px; border:1.5px solid #E3E6E9; background:#ffffff; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.15s; color:#16191D; white-space:nowrap; }
+  .sugestao-chip:hover { border-color:#2563EB; background:#2563EB; color:#2563EB; }
   ::-webkit-scrollbar { width:4px; }
   ::-webkit-scrollbar-track { background:transparent; }
-  ::-webkit-scrollbar-thumb { background:rgba(41,128,185,0.25); border-radius:4px; }
+  ::-webkit-scrollbar-thumb { background:#EFF4FE; border-radius:4px; }
 `;
 
 const navItems = [
@@ -67,10 +65,10 @@ interface PlaceResult {
 }
 
 function initials(n: string) { return n?.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase()||"?"; }
-function avatarColor(n: string) { const c=["#2980b9","#1abc9c","#8e44ad","#e67e22","#27ae60","#e74c3c"]; return c[(n?.charCodeAt(0)||0)%c.length]; }
+function avatarColor(n: string) { const c=["#2563EB","#2563EB","#5B6570","#8A5A00","#0F7B4F","#B42318"]; return c[(n?.charCodeAt(0)||0)%c.length]; }
 
 function PinNumerado({ numero, cadastrada }: { numero: number; cadastrada: boolean }) {
-  const cor = cadastrada ? "#27ae60" : "#ea4335";
+  const cor = cadastrada ? "#0F7B4F" : "#ea4335";
   return (
     <div style={{ width:28, height:36, position:"relative", cursor:"pointer" }}>
       <svg width="28" height="36" viewBox="0 0 28 36" fill="none">
@@ -94,31 +92,31 @@ function ResultadoCard({
       <div style={{ display:"flex", gap:10 }}>
         {/* Número + avatar */}
         <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:4, flexShrink:0 }}>
-          <div style={{ width:22, height:22, borderRadius:"50%", background: place.ja_cadastrada ? "#27ae60" : "#ea4335", display:"flex", alignItems:"center", justifyContent:"center", fontSize:9, fontWeight:900, color:"#fff" }}>{index+1}</div>
-          <div style={{ width:36, height:36, borderRadius:10, background:avatarColor(place.nome), display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:800, color:"#fff" }}>{initials(place.nome)}</div>
+          <div style={{ width:22, height:22, borderRadius:"50%", background: place.ja_cadastrada ? "#0F7B4F" : "#ea4335", display:"flex", alignItems:"center", justifyContent:"center", fontSize:9, fontWeight:900, color:"#fff" }}>{index+1}</div>
+          <div style={{ width:36, height:36, borderRadius:8, background:avatarColor(place.nome), display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:800, color:"#fff" }}>{initials(place.nome)}</div>
         </div>
 
         {/* Info */}
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:4 }}>
-            <div style={{ fontSize:13, fontWeight:700, color: place.ja_cadastrada ? "#27ae60" : "#1a0dab", textDecoration: place.ja_cadastrada ? "line-through" : "none", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", flex:1 }}>
+            <div style={{ fontSize:13, fontWeight:700, color: place.ja_cadastrada ? "#0F7B4F" : "#1a0dab", textDecoration: place.ja_cadastrada ? "line-through" : "none", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", flex:1 }}>
               {place.nome}
             </div>
             {place.ja_cadastrada && (
-              <span style={{ fontSize:9, fontWeight:700, padding:"2px 6px", borderRadius:6, background:"rgba(39,174,96,0.12)", color:"#27ae60", border:"1px solid rgba(39,174,96,0.25)", flexShrink:0 }}>
+              <span style={{ fontSize:9, fontWeight:700, padding:"2px 6px", borderRadius:6, background:"rgba(39,174,96,0.12)", color:"#0F7B4F", border:"1px solid rgba(39,174,96,0.25)", flexShrink:0 }}>
                 ✓ No CRM
               </span>
             )}
           </div>
 
           {place.tipo && (
-            <div style={{ fontSize:10, color:"rgba(20,45,70,0.5)", marginTop:1 }}>{place.tipo}</div>
+            <div style={{ fontSize:10, color:"#5B6570", marginTop:1 }}>{place.tipo}</div>
           )}
 
           {place.business_status && (
             <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:3 }}>
-              <div style={{ width:6, height:6, borderRadius:"50%", background: operacional ? "#27ae60" : "#dc2626", flexShrink:0 }} />
-              <span style={{ fontSize:10, fontWeight:600, color: operacional ? "#27ae60" : "#dc2626" }}>
+              <div style={{ width:6, height:6, borderRadius:"50%", background: operacional ? "#0F7B4F" : "#B42318", flexShrink:0 }} />
+              <span style={{ fontSize:10, fontWeight:600, color: operacional ? "#0F7B4F" : "#B42318" }}>
                 {operacional ? "Em operação" : "Fechado"}
               </span>
             </div>
@@ -126,8 +124,8 @@ function ResultadoCard({
 
           {place.endereco && (
             <div style={{ display:"flex", alignItems:"flex-start", gap:4, marginTop:4 }}>
-              <MapPin style={{ width:10, height:10, color:"rgba(20,45,70,0.4)", flexShrink:0, marginTop:1 }} />
-              <span style={{ fontSize:10, color:"rgba(20,45,70,0.55)", lineHeight:1.4 }}>{place.endereco}</span>
+              <MapPin style={{ width:10, height:10, color:"#5B6570", flexShrink:0, marginTop:1 }} />
+              <span style={{ fontSize:10, color:"#5B6570", lineHeight:1.4 }}>{place.endereco}</span>
             </div>
           )}
 
@@ -135,7 +133,7 @@ function ResultadoCard({
             <button
               onClick={e=>{ e.stopPropagation(); onCadastrar(); }}
               disabled={salvando}
-              style={{ marginTop:8, width:"100%", height:32, borderRadius:8, border:"none", background:"linear-gradient(135deg,#8e44ad,#2980b9,#1abc9c,#8e44ad)", backgroundSize:"200% 200%", animation:"gradientShift 4s ease infinite", color:"#fff", fontSize:11, fontWeight:700, cursor:salvando?"wait":"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:5, opacity:salvando?0.7:1 }}
+              style={{ marginTop:8, width:"100%", height:32, borderRadius:8, border:"none", background:"#5B6570", backgroundSize:"200% 200%", animation:"gradientShift 4s ease infinite", color:"#fff", fontSize:11, fontWeight:700, cursor:salvando?"wait":"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:5, opacity:salvando?0.7:1 }}
             >
               {salvando ? <Loader2 style={{ width:11, height:11, animation:"spin 1s linear infinite" }} /> : <Plus style={{ width:11, height:11 }} />}
               {salvando ? "Salvando..." : "Iniciar cadastro"}
@@ -266,8 +264,7 @@ export default function BuscarEmpresas() {
 
       {/* Background */}
       <div style={{ position:"fixed", inset:0, zIndex:0, overflow:"hidden", pointerEvents:"none" }}>
-        <div style={{ position:"absolute", inset:0, background:"linear-gradient(145deg,#c8e8f5 0%,#d6eef5 30%,#cceee8 65%,#c5eae0 100%)" }} />
-        <div style={{ position:"absolute", inset:0, opacity:0.4, backgroundImage:"radial-gradient(circle,rgba(41,128,185,0.2) 1px,transparent 1px)", backgroundSize:"22px 22px" }} />
+        <div style={{ position:"absolute", inset:0, background:"#F6F7F8" }} />
       </div>
 
       {/* Backdrop mobile */}
@@ -276,18 +273,18 @@ export default function BuscarEmpresas() {
       )}
 
       {/* Sidebar nav */}
-      <div style={{ width:220, flexShrink:0, height:"100vh", overflowY:"auto", zIndex:1000, background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)", boxShadow:"4px 0 24px rgba(0,0,0,0.18)", display:"flex", flexDirection:"column", padding:"0 12px 20px",
+      <div style={{ width:220, flexShrink:0, height:"100vh", overflowY:"auto", zIndex:1000, background:"#1a3a5c", boxShadow:"none", display:"flex", flexDirection:"column", padding:"0 12px 20px",
         position: isMobile ? "fixed" : "relative", top:0, left:0,
         transform: isMobile && !menuOpen ? "translateX(-100%)" : "translateX(0)",
         transition:"transform 0.28s ease" }}>
-        <div style={{ padding:"22px 4px 24px", borderBottom:"1px solid rgba(255,255,255,0.08)", marginBottom:16 }}>
+        <div style={{ padding:"22px 4px 24px", borderBottom:"1px solid #ffffff", marginBottom:16 }}>
           <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-            <div style={{ width:36, height:36, borderRadius:10, background:"linear-gradient(135deg,#2980b9,#1abc9c)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <div style={{ width:36, height:36, borderRadius:8, background:"#2563EB", display:"flex", alignItems:"center", justifyContent:"center" }}>
               <BarChart3 style={{ width:18, height:18, color:"#fff" }} />
             </div>
             <div>
               <div style={{ fontSize:14, fontWeight:800, color:"#fff" }}>Prospecção</div>
-              <div style={{ fontSize:11, fontWeight:700, background:"linear-gradient(90deg,#2980b9,#1abc9c,#2ecc71,#2980b9)", backgroundSize:"200% 200%", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", animation:"gradientShift 4s ease infinite" }}>CRM</div>
+              <div style={{ fontSize:11, fontWeight:700, background:"#2563EB", backgroundSize:"200% 200%", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", animation:"gradientShift 4s ease infinite" }}>CRM</div>
             </div>
           </div>
         </div>
@@ -310,22 +307,22 @@ export default function BuscarEmpresas() {
       <div style={{ flex:1, display:"flex", flexDirection:"column", position:"relative", zIndex:5, overflow:"hidden" }}>
 
         {/* Topbar */}
-        <div style={{ padding:isMobile?"12px 14px":"14px 24px", background:"rgba(210,238,248,0.85)", backdropFilter:"blur(20px)", borderBottom:"1px solid rgba(255,255,255,0.6)", flexShrink:0, display:"flex", alignItems:"center", gap:isMobile?10:14 }}>
+        <div style={{ padding:isMobile?"12px 14px":"14px 24px", background:"rgba(210,238,248,0.85)",  borderBottom:"1px solid #ffffff", flexShrink:0, display:"flex", alignItems:"center", gap:isMobile?10:14 }}>
           {isMobile && (
-            <button onClick={()=>setMenuOpen(true)} style={{ width:36, height:36, borderRadius:10, border:"1px solid rgba(200,225,240,0.9)", background:"rgba(255,255,255,0.75)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-              <Menu style={{ width:18, height:18, color:"#2980b9" }}/>
+            <button onClick={()=>setMenuOpen(true)} style={{ width:36, height:36, borderRadius:8, border:"1px solid #E3E6E9", background:"#ffffff", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+              <Menu style={{ width:18, height:18, color:"#2563EB" }}/>
             </button>
           )}
           <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontSize:11, fontWeight:700, color:"rgba(20,45,70,0.45)", letterSpacing:"0.08em", textTransform:"uppercase" }}>Prospecção</div>
-            <h1 style={{ fontSize:20, fontWeight:900, color:"#0f2133", letterSpacing:"-0.02em" }}>Buscar Empresas</h1>
+            <div style={{ fontSize:11, fontWeight:700, color:"#5B6570", letterSpacing:"0.08em", textTransform:"uppercase" }}>Prospecção</div>
+            <h1 style={{ fontSize:20, fontWeight:900, color:"#16191D", letterSpacing:"-0.02em" }}>Buscar Empresas</h1>
           </div>
           {/* Veio de uma empresa: mostra qual é a referência e o caminho de volta */}
           {origem && (
             <button
               onClick={() => origem.empresa_id && navigate(`/clientes/${origem.empresa_id}?tab=proximas`)}
               title="Voltar para a empresa de referência"
-              style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:20, border:"1.5px solid rgba(41,128,185,0.4)", background:"rgba(41,128,185,0.1)", color:"#2980b9", fontSize:12, fontWeight:700, cursor:"pointer", maxWidth:280, fontFamily:"inherit" }}>
+              style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:8, border:"1.5px solid #2563EB", background:"#EFF4FE", color:"#2563EB", fontSize:12, fontWeight:700, cursor:"pointer", maxWidth:280, fontFamily:"inherit" }}>
               <Navigation2 style={{ width:13, height:13, flexShrink:0 }} />
               <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
                 Perto de {origem.nome || "empresa selecionada"}
@@ -333,7 +330,7 @@ export default function BuscarEmpresas() {
             </button>
           )}
           {totalRascunhos > 0 && (
-            <button onClick={() => navigate("/gerenciamento")} style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:20, border:"1.5px solid rgba(142,68,173,0.4)", background:"rgba(142,68,173,0.1)", color:"#7d3c98", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+            <button onClick={() => navigate("/gerenciamento")} style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:8, border:"1.5px solid rgba(142,68,173,0.4)", background:"rgba(142,68,173,0.1)", color:"#7d3c98", fontSize:12, fontWeight:700, cursor:"pointer" }}>
               <ClipboardList style={{ width:13, height:13 }} />
               {totalRascunhos} rascunho{totalRascunhos > 1 ? "s" : ""} pendente{totalRascunhos > 1 ? "s" : ""}
             </button>
@@ -344,23 +341,23 @@ export default function BuscarEmpresas() {
         <div style={{ flex:1, display:"grid", gridTemplateColumns:isMobile?"1fr":"320px 1fr", gridTemplateRows:isMobile?"42vh 1fr":undefined, overflow:"hidden" }}>
 
           {/* Sidebar de resultados */}
-          <div style={{ display:"flex", flexDirection:"column", overflow:"hidden", background:"rgba(228,244,252,0.6)", backdropFilter:"blur(12px)", borderRight:"1px solid rgba(200,225,240,0.5)" }}>
+          <div style={{ display:"flex", flexDirection:"column", overflow:"hidden", background:"#F0F2F4",  borderRight:"1px solid #E3E6E9" }}>
 
             {/* Search bar */}
             <div style={{ padding:"14px 14px 10px" }}>
               <div style={{ position:"relative" }}>
-                <Search style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", width:14, height:14, color:"rgba(20,45,70,0.4)" }} />
+                <Search style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", width:14, height:14, color:"#5B6570" }} />
                 <input
                   value={query}
                   onChange={e => handleInput(e.target.value)}
                   placeholder={quotaExcedida ? "Busca indisponível no momento..." : "Buscar por categoria, segmento..."}
                   onKeyDown={e => e.key === "Enter" && buscar(query)}
                   disabled={quotaExcedida}
-                  style={{ width:"100%", height:42, paddingLeft:32, paddingRight:query ? 32 : 12, borderRadius:12, border:`1.5px solid ${quotaExcedida ? "rgba(220,38,38,0.3)" : "rgba(200,225,240,0.9)"}`, background: quotaExcedida ? "rgba(255,240,240,0.7)" : "rgba(255,255,255,0.9)", fontSize:13, color:"#1a2e40", outline:"none", boxShadow:"0 2px 8px rgba(41,128,185,0.08)", cursor: quotaExcedida ? "not-allowed" : "text" }}
+                  style={{ width:"100%", height:42, paddingLeft:32, paddingRight:query ? 32 : 12, borderRadius:8, border:`1.5px solid ${quotaExcedida ? "rgba(220,38,38,0.3)" : "#E3E6E9"}`, background: quotaExcedida ? "rgba(255,240,240,0.7)" : "#ffffff", fontSize:13, color:"#16191D", outline:"none", boxShadow:"none", cursor: quotaExcedida ? "not-allowed" : "text" }}
                 />
                 {query && (
-                  <button onClick={() => { setQuery(""); setResults([]); }} style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", width:20, height:20, borderRadius:"50%", border:"none", background:"rgba(20,45,70,0.12)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                    <X style={{ width:11, height:11, color:"rgba(20,45,70,0.5)" }} />
+                  <button onClick={() => { setQuery(""); setResults([]); }} style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", width:20, height:20, borderRadius:"50%", border:"none", background:"#E3E6E9", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <X style={{ width:11, height:11, color:"#5B6570" }} />
                   </button>
                 )}
               </div>
@@ -372,16 +369,16 @@ export default function BuscarEmpresas() {
 
               {/* Quota excedida */}
               {quotaExcedida && (
-                <div style={{ marginTop:8, padding:"16px 14px", borderRadius:14, background:"rgba(220,38,38,0.06)", border:"1.5px solid rgba(220,38,38,0.25)", display:"flex", flexDirection:"column", gap:8 }}>
+                <div style={{ marginTop:8, padding:"16px 14px", borderRadius:8, background:"rgba(220,38,38,0.06)", border:"1.5px solid rgba(220,38,38,0.25)", display:"flex", flexDirection:"column", gap:8 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                    <AlertCircle style={{ width:18, height:18, color:"#dc2626", flexShrink:0 }} />
-                    <span style={{ fontSize:13, fontWeight:700, color:"#dc2626" }}>Limite gratuito atingido</span>
+                    <AlertCircle style={{ width:18, height:18, color:"#B42318", flexShrink:0 }} />
+                    <span style={{ fontSize:13, fontWeight:700, color:"#B42318" }}>Limite gratuito atingido</span>
                   </div>
-                  <p style={{ fontSize:12, color:"rgba(20,45,70,0.6)", lineHeight:1.5 }}>
+                  <p style={{ fontSize:12, color:"#5B6570", lineHeight:1.5 }}>
                     O limite da API do Google Places foi atingido. Uma notificação será enviada quando a busca estiver disponível novamente.
                   </p>
                   {quotaResetTime && (
-                    <div style={{ fontSize:11, fontWeight:600, color:"rgba(20,45,70,0.45)", padding:"6px 10px", borderRadius:8, background:"rgba(0,0,0,0.04)" }}>
+                    <div style={{ fontSize:11, fontWeight:600, color:"#5B6570", padding:"6px 10px", borderRadius:8, background:"rgba(0,0,0,0.04)" }}>
                       Previsão de reset: {quotaResetTime.toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" })}
                     </div>
                   )}
@@ -391,7 +388,7 @@ export default function BuscarEmpresas() {
               {/* Estado vazio — sugestões */}
               {!quotaExcedida && !loading && results.length === 0 && !error && (
                 <div style={{ paddingTop:8 }}>
-                  <div style={{ fontSize:11, fontWeight:700, color:"rgba(20,45,70,0.45)", textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:10 }}>Sugestões rápidas</div>
+                  <div style={{ fontSize:11, fontWeight:700, color:"#5B6570", textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:10 }}>Sugestões rápidas</div>
                   <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
                     {SUGESTOES.map(s => (
                       <button key={s} className="sugestao-chip" onClick={() => { setQuery(s); buscar(s); }}>
@@ -400,18 +397,18 @@ export default function BuscarEmpresas() {
                     ))}
                   </div>
                   <div style={{ marginTop:24, textAlign:"center", padding:"20px 0" }}>
-                    <div style={{ width:52, height:52, borderRadius:"50%", background:"rgba(41,128,185,0.08)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 12px" }}>
-                      <MapPin style={{ width:22, height:22, color:"rgba(41,128,185,0.35)" }} />
+                    <div style={{ width:52, height:52, borderRadius:"50%", background:"#EFF4FE", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 12px" }}>
+                      <MapPin style={{ width:22, height:22, color:"#2563EB" }} />
                     </div>
-                    <div style={{ fontSize:13, fontWeight:700, color:"rgba(20,45,70,0.45)" }}>Busque por segmento ou tipo de empresa</div>
-                    <div style={{ fontSize:11, color:"rgba(20,45,70,0.3)", marginTop:4 }}>Os resultados aparecerão no mapa e aqui na lista</div>
+                    <div style={{ fontSize:13, fontWeight:700, color:"#5B6570" }}>Busque por segmento ou tipo de empresa</div>
+                    <div style={{ fontSize:11, color:"#5B6570", marginTop:4 }}>Os resultados aparecerão no mapa e aqui na lista</div>
                   </div>
                 </div>
               )}
 
               {/* Loading skeletons */}
               {loading && [1,2,3,4].map(i => (
-                <div key={i} style={{ background:"rgba(255,255,255,0.8)", borderRadius:14, padding:14 }}>
+                <div key={i} style={{ background:"#ffffff", borderRadius:8, padding:14 }}>
                   <div className="skeleton" style={{ height:14, width:"70%", marginBottom:8 }} />
                   <div className="skeleton" style={{ height:10, width:"40%", marginBottom:6 }} />
                   <div className="skeleton" style={{ height:10, width:"90%" }} />
@@ -420,16 +417,16 @@ export default function BuscarEmpresas() {
 
               {/* Erro */}
               {error && (
-                <div style={{ display:"flex", alignItems:"center", gap:8, padding:"12px 14px", borderRadius:12, background:"rgba(220,38,38,0.07)", border:"1px solid rgba(220,38,38,0.2)" }}>
-                  <AlertCircle style={{ width:16, height:16, color:"#dc2626", flexShrink:0 }} />
-                  <span style={{ fontSize:12, color:"#dc2626", fontWeight:600 }}>{error}</span>
+                <div style={{ display:"flex", alignItems:"center", gap:8, padding:"12px 14px", borderRadius:8, background:"rgba(220,38,38,0.07)", border:"1px solid rgba(220,38,38,0.2)" }}>
+                  <AlertCircle style={{ width:16, height:16, color:"#B42318", flexShrink:0 }} />
+                  <span style={{ fontSize:12, color:"#B42318", fontWeight:600 }}>{error}</span>
                 </div>
               )}
 
               {/* Resultados */}
               {!loading && resultadosFiltrados.length > 0 && (
                 <>
-                  <div style={{ fontSize:11, fontWeight:700, color:"rgba(20,45,70,0.5)", padding:"0 2px" }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:"#5B6570", padding:"0 2px" }}>
                     {resultadosFiltrados.length} resultado{resultadosFiltrados.length > 1 ? "s" : ""}
                     {results.length !== resultadosFiltrados.length ? ` (de ${results.length})` : ""}
                   </div>
@@ -456,16 +453,16 @@ export default function BuscarEmpresas() {
               <button
                 onClick={() => setMapCenter({ ...myLocation })}
                 title="Minha localização"
-                style={{ position:"absolute", bottom:120, right:10, zIndex:10, width:40, height:40, borderRadius:10, border:"none", background:"#fff", boxShadow:"0 2px 8px rgba(0,0,0,0.2)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}
+                style={{ position:"absolute", bottom:120, right:10, zIndex:10, width:40, height:40, borderRadius:8, border:"none", background:"#fff", boxShadow:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}
               >
-                <Navigation2 style={{ width:18, height:18, color:"#2980b9" }} />
+                <Navigation2 style={{ width:18, height:18, color:"#2563EB" }} />
               </button>
             )}
             {!MAPS_KEY ? (
-              <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100%", flexDirection:"column", gap:12, background:"rgba(200,225,240,0.3)" }}>
-                <AlertCircle style={{ width:32, height:32, color:"rgba(20,45,70,0.3)" }} />
-                <div style={{ fontSize:14, fontWeight:700, color:"rgba(20,45,70,0.45)" }}>Chave do Google Maps não configurada</div>
-                <div style={{ fontSize:12, color:"rgba(20,45,70,0.35)" }}>Adicione VITE_GOOGLE_MAPS_KEY no .env</div>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100%", flexDirection:"column", gap:12, background:"#E3E6E9" }}>
+                <AlertCircle style={{ width:32, height:32, color:"#5B6570" }} />
+                <div style={{ fontSize:14, fontWeight:700, color:"#5B6570" }}>Chave do Google Maps não configurada</div>
+                <div style={{ fontSize:12, color:"#5B6570" }}>Adicione VITE_GOOGLE_MAPS_KEY no .env</div>
               </div>
             ) : (
               <APIProvider apiKey={MAPS_KEY}>
@@ -492,7 +489,7 @@ export default function BuscarEmpresas() {
 
                   {myLocation && (
                     <AdvancedMarker position={myLocation}>
-                      <div style={{ width:16, height:16, borderRadius:"50%", background:"#2980b9", border:"3px solid #fff", boxShadow:"0 2px 8px rgba(41,128,185,0.5)" }} />
+                      <div style={{ width:16, height:16, borderRadius:"50%", background:"#2563EB", border:"3px solid #fff", boxShadow:"none" }} />
                     </AdvancedMarker>
                   )}
 
@@ -502,18 +499,18 @@ export default function BuscarEmpresas() {
                       onCloseClick={() => setInfoWindowId(null)}
                     >
                       <div style={{ fontFamily:"Plus Jakarta Sans, sans-serif", maxWidth:220, padding:4 }}>
-                        <div style={{ fontSize:13, fontWeight:700, color:"#0f2133", marginBottom:4 }}>{selectedPlace.nome}</div>
-                        {selectedPlace.endereco && <div style={{ fontSize:11, color:"rgba(20,45,70,0.6)", marginBottom:6, lineHeight:1.4 }}>{selectedPlace.endereco}</div>}
+                        <div style={{ fontSize:13, fontWeight:700, color:"#16191D", marginBottom:4 }}>{selectedPlace.nome}</div>
+                        {selectedPlace.endereco && <div style={{ fontSize:11, color:"#5B6570", marginBottom:6, lineHeight:1.4 }}>{selectedPlace.endereco}</div>}
                         {!selectedPlace.ja_cadastrada && (
                           <button
                             onClick={() => { setInfoWindowId(null); cadastrar(selectedPlace); }}
-                            style={{ width:"100%", height:28, borderRadius:7, border:"none", background:"linear-gradient(135deg,#8e44ad,#2980b9)", color:"#fff", fontSize:11, fontWeight:700, cursor:"pointer" }}
+                            style={{ width:"100%", height:28, borderRadius:7, border:"none", background:"#5B6570", color:"#fff", fontSize:11, fontWeight:700, cursor:"pointer" }}
                           >
                             + Iniciar cadastro
                           </button>
                         )}
                         {selectedPlace.ja_cadastrada && (
-                          <span style={{ fontSize:10, fontWeight:700, color:"#27ae60" }}>✓ Já está no CRM</span>
+                          <span style={{ fontSize:10, fontWeight:700, color:"#0F7B4F" }}>✓ Já está no CRM</span>
                         )}
                       </div>
                     </InfoWindow>

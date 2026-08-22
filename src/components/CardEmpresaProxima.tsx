@@ -3,9 +3,9 @@ import { formatarDistancia } from "../utils/distancia";
 import type { EmpresaProxima } from "../hooks/useEmpresasProximas";
 
 function tempCor(t?: string) {
-  if (t === "Quente") return "#e74c3c";
-  if (t === "Morno") return "#e67e22";
-  if (t === "Frio") return "#2980b9";
+  if (t === "Quente") return "#B42318";
+  if (t === "Morno") return "#8A5A00";
+  if (t === "Frio") return "#2563EB";
   return "#7f8c9a";
 }
 
@@ -36,18 +36,18 @@ export default function CardEmpresaProxima({ empresa }: { empresa: EmpresaProxim
         width: "100%",
         textAlign: "left",
         padding: "14px 16px",
-        borderRadius: 14,
-        border: "1px solid rgba(200,225,240,0.8)",
-        background: "rgba(255,255,255,0.78)",
+        borderRadius: 8,
+        border: "1px solid #E3E6E9",
+        background: "#ffffff",
         cursor: "pointer",
         transition: "all 0.15s",
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.background = "rgba(41,128,185,0.06)";
+        e.currentTarget.style.background = "#EFF4FE";
         e.currentTarget.style.transform = "translateY(-1px)";
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.background = "rgba(255,255,255,0.78)";
+        e.currentTarget.style.background = "#ffffff";
         e.currentTarget.style.transform = "translateY(0)";
       }}
     >
@@ -59,7 +59,7 @@ export default function CardEmpresaProxima({ empresa }: { empresa: EmpresaProxim
           background: cor,
           flexShrink: 0,
           border: "1.5px solid #fff",
-          boxShadow: "0 0 0 1px rgba(0,0,0,0.08)",
+          boxShadow:"none",
         }}
       />
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -67,7 +67,7 @@ export default function CardEmpresaProxima({ empresa }: { empresa: EmpresaProxim
           style={{
             fontSize: 14,
             fontWeight: 800,
-            color: "#0f2133",
+            color: "#16191D",
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
@@ -81,7 +81,7 @@ export default function CardEmpresaProxima({ empresa }: { empresa: EmpresaProxim
             alignItems: "center",
             gap: 4,
             fontSize: 12,
-            color: "rgba(20,45,70,0.55)",
+            color: "#5B6570",
             marginTop: 2,
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -101,7 +101,7 @@ export default function CardEmpresaProxima({ empresa }: { empresa: EmpresaProxim
           flexShrink: 0,
         }}
       >
-        <span style={{ fontSize: 13, fontWeight: 800, color: "#2980b9" }}>
+        <span style={{ fontSize: 13, fontWeight: 800, color: "#2563EB" }}>
           {formatarDistancia(empresa.distanciaKm)}
         </span>
         <span
@@ -111,7 +111,7 @@ export default function CardEmpresaProxima({ empresa }: { empresa: EmpresaProxim
             gap: 4,
             fontSize: 11,
             fontWeight: 700,
-            color: "#1abc9c",
+            color: "#2563EB",
           }}
         >
           <Navigation style={{ width: 12, height: 12 }} /> Waze

@@ -2,90 +2,127 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ========================= */
-/* 📱 TRAVA DE OVERFLOW HORIZONTAL (mobile) */
-/* Impede que arrastar para o lado mova a página inteira. */
-/* ========================= */
+/* ===================================================================
+   ProspectaGeo — tokens do DESIGN.md (raiz do repo).
+   Registro: ferramenta de operação. Plano, denso, um acento só.
+   Ao mexer aqui, mexa no DESIGN.md junto — ele é a fonte da verdade.
+   =================================================================== */
+
+:root {
+  --canvas: #F6F7F8;
+  --surface: #FFFFFF;
+  --surface-sunken: #F0F2F4;
+
+  --ink: #16191D;
+  --ink-muted: #5B6570;
+  --ink-faint: #8A929B;
+
+  --line: #E3E6E9;
+  --line-strong: #CBD1D7;
+
+  --primary: #2563EB;
+  --primary-hover: #1D4FD7;
+  --primary-wash: #EFF4FE;
+  --on-primary: #FFFFFF;
+
+  --positive: #0F7B4F;
+  --positive-wash: #ECF6F1;
+  --warning: #8A5A00;
+  --warning-wash: #FBF4E6;
+  --danger: #B42318;
+  --danger-wash: #FDF1F0;
+
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 8px;
+
+  --s-xs: 4px;
+  --s-sm: 8px;
+  --s-md: 12px;
+  --s-lg: 16px;
+  --s-xl: 24px;
+
+  --t-fast: 120ms;
+  --t-content: 180ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-data: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* Trava de overflow horizontal (mobile): arrastar para o lado não move a página. */
 html, body, #root {
   max-width: 100%;
   overflow-x: hidden;
   overscroll-behavior-x: none;
 }
 
-/* ========================= */
-/* 🌈 GRADIENTES DE TEXTO */
-/* ========================= */
-
-.gradient-strong {
-  background: linear-gradient(270deg, #2f80ed, #56ccf2, #27ae60);
-  background-size: 400% 400%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: gradientMove 6s ease infinite;
+body {
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
 }
 
-.gradient-soft {
-  background: linear-gradient(270deg, #56ccf2, #2f80ed);
-  background-size: 400% 400%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: gradientMove 5s ease infinite;
+/* Números que se comparam na vertical: mono com numeral tabular. */
+.data,
+.tabular {
+  font-family: var(--font-data);
+  font-size: 13px;
+  font-weight: 500;
+  font-feature-settings: "tnum" 1;
 }
 
-/* ========================= */
-/* ✨ ANIMAÇÃO GRADIENTE */
-/* ========================= */
-
-@keyframes gradientMove {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+/* Um único anel de foco em todo o produto. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--primary-wash);
+  border-color: var(--primary);
+  outline-offset: 0;
 }
-
-/* ========================= */
-/* 🌫️ GLASS EFFECT (GLOBAL) */
-/* ========================= */
-
-.glass {
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255,255,255,0.4);
-}
-
-/* ========================= */
-/* 💡 BOTÃO PREMIUM */
-/* ========================= */
-
-.btn-primary {
-  background: linear-gradient(135deg, #2f80ed 0%, #27ae60 100%);
-  box-shadow: 0 10px 30px rgba(47,128,237,0.35);
-}
-
-/* ========================= */
-/* 🧠 MICRO DETALHES */
-/* ========================= */
 
 ::selection {
-  background: #2f80ed;
-  color: white;
+  background: var(--primary);
+  color: var(--on-primary);
 }
 
-@keyframes float {
-  0% { transform: translateY(0px); }
-  50% { transform: translateY(-20px); }
-  100% { transform: translateY(0px); }
+/* Superfície de painel. Era vidro fosco; agora é superfície com linha. */
+.glass {
+  background: var(--surface);
+  border: 1px solid var(--line);
 }
 
-@keyframes floatSlow {
-  0% { transform: translateY(0px); }
-  50% { transform: translateY(30px); }
-  100% { transform: translateY(0px); }
+.btn-primary {
+  background: var(--primary);
+  color: var(--on-primary);
+  border: none;
+  border-radius: var(--r-md);
+  height: 34px;
+  padding: 0 var(--s-md);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease);
 }
 
-.animate-float {
-  animation: float 8s ease-in-out infinite;
+.btn-primary:hover {
+  background: var(--primary-hover);
 }
 
-.animate-floatSlow {
-  animation: floatSlow 12s ease-in-out infinite;
+/* Herdadas do visual antigo: eram texto com gradiente animado em laço.
+   Viraram texto sólido — o destaque agora é a cor, não o movimento. */
+.gradient-strong,
+.gradient-soft {
+  color: var(--primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0ms !important;
+  }
 }

@@ -38,8 +38,8 @@ function App() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(145deg, #c8e8f5 0%, #cceee8 65%, #c5eae0 100%)",
-          color: "#2980b9",
+          background: "#F6F7F8",
+          color: "#2563EB",
           fontSize: 14,
           fontWeight: 600,
         }}
