@@ -36,13 +36,14 @@ import FundoAzul from "../../components/FundoAzul";
       .glass-card { background:#143354; border:1px solid rgba(126,176,219,0.16); border-radius:16px; }
       .metric-card { background:#143354; border:1.5px solid rgba(126,176,219,0.16); border-radius:16px; padding:16px 14px; transition:all 0.2s; cursor:pointer; user-select:none; }
       .metric-card:hover { transform:translateY(-2px); box-shadow:0 10px 30px rgba(3,14,26,0.45); }
-      .preview-row { display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr; align-items:center; padding:11px 18px; border-bottom:1px solid rgba(126,176,219,0.16); cursor:pointer; transition:background 0.13s; }
+      .preview-row { display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr; column-gap:14px; align-items:center; padding:11px 18px; border-bottom:1px solid rgba(126,176,219,0.16); cursor:pointer; transition:background 0.13s; }
       .preview-row:hover { background:rgba(126,176,219,0.07); }
       .preview-row.draft-row { background:rgba(167,139,250,0.03); border-left:3px solid rgba(167,139,250,0.3); }
       .preview-row.draft-row:hover { background:rgba(167,139,250,0.07); }
       .preview-row:last-child { border-bottom:none; }
-      .preview-th { display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr; align-items:center; padding:8px 18px; border-bottom:1px solid rgba(126,176,219,0.16); }
+      .preview-th { display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr; column-gap:14px; align-items:center; padding:8px 18px; border-bottom:1px solid rgba(126,176,219,0.16); }
       .chip { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:20px; font-size:10px; font-weight:700; white-space:nowrap; }
+      .preview-row > .chip, .preview-row > button { justify-self:start; }
       .action-item { padding:12px 14px; border-radius:12px; background:#143354; border:1px solid rgba(126,176,219,0.16); cursor:pointer; transition:all 0.18s; }
       .action-item:hover { background:#143354; border-color:rgba(126,176,219,0.30); transform:translateY(-1px); }
       .notif-item { padding:12px 14px; border-bottom:1px solid rgba(126,176,219,0.16); transition:background 0.13s; display:flex; gap:10px; align-items:flex-start; }
@@ -95,7 +96,6 @@ import FundoAzul from "../../components/FundoAzul";
       if(s==="Em contato")      return { bg:"rgba(86,164,245,0.12)",  text:"#56A4F5",  border:"rgba(126,176,219,0.30)"  };
       return                           { bg:"rgba(126,176,219,0.12)", text:"#B6CFE4",  border:"rgba(126,176,219,0.30)" };
     }
-    function tempIcon(t: string) { if(t==="Quente")return"🔥"; if(t==="Morno")return"🌡️"; return"❄️"; }
     function tempColor(t: string) { if(t==="Quente")return"#F87171"; if(t==="Morno")return"#F0A05A"; return"#B6CFE4"; }
 
     // ── Evolução da base ────────────────────────────────────────
@@ -516,7 +516,7 @@ import FundoAzul from "../../components/FundoAzul";
       const filterLabels: Record<FilterKey, string> = {
         total:"Todas as empresas", rascunho:"Rascunhos pendentes", lead:"Leads",
         em_contato:"Em contato", visita:"Visita agendada", proposta:"Propostas enviadas",
-        negociacao:"Em negociação", fechado:"Clientes fechados", quente:"Leads quentes 🔥",
+        negociacao:"Em negociação", fechado:"Clientes fechados", quente:"Leads quentes",
       };
 
       const previewList = filterMap[activeFilter];
@@ -837,7 +837,10 @@ import FundoAzul from "../../components/FundoAzul";
                               ):(
                                 <>
                                   <span className="chip" style={{background:sc.bg,color:sc.text,border:`1px solid ${sc.border}`}}>{emp.status||"—"}</span>
-                                  <span style={{fontSize:12,color:tempColor(emp.temperatura)}}>{tempIcon(emp.temperatura)} {emp.temperatura||"—"}</span>
+                                  <span style={{display:"inline-flex",alignItems:"center",gap:7,fontSize:11,color:emp.temperatura?tempColor(emp.temperatura):"#B6CFE4"}}>
+                                    {emp.temperatura&&<span style={{width:6,height:6,borderRadius:"50%",background:tempColor(emp.temperatura),flexShrink:0}}/>}
+                                    {emp.temperatura||"—"}
+                                  </span>
                                   <span style={{fontSize:11,color:"#FFFFFF"}}>{emp.cidade||"—"}</span>
                                   <span style={{fontSize:12,fontWeight:700,color:"#FFFFFF"}}>{emp.ticket_medio_estimado?`R$ ${emp.ticket_medio_estimado.toLocaleString("pt-BR")}`:"—"}</span>
                                 </>
