@@ -79,7 +79,7 @@ export default function Hero() {
               whileTap={{ scale: 0.96 }}
               className="w-full sm:w-[45%] h-14 px-8 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2"
               style={{
-                background: "linear-gradient(135deg, #2f80ed 0%, #27ae60 100%)",
+                background:"linear-gradient(135deg, #2E6F95 0%, #83DDA8 100%)",
                 boxShadow: "0 14px 40px rgba(47,128,237,0.45)"
               }}
             >

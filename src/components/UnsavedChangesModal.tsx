@@ -39,17 +39,17 @@ function BtnGhost({
     <button
       onClick={onClick}
       style={{
-        border: danger
-          ? "1.5px solid rgba(231,76,60,0.3)"
-          : "1.5px solid rgba(200,225,240,0.9)",
-        background: danger
-          ? "rgba(231,76,60,0.06)"
-          : "rgba(255,255,255,0.75)",
+        border:danger
+          ? "1.5px solid rgba(248,113,113,0.3)"
+          : "1.5px solid rgba(126,176,219,0.9)",
+        background:danger
+          ? "rgba(248,113,113,0.06)"
+          : "#143354",
         cursor: "pointer",
         borderRadius: 10,
         fontFamily: "'Plus Jakarta Sans', sans-serif",
         fontWeight: 600,
-        color: danger ? "#e74c3c" : "rgba(20,45,70,0.65)",
+        color:danger ? "#F87171" : "#FFFFFF",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -59,18 +59,18 @@ function BtnGhost({
       }}
       onMouseEnter={(e) => {
         (e.currentTarget as HTMLButtonElement).style.background = danger
-          ? "rgba(231,76,60,0.12)"
-          : "rgba(255,255,255,0.95)";
+          ? "rgba(248,113,113,0.12)"
+          : "#143354";
         if (!danger)
-          (e.currentTarget as HTMLButtonElement).style.color = "#2980b9";
+          (e.currentTarget as HTMLButtonElement).style.color = "#B6CFE4";
       }}
       onMouseLeave={(e) => {
         (e.currentTarget as HTMLButtonElement).style.background = danger
-          ? "rgba(231,76,60,0.06)"
-          : "rgba(255,255,255,0.75)";
+          ? "rgba(248,113,113,0.06)"
+          : "#143354";
         if (!danger)
           (e.currentTarget as HTMLButtonElement).style.color =
-            "rgba(20,45,70,0.65)";
+            "rgba(159,211,234,0.55)";
       }}
     >
       {children}
@@ -107,7 +107,7 @@ export default function UnsavedChangesModal({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              background: "rgba(10,31,51,0.4)",
+              background:"rgba(3,14,26,0.62)",
               backdropFilter: "blur(6px)",
             }}
           >
@@ -120,12 +120,12 @@ export default function UnsavedChangesModal({
               onClick={(e) => e.stopPropagation()}
               style={{
                 width: 460,
-                background: "rgba(248,252,255,0.97)",
+                background:"#0F2E4B",
                 backdropFilter: "blur(24px)",
                 borderRadius: 20,
-                border: "1.5px solid rgba(230,126,34,0.25)",
+                border:"1.5px solid rgba(240,160,90,0.25)",
                 boxShadow:
-                  "0 28px 72px rgba(10,31,51,0.24), 0 0 0 1px rgba(230,126,34,0.12)",
+                  "0 28px 72px rgba(10,31,51,0.24), 0 0 0 1px rgba(240,160,90,0.12)",
                 overflow: "hidden",
                 position: "relative",
               }}
@@ -134,8 +134,7 @@ export default function UnsavedChangesModal({
               <div
                 style={{
                   height: 4,
-                  background:
-                    "linear-gradient(90deg, #e67e22, #f39c12, #e67e22)",
+                  background:"linear-gradient(90deg, #F0A05A, #F0A05A, #F0A05A)",
                   backgroundSize: "200% 100%",
                   animation: "gradientShift 3s ease infinite",
                 }}
@@ -151,26 +150,26 @@ export default function UnsavedChangesModal({
                   width: 28,
                   height: 28,
                   borderRadius: 8,
-                  border: "1px solid rgba(200,225,240,0.7)",
-                  background: "rgba(255,255,255,0.8)",
+                  border:"1px solid rgba(126,176,219,0.16)",
+                  background:"#143354",
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  color: "rgba(20,45,70,0.4)",
+                  color:"#B6CFE4",
                   transition: "all 0.18s",
                 }}
                 onMouseEnter={(e) => {
                   (e.currentTarget as HTMLButtonElement).style.background =
-                    "rgba(255,255,255,1)";
+                    "rgba(126,176,219,1)";
                   (e.currentTarget as HTMLButtonElement).style.color =
-                    "#e74c3c";
+                    "#F87171";
                 }}
                 onMouseLeave={(e) => {
                   (e.currentTarget as HTMLButtonElement).style.background =
-                    "rgba(255,255,255,0.8)";
+                    "#143354";
                   (e.currentTarget as HTMLButtonElement).style.color =
-                    "rgba(20,45,70,0.4)";
+                    "rgba(159,211,234,0.55)";
                 }}
               >
                 <X style={{ width: 13, height: 13 }} />
@@ -191,8 +190,8 @@ export default function UnsavedChangesModal({
                       width: 48,
                       height: 48,
                       borderRadius: 14,
-                      background: "rgba(230,126,34,0.1)",
-                      border: "1.5px solid rgba(230,126,34,0.25)",
+                      background:"rgba(240,160,90,0.1)",
+                      border:"1.5px solid rgba(240,160,90,0.25)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -200,7 +199,7 @@ export default function UnsavedChangesModal({
                     }}
                   >
                     <AlertTriangle
-                      style={{ width: 22, height: 22, color: "#e67e22" }}
+                      style={{ width: 22, height: 22, color:"#F0A05A" }}
                     />
                   </div>
                   <div>
@@ -208,7 +207,7 @@ export default function UnsavedChangesModal({
                       style={{
                         fontSize: 16,
                         fontWeight: 800,
-                        color: "#0f2133",
+                        color:"#FFFFFF",
                         marginBottom: 4,
                         letterSpacing: "-0.02em",
                       }}
@@ -218,7 +217,7 @@ export default function UnsavedChangesModal({
                     <div
                       style={{
                         fontSize: 13,
-                        color: "rgba(20,45,70,0.55)",
+                        color:"#B6CFE4",
                         lineHeight: 1.55,
                       }}
                     >
@@ -241,10 +240,10 @@ export default function UnsavedChangesModal({
                   <OptionButton
                     icon={
                       <Save
-                        style={{ width: 15, height: 15, color: "#2980b9" }}
+                        style={{ width: 15, height: 15, color:"#B6CFE4" }}
                       />
                     }
-                    iconBg="rgba(41,128,185,0.1)"
+                    iconBg="rgba(86,164,245,0.1)"
                     label="Salvar empresa"
                     description={
                       canSave
@@ -254,17 +253,17 @@ export default function UnsavedChangesModal({
                     disabled={!canSave}
                     onClick={() => onAction("save")}
                     badge={canSave ? undefined : "Campos obrigatórios faltando"}
-                    badgeColor="#e67e22"
+                    badgeColor="#F0A05A"
                   />
 
                   {/* Opção 2 — Salvar como rascunho */}
                   <OptionButton
                     icon={
                       <FileText
-                        style={{ width: 15, height: 15, color: "#8e44ad" }}
+                        style={{ width: 15, height: 15, color:"#B6CFE4" }}
                       />
                     }
-                    iconBg="rgba(142,68,173,0.1)"
+                    iconBg="rgba(167,139,250,0.1)"
                     label="Salvar como rascunho"
                     description="Salva o progresso parcial. Você pode completar depois"
                     onClick={() => onAction("draft")}
@@ -274,10 +273,10 @@ export default function UnsavedChangesModal({
                   <OptionButton
                     icon={
                       <ArrowRight
-                        style={{ width: 15, height: 15, color: "#27ae60" }}
+                        style={{ width: 15, height: 15, color:"#2CCD93" }}
                       />
                     }
-                    iconBg="rgba(39,174,96,0.1)"
+                    iconBg="rgba(44,205,147,0.1)"
                     label="Continuar editando"
                     description="Voltar ao formulário e continuar preenchendo"
                     onClick={() => onAction("continue")}
@@ -288,7 +287,7 @@ export default function UnsavedChangesModal({
                 <div
                   style={{
                     height: 1,
-                    background: "rgba(200,225,240,0.5)",
+                    background:"rgba(126,176,219,0.08)",
                     marginBottom: 16,
                   }}
                 />
@@ -341,10 +340,10 @@ function OptionButton({
         gap: 12,
         padding: "12px 14px",
         borderRadius: 12,
-        border: "1.5px solid rgba(200,225,240,0.7)",
-        background: disabled
-          ? "rgba(240,244,248,0.5)"
-          : "rgba(255,255,255,0.75)",
+        border:"1.5px solid rgba(126,176,219,0.16)",
+        background:disabled
+          ? "rgba(126,176,219,0.5)"
+          : "#143354",
         cursor: disabled ? "not-allowed" : "pointer",
         textAlign: "left",
         transition: "all 0.18s",
@@ -353,18 +352,18 @@ function OptionButton({
       onMouseEnter={(e) => {
         if (!disabled) {
           (e.currentTarget as HTMLButtonElement).style.background =
-            "rgba(255,255,255,1)";
+            "rgba(126,176,219,1)";
           (e.currentTarget as HTMLButtonElement).style.borderColor =
-            "rgba(41,128,185,0.3)";
+            "rgba(86,164,245,0.3)";
           (e.currentTarget as HTMLButtonElement).style.boxShadow =
-            "0 4px 16px rgba(41,128,185,0.1)";
+            "0 4px 16px rgba(86,164,245,0.1)";
         }
       }}
       onMouseLeave={(e) => {
         (e.currentTarget as HTMLButtonElement).style.background =
-          "rgba(255,255,255,0.75)";
+          "#143354";
         (e.currentTarget as HTMLButtonElement).style.borderColor =
-          "rgba(200,225,240,0.7)";
+          "rgba(126,176,219,0.7)";
         (e.currentTarget as HTMLButtonElement).style.boxShadow = "none";
       }}
     >
@@ -373,7 +372,7 @@ function OptionButton({
           width: 34,
           height: 34,
           borderRadius: 9,
-          background: iconBg,
+          background:iconBg,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -387,7 +386,7 @@ function OptionButton({
           style={{
             fontSize: 13,
             fontWeight: 700,
-            color: disabled ? "rgba(20,45,70,0.45)" : "#0f2133",
+            color:disabled ? "#B6CFE4" : "#FFFFFF",
             marginBottom: 2,
             display: "flex",
             alignItems: "center",
@@ -402,9 +401,9 @@ function OptionButton({
                 fontWeight: 700,
                 padding: "2px 7px",
                 borderRadius: 4,
-                background: `${badgeColor}18`,
-                color: badgeColor,
-                border: `1px solid ${badgeColor}30`,
+                background:`${badgeColor}18`,
+                color:badgeColor,
+                border:`1px solid ${badgeColor}30`,
               }}
             >
               {badge}
@@ -414,7 +413,7 @@ function OptionButton({
         <div
           style={{
             fontSize: 11,
-            color: "rgba(20,45,70,0.45)",
+            color:"#B6CFE4",
             lineHeight: 1.4,
           }}
         >
@@ -426,7 +425,7 @@ function OptionButton({
           style={{
             width: 13,
             height: 13,
-            color: "rgba(20,45,70,0.25)",
+            color:"rgba(159,211,234,0.78)",
             flexShrink: 0,
           }}
         />

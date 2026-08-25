@@ -25,7 +25,7 @@ export default function Navbar() {
     <nav
       className="fixed top-0 left-0 right-0 z-50 transition-all duration-500"
       style={{
-        background: scrolled
+        background:scrolled
           ? "rgba(174, 218, 235, 0.45)"
           : "rgba(200, 232, 242, 0.25)",
         backdropFilter: "blur(24px) saturate(200%)",
@@ -51,9 +51,9 @@ export default function Navbar() {
             <div
               className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-110"
               style={{
-                background: "linear-gradient(135deg, rgba(41,128,185,0.8), rgba(26,188,156,0.7))",
+                background:"linear-gradient(135deg, rgba(46,111,149,0.8), rgba(26,188,156,0.7))",
                 boxShadow: "0 4px 12px rgba(41,128,185,0.3)",
-                border: "1px solid rgba(255,255,255,0.5)",
+                border:"1px solid rgba(159,211,234,0.18)",
               }}
             >
               <Zap className="w-5 h-5 text-white" />
@@ -92,7 +92,7 @@ export default function Navbar() {
               onClick={() => navigate("/cadastro")}
               className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition hover:scale-105"
               style={{
-                background: "linear-gradient(135deg, #2980b9, #1abc9c)",
+                background:"linear-gradient(135deg, #2E6F95, #2E6F95)",
               }}
             >
               Começar Grátis

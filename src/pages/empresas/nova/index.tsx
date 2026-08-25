@@ -1,24 +1,32 @@
 import { getToken } from "../../../services/auth";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Building2, Users, LayoutDashboard, Search, Calendar,
-  ClipboardList, BarChart3, ChevronDown, ArrowLeft,
+  ClipboardList, BarChart3, ChevronDown,
   Plus, Trash2, Globe, Link2, Phone, Mail,
   MapPin, Briefcase, Hash, User, Thermometer,
   Target, Clock, Star,
   FileText, Save, CheckCircle, XCircle, Loader,
-  AlertTriangle, Menu, UserRoundCog,
+  AlertTriangle, Menu, UserRoundCog, ImagePlus,
 } from "lucide-react";
 import useIsMobile from "../../../hooks/useIsMobile";
 
 // ── Import do modal de alterações não salvas ──────────────────
 import UnsavedChangesModal, { UnsavedChangesAction } from "../../../components/UnsavedChangesModal";
 import CardUsuario from "../../../components/CardUsuario";
+import FundoAzul from "../../../components/FundoAzul";
 // Ajuste o caminho acima conforme onde você colocou o componente
 
-const API = "https://backend-crm-production-157b.up.railway.app";
+const API = (process.env.REACT_APP_API_URL || "https://backend-crm-production-157b.up.railway.app");
+
+const PORTES = ["Pequeno", "Médio", "Grande"];
+
+const ORIGENS_LEAD = [
+  "Indicação", "LinkedIn", "Site", "Prospecção ativa", "Evento",
+  "Cold Email", "Google Maps", "Manual", "Outro",
+];
 
 const SEGMENTOS_PADRAO = [
   "Academias e Fitness","Administracao de Condominios","Advocacia","Agencia de Marketing",
@@ -83,71 +91,67 @@ const dateInputToIso = (value: string) =>
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
   * { font-family: 'Plus Jakarta Sans', sans-serif; box-sizing: border-box; margin: 0; padding: 0; }
-  @keyframes float1{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(40px,-30px) scale(1.05)}66%{transform:translate(-20px,20px) scale(0.97)}}
-  @keyframes float2{0%,100%{transform:translate(0,0) scale(1)}40%{transform:translate(-50px,25px) scale(1.08)}70%{transform:translate(30px,-15px) scale(0.95)}}
-  @keyframes float3{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(25px,40px) scale(1.03)}}
-  @keyframes float4{0%,100%{transform:translate(0,0)}30%{transform:translate(-30px,-40px)}60%{transform:translate(20px,15px)}}
-  @keyframes float5{0%,100%{transform:translate(0,0) scale(1)}45%{transform:translate(35px,-20px) scale(1.06)}80%{transform:translate(-15px,30px) scale(0.96)}}
   @keyframes gradientShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
   @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-  @keyframes pulseGlow{0%,100%{box-shadow:0 0 0 0 rgba(41,128,185,0.25)}50%{box-shadow:0 0 0 8px rgba(41,128,185,0)}}
+  @keyframes pulseGlow{0%,100%{box-shadow:0 0 0 0 rgba(86,164,245,0.25)}50%{box-shadow:0 0 0 8px rgba(86,164,245,0)}}
 
-  .nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:10px;cursor:pointer;font-size:13.5px;font-weight:500;color:rgba(255,255,255,0.65);transition:all 0.18s;user-select:none;}
-  .nav-item:hover{background:rgba(255,255,255,0.08);color:#fff;}
-  .nav-item.active{background:rgba(255,255,255,0.14);color:#fff;font-weight:600;}
-  .glass-card{background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.9);border-radius:16px;}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:10px;cursor:pointer;font-size:13.5px;font-weight:500;color:#FFFFFF;transition:all 0.18s;user-select:none;}
+  .nav-item:hover{background:rgba(126,176,219,0.08);color:#fff;}
+  .nav-item.active{background:rgba(126,176,219,0.08);color:#fff;font-weight:600;}
+  .glass-card{background:#143354;border:1px solid rgba(126,176,219,0.16);border-radius:16px;}
   .field-group{display:flex;flex-direction:column;gap:5px;}
-  .field-label{font-size:10px;font-weight:700;letter-spacing:0.06em;color:rgba(15,33,51,0.45);text-transform:uppercase;}
-  .field-input{height:44px;padding:0 14px;border-radius:10px;border:1.5px solid rgba(200,225,240,0.8);background:rgba(255,255,255,0.75);font-size:13px;color:#0f2133;outline:none;transition:border-color 0.18s,box-shadow 0.18s;width:100%;}
-  .field-input:focus{border-color:rgba(41,128,185,0.55);box-shadow:0 0 0 3px rgba(41,128,185,0.1);}
-  .field-select{height:44px;padding:0 14px;border-radius:10px;border:1.5px solid rgba(200,225,240,0.8);background:rgba(255,255,255,0.75);font-size:13px;color:#0f2133;outline:none;transition:border-color 0.18s,box-shadow 0.18s;width:100%;cursor:pointer;appearance:none;}
-  .field-select:focus{border-color:rgba(41,128,185,0.55);box-shadow:0 0 0 3px rgba(41,128,185,0.1);}
-  .field-textarea{padding:12px 14px;border-radius:10px;border:1.5px solid rgba(200,225,240,0.8);background:rgba(255,255,255,0.75);font-size:13px;color:#0f2133;outline:none;transition:border-color 0.18s,box-shadow 0.18s;width:100%;resize:vertical;min-height:80px;}
-  .field-textarea:focus{border-color:rgba(41,128,185,0.55);box-shadow:0 0 0 3px rgba(41,128,185,0.1);}
+  .field-label{font-size:10px;font-weight:700;letter-spacing:0.06em;color:#B6CFE4;text-transform:uppercase;}
+  .field-input{height:44px;padding:0 14px;border-radius:10px;border:1.5px solid rgba(126,176,219,0.16);background:#143354;font-size:13px;color:#FFFFFF;outline:none;transition:border-color 0.18s,box-shadow 0.18s;width:100%;}
+  .field-input:focus{border-color:rgba(126,176,219,0.30);box-shadow:0 0 0 3px rgba(86,164,245,0.1);}
+  .field-select{height:44px;padding:0 14px;border-radius:10px;border:1.5px solid rgba(126,176,219,0.16);background:#143354;font-size:13px;color:#FFFFFF;outline:none;transition:border-color 0.18s,box-shadow 0.18s;width:100%;cursor:pointer;appearance:none;}
+  .field-select:focus{border-color:rgba(126,176,219,0.30);box-shadow:0 0 0 3px rgba(86,164,245,0.1);}
+  .field-textarea{padding:12px 14px;border-radius:10px;border:1.5px solid rgba(126,176,219,0.16);background:#143354;font-size:13px;color:#FFFFFF;outline:none;transition:border-color 0.18s,box-shadow 0.18s;width:100%;resize:vertical;min-height:80px;}
+  .field-textarea:focus{border-color:rgba(126,176,219,0.30);box-shadow:0 0 0 3px rgba(86,164,245,0.1);}
   .field-input-icon{position:relative;display:flex;align-items:center;}
-  .field-input-icon .icon{position:absolute;left:12px;color:rgba(20,45,70,0.3);pointer-events:none;}
+  .field-input-icon .icon{position:absolute;left:12px;color:#B6CFE4;pointer-events:none;}
   .field-input-icon .field-input{padding-left:36px;}
 
   .seg-wrapper{position:relative;}
   .seg-input-wrap{position:relative;display:flex;align-items:center;}
-  .seg-input{height:44px;padding:0 40px 0 36px;border-radius:10px;border:1.5px solid rgba(200,225,240,0.8);background:rgba(255,255,255,0.75);font-size:13px;color:#0f2133;outline:none;transition:border-color 0.18s,box-shadow 0.18s;width:100%;}
-  .seg-input:focus{border-color:rgba(41,128,185,0.55);box-shadow:0 0 0 3px rgba(41,128,185,0.1);}
-  .seg-input.open{border-color:rgba(41,128,185,0.55);box-shadow:0 0 0 3px rgba(41,128,185,0.1);border-bottom-left-radius:0;border-bottom-right-radius:0;}
-  .seg-icon-left{position:absolute;left:12px;color:rgba(20,45,70,0.3);pointer-events:none;width:14px;height:14px;}
-  .seg-chevron{position:absolute;right:12px;color:rgba(20,45,70,0.35);pointer-events:none;width:15px;height:15px;transition:transform 0.2s;}
+  .seg-input{height:44px;padding:0 40px 0 36px;border-radius:10px;border:1.5px solid rgba(126,176,219,0.16);background:#143354;font-size:13px;color:#FFFFFF;outline:none;transition:border-color 0.18s,box-shadow 0.18s;width:100%;}
+  .seg-input:focus{border-color:rgba(126,176,219,0.30);box-shadow:0 0 0 3px rgba(86,164,245,0.1);}
+  .seg-input.open{border-color:rgba(126,176,219,0.30);box-shadow:0 0 0 3px rgba(86,164,245,0.1);border-bottom-left-radius:0;border-bottom-right-radius:0;}
+  .seg-input-botao{display:flex;align-items:center;cursor:pointer;user-select:none;}
+  .seg-icon-left{position:absolute;left:12px;color:#B6CFE4;pointer-events:none;width:14px;height:14px;}
+  .seg-chevron{position:absolute;right:12px;color:#B6CFE4;width:15px;height:15px;transition:transform 0.2s;cursor:pointer;}
   .seg-chevron.open{transform:rotate(180deg);}
-  .seg-dropdown{position:absolute;top:calc(100% - 1px);left:0;right:0;z-index:999;background:rgba(255,255,255,0.97);backdrop-filter:blur(20px);border:1.5px solid rgba(41,128,185,0.45);border-top:1px solid rgba(200,225,240,0.5);border-bottom-left-radius:10px;border-bottom-right-radius:10px;box-shadow:0 12px 40px rgba(20,45,70,0.14);max-height:240px;overflow-y:auto;}
-  .seg-option{padding:10px 14px;font-size:13px;color:#1a2e40;cursor:pointer;transition:background 0.12s;display:flex;align-items:center;gap:8px;}
-  .seg-option:hover,.seg-option.highlighted{background:rgba(41,128,185,0.07);color:#2980b9;}
-  .seg-option.selected{background:rgba(41,128,185,0.1);color:#2980b9;font-weight:700;}
-  .seg-option-new{padding:10px 14px;font-size:13px;cursor:pointer;transition:background 0.12s;display:flex;align-items:center;gap:8px;color:#e67e22;font-weight:600;border-top:1px solid rgba(200,225,240,0.5);}
-  .seg-option-new:hover{background:rgba(230,126,34,0.07);}
-  .seg-empty{padding:14px;font-size:12px;color:rgba(20,45,70,0.4);text-align:center;}
+  .seg-dropdown{position:absolute;top:calc(100% - 1px);left:0;right:0;z-index:999;background:#16395E;border:1.5px solid rgba(126,176,219,0.30);border-top:1px solid rgba(126,176,219,0.16);border-bottom-left-radius:10px;border-bottom-right-radius:10px;box-shadow:0 16px 40px rgba(3,14,26,0.55);max-height:240px;overflow-y:auto;}
+  .seg-option{padding:10px 14px;font-size:13px;color:#FFFFFF;cursor:pointer;transition:background 0.12s;display:flex;align-items:center;gap:8px;}
+  .seg-option:hover,.seg-option.highlighted{background:rgba(126,176,219,0.10);color:#FFFFFF;}
+  .seg-option.selected{background:rgba(86,164,245,0.16);color:#8FC4FA;font-weight:700;}
+  .seg-option-new{padding:10px 14px;font-size:13px;cursor:pointer;transition:background 0.12s;display:flex;align-items:center;gap:8px;color:#F0A05A;font-weight:600;border-top:1px solid rgba(126,176,219,0.16);}
+  .seg-option-new:hover{background:rgba(240,160,90,0.07);}
+  .seg-empty{padding:14px;font-size:12px;color:#B6CFE4;text-align:center;}
 
-  .contact-card{background:rgba(255,255,255,0.6);border:1.5px solid rgba(200,225,240,0.7);border-radius:14px;padding:20px;transition:box-shadow 0.2s;}
-  .contact-card:hover{box-shadow:0 6px 24px rgba(41,128,185,0.12);}
-  .temp-btn{flex:1;height:38px;border-radius:8px;border:1.5px solid rgba(200,225,240,0.8);background:rgba(255,255,255,0.75);font-size:12px;font-weight:600;cursor:pointer;transition:all 0.18s;display:flex;align-items:center;justify-content:center;gap:5px;}
-  .temp-btn.frio.active{background:rgba(52,152,219,0.12);border-color:#3498db;color:#2980b9;}
-  .temp-btn.morno.active{background:rgba(230,126,34,0.12);border-color:#e67e22;color:#e67e22;}
-  .temp-btn.quente.active{background:rgba(231,76,60,0.12);border-color:#e74c3c;color:#e74c3c;}
-  .temp-btn:not(.active){color:rgba(20,45,70,0.4);}
-  .prio-btn{flex:1;height:34px;border-radius:8px;border:1.5px solid rgba(200,225,240,0.8);background:rgba(255,255,255,0.75);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.18s;}
-  .prio-btn.alta.active{background:rgba(231,76,60,0.12);border-color:#e74c3c;color:#e74c3c;}
-  .prio-btn.media.active{background:rgba(230,126,34,0.12);border-color:#e67e22;color:#e67e22;}
-  .prio-btn.baixa.active{background:rgba(39,174,96,0.12);border-color:#27ae60;color:#27ae60;}
-  .prio-btn:not(.active){color:rgba(20,45,70,0.4);}
-  .checkbox-decisor{display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 12px;border-radius:8px;border:1.5px solid rgba(200,225,240,0.8);background:rgba(255,255,255,0.75);transition:all 0.18s;}
-  .checkbox-decisor.checked{border-color:#27ae60;background:rgba(39,174,96,0.08);}
-  .checkbox-decisor .box{width:16px;height:16px;border-radius:4px;border:1.5px solid rgba(200,225,240,0.9);background:#fff;display:flex;align-items:center;justify-content:center;transition:all 0.18s;flex-shrink:0;}
-  .checkbox-decisor.checked .box{background:#27ae60;border-color:#27ae60;}
-  .btn-grad{border:none;cursor:pointer;border-radius:10px;color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;display:flex;align-items:center;justify-content:center;gap:7px;background:linear-gradient(135deg,#2980b9,#1abc9c,#2ecc71,#2980b9);background-size:200% 200%;animation:gradientShift 4s ease infinite;box-shadow:0 4px 14px rgba(41,128,185,0.35);transition:transform 0.15s,box-shadow 0.15s;}
-  .btn-grad:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(41,128,185,0.42);}
-  .btn-ghost{border:1.5px solid rgba(200,225,240,0.9);background:rgba(255,255,255,0.75);cursor:pointer;border-radius:10px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;color:rgba(20,45,70,0.65);display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.18s;}
-  .btn-ghost:hover{background:rgba(255,255,255,0.95);border-color:rgba(41,128,185,0.3);color:#2980b9;}
+  .contact-card{background:#143354;border:1.5px solid rgba(126,176,219,0.16);border-radius:14px;padding:20px;transition:box-shadow 0.2s;}
+  .contact-card:hover{box-shadow:0 8px 26px rgba(3,14,26,0.40);border-color:rgba(126,176,219,0.30);}
+  .temp-btn{flex:1;height:38px;border-radius:8px;border:1.5px solid rgba(126,176,219,0.16);background:#143354;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.18s;display:flex;align-items:center;justify-content:center;gap:5px;}
+  .temp-btn.frio.active{background:rgba(86,164,245,0.12);border-color:rgba(126,176,219,0.30);color:#B6CFE4;}
+  .temp-btn.morno.active{background:rgba(240,160,90,0.12);border-color:#F0A05A;color:#F0A05A;}
+  .temp-btn.quente.active{background:rgba(248,113,113,0.12);border-color:#F87171;color:#F87171;}
+  .temp-btn:not(.active){color:#B6CFE4;}
+  .prio-btn{flex:1;height:34px;border-radius:8px;border:1.5px solid rgba(126,176,219,0.16);background:#143354;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.18s;}
+  .prio-btn.alta.active{background:rgba(248,113,113,0.12);border-color:#F87171;color:#F87171;}
+  .prio-btn.media.active{background:rgba(240,160,90,0.12);border-color:#F0A05A;color:#F0A05A;}
+  .prio-btn.baixa.active{background:rgba(44,205,147,0.12);border-color:#2CCD93;color:#2CCD93;}
+  .prio-btn:not(.active){color:#B6CFE4;}
+  .checkbox-decisor{display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 12px;border-radius:8px;border:1.5px solid rgba(126,176,219,0.16);background:#143354;transition:all 0.18s;}
+  .checkbox-decisor.checked{border-color:#2CCD93;background:rgba(44,205,147,0.08);}
+  .checkbox-decisor .box{width:16px;height:16px;border-radius:4px;border:1.5px solid rgba(126,176,219,0.16);background:#143354;display:flex;align-items:center;justify-content:center;transition:all 0.18s;flex-shrink:0;}
+  .checkbox-decisor.checked .box{background:#2CCD93;border-color:#2CCD93;}
+  .btn-grad{border:none;cursor:pointer;border-radius:10px;color:#FFFFFF;font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;display:flex;align-items:center;justify-content:center;gap:7px;background:linear-gradient(135deg,#2CCD93,#2CCD93,#56A4F5,#2CCD93);background-size:200% 200%;animation:gradientShift 4s ease infinite;box-shadow:0 4px 14px rgba(44,205,147,0.28);transition:transform 0.15s,box-shadow 0.15s;}
+  .btn-grad:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(44,205,147,0.38);}
+  .btn-ghost{border:1.5px solid rgba(126,176,219,0.16);background:#143354;cursor:pointer;border-radius:10px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;color:#FFFFFF;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.18s;}
+  .btn-ghost:hover{background:#143354;border-color:rgba(126,176,219,0.30);color:#B6CFE4;}
   .spin{animation:spin 0.9s linear infinite;}
   ::-webkit-scrollbar{width:4px;}
   ::-webkit-scrollbar-track{background:transparent;}
-  ::-webkit-scrollbar-thumb{background:rgba(41,128,185,0.25);border-radius:4px;}
+  ::-webkit-scrollbar-thumb{background:rgba(86,164,245,0.25);border-radius:4px;}
 `;
 
 const navItems = [
@@ -179,39 +183,39 @@ function ValidacaoModal({
 }) {
   const configs = {
     buscando: {
-      icon: <Loader className="spin" style={{width:32,height:32,color:"#2980b9"}}/>,
+      icon: <Loader className="spin" style={{width:32,height:32,color:"#B6CFE4"}}/>,
       title: "Validando Segmento",
       sub: `Verificando "${segmento}" na base de dados...`,
-      color: "#2980b9",
-      bg: "rgba(41,128,185,0.08)",
-      border: "rgba(41,128,185,0.2)",
+      color:"#B6CFE4",
+      bg: "rgba(86,164,245,0.08)",
+      border:"rgba(126,176,219,0.30)",
       showButtons: false,
     },
     encontrado: {
-      icon: <CheckCircle style={{width:32,height:32,color:"#27ae60"}}/>,
+      icon: <CheckCircle style={{width:32,height:32,color:"#2CCD93"}}/>,
       title: "Segmento Confirmado",
       sub: `"${segmento}" foi encontrado e validado com sucesso.`,
-      color: "#27ae60",
-      bg: "rgba(39,174,96,0.08)",
-      border: "rgba(39,174,96,0.25)",
+      color:"#2CCD93",
+      bg: "rgba(44,205,147,0.08)",
+      border:"rgba(44,205,147,0.25)",
       showButtons: true,
     },
     novo: {
-      icon: <Star style={{width:32,height:32,color:"#e67e22"}}/>,
+      icon: <Star style={{width:32,height:32,color:"#F0A05A"}}/>,
       title: "Segmento Novo",
       sub: `"${segmento}" não existe na base. Deseja adicioná-lo?`,
-      color: "#e67e22",
-      bg: "rgba(230,126,34,0.08)",
-      border: "rgba(230,126,34,0.25)",
+      color:"#F0A05A",
+      bg: "rgba(240,160,90,0.08)",
+      border:"rgba(240,160,90,0.25)",
       showButtons: true,
     },
     erro: {
-      icon: <XCircle style={{width:32,height:32,color:"#dc2626"}}/>,
+      icon: <XCircle style={{width:32,height:32,color:"#F87171"}}/>,
       title: "Segmento Inválido",
       sub: `"${segmento}" não é um segmento reconhecido. Por favor, escolha um da lista ou use um nome mais específico.`,
-      color: "#dc2626",
-      bg: "rgba(220,38,38,0.06)",
-      border: "rgba(220,38,38,0.2)",
+      color:"#F87171",
+      bg: "rgba(248,113,113,0.06)",
+      border:"rgba(248,113,113,0.2)",
       showButtons: false,
     },
   };
@@ -238,11 +242,11 @@ function ValidacaoModal({
         transition={{duration:0.22,ease:[0.4,0,0.2,1]}}
         onClick={e=>e.stopPropagation()}
         style={{
-          width:420,background:"rgba(248,252,255,0.97)",
+          width:420,background:"#0F2E4B",
           backdropFilter:"blur(24px)",
           borderRadius:20,
           border:`1.5px solid ${cfg.border}`,
-          boxShadow:`0 24px 64px rgba(10,31,51,0.22), 0 0 0 1px ${cfg.border}`,
+          boxShadow:`0 24px 64px rgba(3,14,26,0.60), 0 0 0 1px `,
           padding:"32px 28px 24px",
           overflow:"hidden",
           position:"relative",
@@ -253,12 +257,12 @@ function ValidacaoModal({
           <div style={{width:64,height:64,borderRadius:18,background:cfg.bg,border:`1.5px solid ${cfg.border}`,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}>
             {cfg.icon}
           </div>
-          <div style={{fontSize:17,fontWeight:800,color:"#0f2133",marginBottom:6}}>{cfg.title}</div>
-          <div style={{fontSize:13,color:"rgba(20,45,70,0.55)",lineHeight:1.55,maxWidth:320,margin:"0 auto"}}>{cfg.sub}</div>
+          <div style={{fontSize:17,fontWeight:800,color:"#FFFFFF",marginBottom:6}}>{cfg.title}</div>
+          <div style={{fontSize:13,color:"#B6CFE4",lineHeight:1.55,maxWidth:320,margin:"0 auto"}}>{cfg.sub}</div>
         </div>
         {status==="buscando"&&(
           <div style={{marginBottom:8}}>
-            <div style={{height:3,borderRadius:3,background:"rgba(200,225,240,0.5)",overflow:"hidden"}}>
+            <div style={{height:3,borderRadius:3,background:"rgba(126,176,219,0.08)",overflow:"hidden"}}>
               <motion.div initial={{x:"-100%"}} animate={{x:"100%"}} transition={{repeat:Infinity,duration:1.2,ease:"easeInOut"}} style={{height:"100%",width:"60%",borderRadius:3,background:`linear-gradient(90deg,transparent,${cfg.color},transparent)`}}/>
             </div>
           </div>
@@ -340,9 +344,12 @@ function SegmentoAutocomplete({
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
           autoComplete="off"
-          style={hasError&&!value.trim()?{borderColor:"rgba(231,76,60,0.6)",background:"rgba(231,76,60,0.03)"}:{}}
+          style={hasError&&!value.trim()?{borderColor:"rgba(248,113,113,0.6)",background:"rgba(248,113,113,0.03)"}:{}}
         />
-        <ChevronDown className={`seg-chevron${open?" open":""}`}/>
+        <ChevronDown
+          className={`seg-chevron${open?" open":""}`}
+          onMouseDown={e=>{e.preventDefault();setOpen(o=>!o);inputRef.current?.focus();}}
+        />
       </div>
       <AnimatePresence>
         {open&&(
@@ -350,7 +357,7 @@ function SegmentoAutocomplete({
             {filtered.length===0&&!showNew&&<div className="seg-empty">Nenhum segmento encontrado</div>}
             {filtered.map((opt, i) => (
               <div key={opt} className={`seg-option${normalizeSegmento(opt)===normalizeSegmento(value)?" selected":""}${highlighted===i?" highlighted":""}`} onMouseDown={e=>{e.preventDefault();select(opt);}} onMouseEnter={()=>setHighlighted(i)}>
-                <div style={{width:6,height:6,borderRadius:"50%",background:"rgba(41,128,185,0.35)",flexShrink:0}}/>{opt}
+                <div style={{width:6,height:6,borderRadius:"50%",background:"rgba(86,164,245,0.35)",flexShrink:0}}/>{opt}
               </div>
             ))}
             {showNew&&(
@@ -361,6 +368,169 @@ function SegmentoAutocomplete({
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+// -- Dropdown padrao -------------------------------------------
+// Mesma casca visual do SegmentoAutocomplete (classes `seg-*`), mas com lista
+// fechada: nao da para digitar um valor fora das opcoes. Existe para que
+// "Origem do Lead" nao destoe do campo de Segmento logo acima -- antes era um
+// <select> nativo, que o navegador pinta com o tema dele e ignora a paleta.
+function DropdownPadrao({ value, onChange, opcoes, placeholder, icon: Icone, hasError }: {
+  value: string;
+  onChange: (v: string) => void;
+  opcoes: string[];
+  placeholder: string;
+  icon: any;
+  hasError?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [highlighted, setHighlighted] = useState(-1);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const listaId = useId();
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const select = (v: string) => { onChange(v); setOpen(false); setHighlighted(-1); };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowDown") { e.preventDefault(); setOpen(true); setHighlighted(h => (h + 1) % opcoes.length); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setOpen(true); setHighlighted(h => (h - 1 + opcoes.length) % opcoes.length); }
+    else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      if (open && highlighted >= 0) select(opcoes[highlighted]); else setOpen(o => !o);
+    } else if (e.key === "Escape") setOpen(false);
+  };
+
+  return (
+    <div className="seg-wrapper" ref={wrapRef}>
+      <div className="seg-input-wrap">
+        <Icone className="seg-icon-left"/>
+        <div
+          role="combobox" aria-expanded={open} aria-controls={listaId} aria-haspopup="listbox" tabIndex={0}
+          className={`seg-input seg-input-botao${open?" open":""}`}
+          onClick={()=>setOpen(o=>!o)}
+          onKeyDown={handleKeyDown}
+          style={hasError&&!value?{borderColor:"rgba(248,113,113,0.6)",background:"rgba(248,113,113,0.06)"}:undefined}
+        >
+          <span style={{color:value?"#FFFFFF":"rgba(182,207,228,0.65)"}}>{value||placeholder}</span>
+        </div>
+        <ChevronDown
+          className={`seg-chevron${open?" open":""}`}
+          onMouseDown={e=>{e.preventDefault();setOpen(o=>!o);}}
+        />
+      </div>
+      <AnimatePresence>
+        {open&&(
+          <motion.div id={listaId} role="listbox" className="seg-dropdown" initial={{opacity:0,y:-6,scaleY:0.95}} animate={{opacity:1,y:0,scaleY:1}} exit={{opacity:0,y:-6,scaleY:0.95}} transition={{duration:0.15,ease:[0.4,0,0.2,1]}} style={{transformOrigin:"top"}}>
+            {opcoes.map((opt, i) => (
+              <div key={opt} role="option" aria-selected={opt===value} className={`seg-option${opt===value?" selected":""}${highlighted===i?" highlighted":""}`} onMouseDown={e=>{e.preventDefault();select(opt);}} onMouseEnter={()=>setHighlighted(i)}>
+                <div style={{width:6,height:6,borderRadius:"50%",background:"rgba(86,164,245,0.55)",flexShrink:0}}/>{opt}
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// -- Logo da empresa -------------------------------------------
+// A imagem e reduzida para no maximo 256px e guardada como data URL. Sem
+// bucket de arquivos no projeto, e o que consegue viajar junto com o resto do
+// cadastro; o corte em 256px e o que segura o tamanho do payload.
+const LOGO_MAX_PX = 256;
+const LOGO_MAX_BYTES = 4 * 1024 * 1024;
+
+function reduzirImagem(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Nao foi possivel ler o arquivo."));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("Arquivo nao e uma imagem valida."));
+      img.onload = () => {
+        const escala = Math.min(1, LOGO_MAX_PX / Math.max(img.width, img.height));
+        const w = Math.round(img.width * escala);
+        const h = Math.round(img.height * escala);
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { reject(new Error("Canvas indisponivel.")); return; }
+        ctx.drawImage(img, 0, 0, w, h);
+        // PNG preserva transparencia, que a maioria das logos usa.
+        resolve(canvas.toDataURL("image/png"));
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function LogoUpload({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [erro, setErro] = useState("");
+
+  const handleFile = async (file?: File) => {
+    setErro("");
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { setErro("Escolha um arquivo de imagem."); return; }
+    if (file.size > LOGO_MAX_BYTES) { setErro("Imagem acima de 4 MB."); return; }
+    try { onChange(await reduzirImagem(file)); }
+    catch (e: any) { setErro(e.message || "Falha ao processar a imagem."); }
+  };
+
+  return (
+    <div>
+      <div style={{display:"flex",alignItems:"center",gap:14}}>
+        <div
+          onClick={()=>inputRef.current?.click()}
+          onDragOver={e=>e.preventDefault()}
+          onDrop={e=>{e.preventDefault();handleFile(e.dataTransfer.files?.[0]);}}
+          title={value?"Trocar logo":"Adicionar logo"}
+          style={{
+            width:76,height:76,borderRadius:14,flexShrink:0,cursor:"pointer",
+            border:value?"1.5px solid rgba(126,176,219,0.30)":"2px dashed rgba(126,176,219,0.30)",
+            background:value?"#0F2E4B":"rgba(126,176,219,0.06)",
+            display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",
+            transition:"all 0.18s",
+          }}
+        >
+          {value
+            ? <img src={value} alt="Logo da empresa" style={{width:"100%",height:"100%",objectFit:"contain"}}/>
+            : <ImagePlus style={{width:22,height:22,color:"#B6CFE4"}}/>}
+        </div>
+        <div style={{minWidth:0}}>
+          <div style={{fontSize:12,fontWeight:700,color:"#FFFFFF",marginBottom:3}}>Logo da empresa</div>
+          <div style={{fontSize:11,color:"#B6CFE4",marginBottom:8}}>Opcional. PNG ou JPG, arraste ou clique no quadro.</div>
+          <div style={{display:"flex",gap:8}}>
+            <button type="button" className="btn-ghost" style={{height:30,padding:"0 12px",fontSize:11}} onClick={()=>inputRef.current?.click()}>
+              {value?"Trocar":"Escolher imagem"}
+            </button>
+            {value&&(
+              <button type="button" className="btn-ghost" style={{height:30,padding:"0 12px",fontSize:11,color:"#F87171"}} onClick={()=>{onChange("");setErro("");}}>
+                <Trash2 style={{width:12,height:12}}/> Remover
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+      {erro&&(
+        <div style={{marginTop:8,fontSize:11,fontWeight:600,color:"#F87171",display:"flex",alignItems:"center",gap:5}}>
+          <AlertTriangle style={{width:12,height:12}}/> {erro}
+        </div>
+      )}
+      <input
+        ref={inputRef} type="file" accept="image/*" style={{display:"none"}}
+        onChange={e=>{handleFile(e.target.files?.[0]);e.target.value="";}}
+      />
     </div>
   );
 }
@@ -390,24 +560,24 @@ function ContatoCard({ contato, index, onChange, onRemove }: {
   onRemove: (id: number) => void;
 }) {
   const up = (field: string, value: any) => onChange(index, field, value);
-  const color = ["#2980b9","#1abc9c","#e67e22","#8e44ad","#27ae60"][index % 5];
+  const color = ["#B6CFE4","#2CCD93","#F0A05A","#A78BFA","#2CCD93"][index % 5];
   const initials = contato.nome ? contato.nome.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() : "?";
 
   return (
     <motion.div className="contact-card" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}} transition={{duration:0.25}}>
       <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
-        <div style={{width:38,height:38,borderRadius:"50%",background:color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:"#fff",flexShrink:0}}>{initials}</div>
+        <div style={{width:38,height:38,borderRadius:"50%",background:color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:"#FFFFFF",flexShrink:0}}>{initials}</div>
         <div style={{flex:1}}>
-          <div style={{fontSize:13,fontWeight:700,color:"#0f2133"}}>{contato.nome||`Contato ${index+1}`}</div>
-          <div style={{fontSize:11,color:"rgba(20,45,70,0.4)"}}>{contato.funcao||"Função não definida"}</div>
+          <div style={{fontSize:13,fontWeight:700,color:"#FFFFFF"}}>{contato.nome||`Contato ${index+1}`}</div>
+          <div style={{fontSize:11,color:"#B6CFE4"}}>{contato.funcao||"Função não definida"}</div>
         </div>
         <div className={`checkbox-decisor${contato.decisor?" checked":""}`} onClick={()=>up("decisor",!contato.decisor)}>
           <div className="box">
             {contato.decisor&&<svg width="9" height="9" viewBox="0 0 10 10" fill="none"><polyline points="2,5 4,7.5 8,2.5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
           </div>
-          <span style={{fontSize:11,fontWeight:600,color:contato.decisor?"#27ae60":"rgba(20,45,70,0.5)"}}>Decisor</span>
+          <span style={{fontSize:11,fontWeight:600,color:contato.decisor?"#2CCD93":"#B6CFE4"}}>Decisor</span>
         </div>
-        <button onClick={()=>onRemove(contato.id)} style={{width:32,height:32,borderRadius:8,border:"1.5px solid rgba(231,76,60,0.2)",background:"rgba(231,76,60,0.06)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#e74c3c",transition:"all 0.18s"}} onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(231,76,60,0.14)";}} onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(231,76,60,0.06)";}}>
+        <button onClick={()=>onRemove(contato.id)} style={{width:32,height:32,borderRadius:8,border:"1.5px solid rgba(248,113,113,0.2)",background:"rgba(248,113,113,0.06)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#F87171",transition:"all 0.18s"}} onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(248,113,113,0.14)";}} onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(248,113,113,0.06)";}}>
           <Trash2 style={{width:13,height:13}}/>
         </button>
       </div>
@@ -488,6 +658,7 @@ export default function NovaEmpresa() {
     linkedin_empresa: "", responsavel_principal: "",
     status: "Lead", origem_lead: prefill ? "Google Maps" : "",
     ultima_interacao: todayInputValue(), proxima_acao: "", temperatura: "",
+    logo_url: "",
   });
 
   // campos extras do Google Places (não editáveis no form)
@@ -556,6 +727,7 @@ export default function NovaEmpresa() {
           status: "Lead", origem_lead: empresa.origem_lead || "Manual",
           ultima_interacao: dateInputToIso(empresa.ultima_interacao),
           proxima_acao: empresa.proxima_acao, temperatura: empresa.temperatura || "Frio",
+          logo_url: empresa.logo_url || null,
           ...placesExtra,
         }),
       });
@@ -696,6 +868,7 @@ export default function NovaEmpresa() {
     ultima_interacao: dateInputToIso(empresa.ultima_interacao),
     proxima_acao: empresa.proxima_acao,
     temperatura: empresa.temperatura || "Frio",
+    logo_url: empresa.logo_url || null,
     ...placesExtra,
   });
 
@@ -768,17 +941,7 @@ export default function NovaEmpresa() {
 
       {/* Fundo animado */}
       <div style={{position:"fixed",inset:0,zIndex:0,overflow:"hidden",pointerEvents:"none"}}>
-        <div style={{position:"absolute",inset:0,background:"linear-gradient(145deg,#c8e8f5 0%,#d6eef5 30%,#cceee8 65%,#c5eae0 100%)"}}/>
-        <div style={{position:"absolute",inset:0,opacity:0.4,backgroundImage:"radial-gradient(circle,rgba(41,128,185,0.2) 1px,transparent 1px)",backgroundSize:"22px 22px"}}/>
-        {[
-          {w:420,h:420,top:"-80px",left:"10%",anim:"float1 18s ease-in-out infinite",op:0.12,c1:"#2980b9",c2:"#1abc9c"},
-          {w:280,h:280,top:"40%",left:"-60px",anim:"float2 22s ease-in-out infinite",op:0.1,c1:"#1abc9c",c2:"#2ecc71"},
-          {w:360,h:360,top:"60%",left:"55%",anim:"float3 26s ease-in-out infinite",op:0.09,c1:"#2980b9",c2:"#8e44ad"},
-          {w:200,h:200,top:"20%",left:"75%",anim:"float4 20s ease-in-out infinite",op:0.11,c1:"#27ae60",c2:"#1abc9c"},
-          {w:300,h:300,top:"75%",left:"20%",anim:"float5 24s ease-in-out infinite",op:0.08,c1:"#e67e22",c2:"#f39c12"},
-        ].map((c,i)=>(
-          <div key={i} style={{position:"absolute",width:c.w,height:c.h,top:c.top,left:c.left,borderRadius:"50%",background:`radial-gradient(circle at 40% 40%,${c.c1},${c.c2})`,opacity:c.op,animation:c.anim,filter:"blur(2px)"}}/>
-        ))}
+        <FundoAzul />
       </div>
 
       {/* Backdrop mobile */}
@@ -787,18 +950,18 @@ export default function NovaEmpresa() {
       )}
 
       {/* Sidebar */}
-      <div style={{width:220,flexShrink:0,minHeight:"100vh",height:isMobile?"100vh":undefined,overflowY:"auto",zIndex:1000,background:"linear-gradient(180deg,#1a3a5c 0%,#0f2a44 60%,#0a1f33 100%)",boxShadow:"4px 0 24px rgba(0,0,0,0.18)",display:"flex",flexDirection:"column",padding:"0 12px 20px",
+      <div style={{width:220,flexShrink:0,minHeight:"100vh",height:isMobile?"100vh":undefined,overflowY:"auto",zIndex:1000,background:"linear-gradient(180deg,#10314F 0%,#0F2E4B 55%,#0D2942 100%)",boxShadow:"4px 0 24px rgba(0,0,0,0.18)",display:"flex",flexDirection:"column",padding:"0 12px 20px",
         position: isMobile ? "fixed" : "sticky", top:0, left:0,
         transform: isMobile && !menuOpen ? "translateX(-100%)" : "translateX(0)",
         transition:"transform 0.28s ease"}}>
-        <div style={{padding:"22px 4px 24px",borderBottom:"1px solid rgba(255,255,255,0.08)",marginBottom:16}}>
+        <div style={{padding:"22px 4px 24px",borderBottom:"1px solid rgba(126,176,219,0.16)",marginBottom:16}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#2980b9,#1abc9c)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 12px rgba(41,128,185,0.4)"}}>
+            <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#56A4F5,#56A4F5)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 12px rgba(86,164,245,0.4)"}}>
               <BarChart3 style={{width:18,height:18,color:"#fff"}}/>
             </div>
             <div>
               <div style={{fontSize:14,fontWeight:800,color:"#fff"}}>Prospecção</div>
-              <div style={{fontSize:11,fontWeight:700,background:"linear-gradient(90deg,#2980b9,#1abc9c,#2ecc71,#2980b9)",backgroundSize:"200% 200%",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"gradientShift 4s ease infinite"}}>CRM</div>
+              <div style={{fontSize:11,fontWeight:700,background:"linear-gradient(90deg,#56A4F5,#56A4F5,#2CCD93,#56A4F5)",backgroundSize:"200% 200%",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"gradientShift 4s ease infinite"}}>CRM</div>
             </div>
           </div>
         </div>
@@ -822,23 +985,16 @@ export default function NovaEmpresa() {
       <div style={{flex:1,minHeight: "100vh",overflowY:"auto",position:"relative",zIndex:1}}>
 
         {/* Top bar */}
-        <div style={{position:"sticky",top:0,zIndex:20,padding:isMobile?"12px 14px":"14px 28px",background:"rgba(210,238,248,0.75)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,0.6)",display:"flex",alignItems:"center",gap:isMobile?10:16}}>
+        <div style={{position:"sticky",top:0,zIndex:20,padding:isMobile?"12px 14px":"14px 28px",background:"rgba(15,46,75,0.88)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(126,176,219,0.16)",display:"flex",alignItems:"center",gap:isMobile?10:16}}>
           {isMobile && (
-            <button onClick={()=>setMenuOpen(true)} style={{width:36,height:36,borderRadius:10,border:"1px solid rgba(200,225,240,0.9)",background:"rgba(255,255,255,0.75)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-              <Menu style={{width:18,height:18,color:"#2980b9"}}/>
+            <button onClick={()=>setMenuOpen(true)} style={{width:36,height:36,borderRadius:10,border:"1px solid rgba(126,176,219,0.16)",background:"#143354",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <Menu style={{width:18,height:18,color:"#B6CFE4"}}/>
             </button>
           )}
-          {/* ── Botão Voltar protegido ── */}
-          <button className="btn-ghost" title="Voltar" style={{height:38,padding:isMobile?"0 10px":"0 14px",fontSize:13,flexShrink:0}} onClick={()=>handleNavigateAway("/dashboard")}>
-            <ArrowLeft style={{width:15,height:15}}/>{!isMobile && " Voltar"}
-          </button>
           <div style={{flex:1,minWidth:0}}>
-            <h1 style={{fontSize:isMobile?16:18,fontWeight:800,color:"#0f2133",letterSpacing:"-0.02em"}}>Cadastrar Empresa</h1>
-            {!isMobile && <p style={{fontSize:12,color:"rgba(20,45,70,0.5)",marginTop:1}}>Preencha os dados da empresa e adicione os contatos vinculados</p>}
+            <h1 style={{fontSize:isMobile?16:18,fontWeight:800,color:"#FFFFFF",letterSpacing:"-0.02em"}}>Cadastrar Empresa</h1>
+            {!isMobile && <p style={{fontSize:12,color:"#B6CFE4",marginTop:1}}>Preencha os dados da empresa e adicione os contatos vinculados</p>}
           </div>
-          <button className="btn-grad" title="Salvar Empresa" style={{height:38,padding:isMobile?"0 12px":"0 18px",fontSize:13,opacity:loading?0.7:1,flexShrink:0,whiteSpace:"nowrap"}} onClick={handleSubmit} disabled={loading}>
-            <Save style={{width:15,height:15}}/> {loading?"Salvando...":(isMobile?"Salvar":"Salvar Empresa")}
-          </button>
         </div>
 
         {/* Conteúdo */}
@@ -849,10 +1005,10 @@ export default function NovaEmpresa() {
             {showErrors && (
               <motion.div
                 initial={{opacity:0,y:-8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}}
-                style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderRadius:12,background:"rgba(231,76,60,0.07)",border:"1.5px solid rgba(231,76,60,0.22)",marginBottom:18}}
+                style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderRadius:12,background:"rgba(248,113,113,0.07)",border:"1.5px solid rgba(248,113,113,0.22)",marginBottom:18}}
               >
-                <AlertTriangle style={{width:16,height:16,color:"#e74c3c",flexShrink:0}}/>
-                <span style={{fontSize:12,fontWeight:600,color:"#c0392b"}}>
+                <AlertTriangle style={{width:16,height:16,color:"#F87171",flexShrink:0}}/>
+                <span style={{fontSize:12,fontWeight:600,color:"#F87171"}}>
                   Campos obrigatórios não preenchidos — empresa salva como <strong>rascunho</strong>. Complete os campos em vermelho para converter em Lead.
                 </span>
               </motion.div>
@@ -865,17 +1021,20 @@ export default function NovaEmpresa() {
             <div style={{display:"flex",flexDirection:"column",gap:16}}>
 
               {/* Informações Principais */}
-              <motion.div className="glass-card" style={{padding:"24px"}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.38}}>
+              <motion.div className="glass-card" style={{padding:"24px",position:"relative",zIndex:30}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.38}}>
                 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
-                  <div style={{width:36,height:36,borderRadius:10,background:"rgba(41,128,185,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                    <Building2 style={{width:17,height:17,color:"#2980b9"}}/>
+                  <div style={{width:36,height:36,borderRadius:10,background:"rgba(86,164,245,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    <Building2 style={{width:17,height:17,color:"#B6CFE4"}}/>
                   </div>
                   <div>
-                    <div style={{fontSize:14,fontWeight:700,color:"#0f2133"}}>Informações Principais</div>
-                    <div style={{fontSize:11,color:"rgba(20,45,70,0.45)"}}>Dados obrigatórios da empresa</div>
+                    <div style={{fontSize:14,fontWeight:700,color:"#FFFFFF"}}>Informações Principais</div>
+                    <div style={{fontSize:11,color:"#B6CFE4"}}>Dados obrigatórios da empresa</div>
                   </div>
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                  <div style={{gridColumn:"1 / -1",paddingBottom:14,marginBottom:2,borderBottom:"1px solid rgba(126,176,219,0.16)"}}>
+                    <LogoUpload value={empresa.logo_url} onChange={v=>setEmp("logo_url",v)}/>
+                  </div>
                   <div style={{gridColumn:"1 / -1"}}>
                     <Field label="Nome da Empresa *">
                       <IconInput icon={Building2} placeholder="Nome completo da empresa" value={empresa.nome} onChange={(e:any)=>setEmp("nome",e.target.value)}/>
@@ -889,21 +1048,25 @@ export default function NovaEmpresa() {
                       hasError={showErrors}
                     />
                     {empresa.segmento.trim()&&!segmentoExiste&&(
-                      <div style={{marginTop:5,fontSize:10,fontWeight:600,color:"#e67e22",display:"flex",alignItems:"center",gap:4}}>
+                      <div style={{marginTop:5,fontSize:10,fontWeight:600,color:"#F0A05A",display:"flex",alignItems:"center",gap:4}}>
                         <AlertTriangle style={{width:11,height:11}}/> Segmento novo — será validado ao salvar
                       </div>
                     )}
                     {empresa.segmento.trim()&&segmentoExiste&&(
-                      <div style={{marginTop:5,fontSize:10,fontWeight:600,color:"#27ae60",display:"flex",alignItems:"center",gap:4}}>
+                      <div style={{marginTop:5,fontSize:10,fontWeight:600,color:"#2CCD93",display:"flex",alignItems:"center",gap:4}}>
                         <CheckCircle style={{width:11,height:11}}/> Segmento reconhecido
                       </div>
                     )}
                   </Field>
                   <Field label="Porte *">
-                    <select className="field-select" value={empresa.porte} onChange={e=>setEmp("porte",e.target.value)} style={showErrors&&!empresa.porte?{borderColor:"rgba(231,76,60,0.6)",background:"rgba(231,76,60,0.03)"}:{}}>
-                      <option value="">Selecionar porte...</option>
-                      <option>Pequeno</option><option>Médio</option><option>Grande</option>
-                    </select>
+                    <DropdownPadrao
+                      value={empresa.porte}
+                      onChange={v=>setEmp("porte",v)}
+                      opcoes={PORTES}
+                      placeholder="Selecionar porte..."
+                      icon={Briefcase}
+                      hasError={showErrors}
+                    />
                   </Field>
                   <Field label="CNPJ">
                     <IconInput icon={Hash} placeholder="00.000.000/0000-00" value={empresa.cnpj} onChange={(e:any)=>setEmp("cnpj",formatCnpj(e.target.value))}/>
@@ -921,36 +1084,36 @@ export default function NovaEmpresa() {
               </motion.div>
 
               {/* Localização */}
-              <motion.div className="glass-card" style={{padding:"24px"}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.38,delay:0.08}}>
+              <motion.div className="glass-card" style={{padding:"24px",position:"relative",zIndex:20}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.38,delay:0.08}}>
                 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
-                  <div style={{width:36,height:36,borderRadius:10,background:"rgba(26,188,156,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                    <MapPin style={{width:17,height:17,color:"#1abc9c"}}/>
+                  <div style={{width:36,height:36,borderRadius:10,background:"rgba(44,205,147,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    <MapPin style={{width:17,height:17,color:"#B6CFE4"}}/>
                   </div>
                   <div>
-                    <div style={{fontSize:14,fontWeight:700,color:"#0f2133"}}>Localização</div>
-                    <div style={{fontSize:11,color:"rgba(20,45,70,0.45)"}}>Endereço completo</div>
+                    <div style={{fontSize:14,fontWeight:700,color:"#FFFFFF"}}>Localização</div>
+                    <div style={{fontSize:11,color:"#B6CFE4"}}>Endereço completo</div>
                   </div>
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                  <Field label="Cidade *"><IconInput icon={MapPin} placeholder="Nome da cidade" value={empresa.cidade} onChange={(e:any)=>setEmp("cidade",e.target.value)} style={showErrors&&!empresa.cidade.trim()?{borderColor:"rgba(231,76,60,0.6)",background:"rgba(231,76,60,0.03)"}:{}}/></Field>
-                  <Field label="CEP *"><input className="field-input" placeholder="00000-000" value={empresa.cep} onChange={e=>setEmp("cep",formatCep(e.target.value))} style={showErrors&&!empresa.cep.trim()?{borderColor:"rgba(231,76,60,0.6)",background:"rgba(231,76,60,0.03)"}:{}}/></Field>
+                  <Field label="Cidade *"><IconInput icon={MapPin} placeholder="Nome da cidade" value={empresa.cidade} onChange={(e:any)=>setEmp("cidade",e.target.value)} style={showErrors&&!empresa.cidade.trim()?{borderColor:"rgba(248,113,113,0.6)",background:"rgba(248,113,113,0.03)"}:{}}/></Field>
+                  <Field label="CEP *"><input className="field-input" placeholder="00000-000" value={empresa.cep} onChange={e=>setEmp("cep",formatCep(e.target.value))} style={showErrors&&!empresa.cep.trim()?{borderColor:"rgba(248,113,113,0.6)",background:"rgba(248,113,113,0.03)"}:{}}/></Field>
                   <div style={{gridColumn:"1 / -1"}}>
-                    <Field label="Endereço *"><input className="field-input" placeholder="Rua, número, complemento" value={empresa.endereco} onChange={e=>setEmp("endereco",e.target.value)} style={showErrors&&!empresa.endereco.trim()?{borderColor:"rgba(231,76,60,0.6)",background:"rgba(231,76,60,0.03)"}:{}}/></Field>
+                    <Field label="Endereço *"><input className="field-input" placeholder="Rua, número, complemento" value={empresa.endereco} onChange={e=>setEmp("endereco",e.target.value)} style={showErrors&&!empresa.endereco.trim()?{borderColor:"rgba(248,113,113,0.6)",background:"rgba(248,113,113,0.03)"}:{}}/></Field>
                   </div>
-                  <Field label="Bairro *"><input className="field-input" placeholder="Bairro" value={empresa.bairro} onChange={e=>setEmp("bairro",e.target.value)} style={showErrors&&!empresa.bairro.trim()?{borderColor:"rgba(231,76,60,0.6)",background:"rgba(231,76,60,0.03)"}:{}}/></Field>
+                  <Field label="Bairro *"><input className="field-input" placeholder="Bairro" value={empresa.bairro} onChange={e=>setEmp("bairro",e.target.value)} style={showErrors&&!empresa.bairro.trim()?{borderColor:"rgba(248,113,113,0.6)",background:"rgba(248,113,113,0.03)"}:{}}/></Field>
                   <Field label="Região"><input className="field-input" placeholder="ex: Sul, Norte, Centro..." value={empresa.regiao} onChange={e=>setEmp("regiao",e.target.value)}/></Field>
                 </div>
               </motion.div>
 
               {/* Observações */}
-              <motion.div className="glass-card" style={{padding:"24px"}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.38,delay:0.14}}>
+              <motion.div className="glass-card" style={{padding:"24px",position:"relative",zIndex:10}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.38,delay:0.14}}>
                 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
-                  <div style={{width:36,height:36,borderRadius:10,background:"rgba(142,68,173,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                    <FileText style={{width:17,height:17,color:"#8e44ad"}}/>
+                  <div style={{width:36,height:36,borderRadius:10,background:"rgba(167,139,250,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    <FileText style={{width:17,height:17,color:"#B6CFE4"}}/>
                   </div>
                   <div>
-                    <div style={{fontSize:14,fontWeight:700,color:"#0f2133"}}>Observações</div>
-                    <div style={{fontSize:11,color:"rgba(20,45,70,0.45)"}}>Notas internas sobre o lead</div>
+                    <div style={{fontSize:14,fontWeight:700,color:"#FFFFFF"}}>Observações</div>
+                    <div style={{fontSize:11,color:"#B6CFE4"}}>Notas internas sobre o lead</div>
                   </div>
                 </div>
                 <Field label="Observações">
@@ -963,20 +1126,17 @@ export default function NovaEmpresa() {
             <div style={{display:"flex",flexDirection:"column",gap:16}}>
 
               {/* Dados de Prospecção */}
-              <motion.div className="glass-card" style={{padding:"24px"}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.38,delay:0.06}}>
+              <motion.div className="glass-card" style={{padding:"24px",position:"relative",zIndex:30}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.38,delay:0.06}}>
                 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
-                  <div style={{width:36,height:36,borderRadius:10,background:"rgba(230,126,34,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                    <Target style={{width:17,height:17,color:"#e67e22"}}/>
+                  <div style={{width:36,height:36,borderRadius:10,background:"rgba(240,160,90,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    <Target style={{width:17,height:17,color:"#F0A05A"}}/>
                   </div>
                   <div>
-                    <div style={{fontSize:14,fontWeight:700,color:"#0f2133"}}>Dados de Prospecção</div>
-                    <div style={{fontSize:11,color:"rgba(20,45,70,0.45)"}}>Status e qualificação do lead</div>
+                    <div style={{fontSize:14,fontWeight:700,color:"#FFFFFF"}}>Dados de Prospecção</div>
+                    <div style={{fontSize:11,color:"#B6CFE4"}}>Qualificação e origem do lead</div>
                   </div>
                 </div>
                 <div style={{display:"flex",flexDirection:"column",gap:12}}>
-                  <Field label="Status do Lead">
-                    <input className="field-input" value="Lead" disabled style={{background:"rgba(39,174,96,0.08)",color:"#1f7a4d",fontWeight:700}}/>
-                  </Field>
                   <Field label="Temperatura do Lead">
                     <div style={{display:"flex",gap:6,marginTop:2}}>
                       {(["Frio","Morno","Quente"] as const).map(t=>(
@@ -987,25 +1147,26 @@ export default function NovaEmpresa() {
                     </div>
                   </Field>
                   <Field label="Origem do Lead">
-                    <select className="field-select" value={empresa.origem_lead} onChange={e=>setEmpresa({...empresa,origem_lead:e.target.value})}>
-                      <option value="">Selecionar origem...</option>
-                      <option>Indicação</option><option>LinkedIn</option><option>Site</option>
-                      <option>Prospecção ativa</option><option>Evento</option>
-                      <option>Cold Email</option><option>Outro</option>
-                    </select>
+                    <DropdownPadrao
+                      value={empresa.origem_lead}
+                      onChange={v=>setEmpresa({...empresa,origem_lead:v})}
+                      opcoes={ORIGENS_LEAD}
+                      placeholder="Selecionar origem..."
+                      icon={Target}
+                    />
                   </Field>
                 </div>
               </motion.div>
 
               {/* Acompanhamento */}
-              <motion.div className="glass-card" style={{padding:"24px"}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.38,delay:0.12}}>
+              <motion.div className="glass-card" style={{padding:"24px",position:"relative",zIndex:20}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.38,delay:0.12}}>
                 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
-                  <div style={{width:36,height:36,borderRadius:10,background:"rgba(39,174,96,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                    <Clock style={{width:17,height:17,color:"#27ae60"}}/>
+                  <div style={{width:36,height:36,borderRadius:10,background:"rgba(44,205,147,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    <Clock style={{width:17,height:17,color:"#2CCD93"}}/>
                   </div>
                   <div>
-                    <div style={{fontSize:14,fontWeight:700,color:"#0f2133"}}>Acompanhamento</div>
-                    <div style={{fontSize:11,color:"rgba(20,45,70,0.45)"}}>Ações e datas</div>
+                    <div style={{fontSize:14,fontWeight:700,color:"#FFFFFF"}}>Acompanhamento</div>
+                    <div style={{fontSize:11,color:"#B6CFE4"}}>Ações e datas</div>
                   </div>
                 </div>
                 <div style={{display:"flex",flexDirection:"column",gap:12}}>
@@ -1013,34 +1174,37 @@ export default function NovaEmpresa() {
                     <input className="field-input" type="date" value={empresa.ultima_interacao} onChange={e=>setEmpresa({...empresa,ultima_interacao:e.target.value})}/>
                   </Field>
                   <Field label="Próxima Ação">
-                    <select className="field-select" value={empresa.proxima_acao} onChange={e=>setEmpresa({...empresa,proxima_acao:e.target.value})}>
-                      <option value="">Selecionar próxima ação...</option>
-                      {PROXIMAS_ACOES.map(a=><option key={a}>{a}</option>)}
-                    </select>
+                    <DropdownPadrao
+                      value={empresa.proxima_acao}
+                      onChange={v=>setEmpresa({...empresa,proxima_acao:v})}
+                      opcoes={PROXIMAS_ACOES}
+                      placeholder="Selecionar próxima ação..."
+                      icon={Clock}
+                    />
                   </Field>
                 </div>
               </motion.div>
 
               {/* Preview contatos */}
-              <motion.div className="glass-card" style={{padding:"20px 24px"}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.38,delay:0.18}}>
+              <motion.div className="glass-card" style={{padding:"20px 24px",position:"relative",zIndex:10}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.38,delay:0.18}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-                  <div style={{fontSize:13,fontWeight:700,color:"#0f2133"}}>Contatos</div>
-                  <span style={{padding:"3px 10px",borderRadius:20,background:"rgba(41,128,185,0.1)",color:"#2980b9",fontSize:11,fontWeight:700}}>
+                  <div style={{fontSize:13,fontWeight:700,color:"#FFFFFF"}}>Contatos</div>
+                  <span style={{padding:"3px 10px",borderRadius:20,background:"rgba(86,164,245,0.1)",color:"#B6CFE4",fontSize:11,fontWeight:700}}>
                     {contatos.length} adicionado{contatos.length!==1?"s":""}
                   </span>
                 </div>
                 <div style={{display:"flex",flexDirection:"column",gap:6}}>
                   {contatos.map((c,i)=>{
-                    const color=["#2980b9","#1abc9c","#e67e22","#8e44ad","#27ae60"][i%5];
+                    const color=["#B6CFE4","#2CCD93","#F0A05A","#A78BFA","#2CCD93"][i%5];
                     const ini=c.nome?c.nome.split(" ").map((w:string)=>w[0]).join("").slice(0,2).toUpperCase():"?";
                     return(
-                      <div key={c.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:8,background:"rgba(255,255,255,0.55)",border:"1px solid rgba(200,225,240,0.5)"}}>
-                        <div style={{width:26,height:26,borderRadius:"50%",background:color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:"#fff",flexShrink:0}}>{ini}</div>
+                      <div key={c.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:8,background:"#143354",border:"1px solid rgba(126,176,219,0.16)"}}>
+                        <div style={{width:26,height:26,borderRadius:"50%",background:color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:"#FFFFFF",flexShrink:0}}>{ini}</div>
                         <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontSize:11,fontWeight:600,color:"#0f2133",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.nome||`Contato ${i+1}`}</div>
-                          <div style={{fontSize:10,color:"rgba(20,45,70,0.4)"}}>{c.funcao||"—"}</div>
+                          <div style={{fontSize:11,fontWeight:600,color:"#FFFFFF",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.nome||`Contato ${i+1}`}</div>
+                          <div style={{fontSize:10,color:"#B6CFE4"}}>{c.funcao||"—"}</div>
                         </div>
-                        {c.decisor&&<span style={{fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:4,background:"rgba(39,174,96,0.1)",color:"#27ae60",border:"1px solid rgba(39,174,96,0.2)"}}>Decisor</span>}
+                        {c.decisor&&<span style={{fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:4,background:"rgba(44,205,147,0.1)",color:"#2CCD93",border:"1px solid rgba(44,205,147,0.2)"}}>Decisor</span>}
                       </div>
                     );
                   })}
@@ -1053,12 +1217,12 @@ export default function NovaEmpresa() {
           <motion.div style={{marginTop:20}} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.38,delay:0.22}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
               <div style={{display:"flex",alignItems:"center",gap:12}}>
-                <div style={{width:38,height:38,borderRadius:10,background:"linear-gradient(135deg,#2980b9,#1abc9c)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 12px rgba(41,128,185,0.3)"}}>
-                  <Users style={{width:18,height:18,color:"#fff"}}/>
+                <div style={{width:38,height:38,borderRadius:10,background:"rgba(86,164,245,0.14)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  <Users style={{width:18,height:18,color:"#8FC4FA"}}/>
                 </div>
                 <div>
-                  <div style={{fontSize:16,fontWeight:800,color:"#0f2133"}}>Contatos Vinculados</div>
-                  <div style={{fontSize:12,color:"rgba(20,45,70,0.45)"}}>Adicione todos os contatos desta empresa</div>
+                  <div style={{fontSize:16,fontWeight:800,color:"#FFFFFF"}}>Contatos Vinculados</div>
+                  <div style={{fontSize:12,color:"#B6CFE4"}}>Adicione todos os contatos desta empresa</div>
                 </div>
               </div>
               <button className="btn-grad" style={{height:40,padding:"0 18px",fontSize:13}} onClick={addContato}>
@@ -1069,11 +1233,11 @@ export default function NovaEmpresa() {
               {contatos.map((c,i)=>(
                 <ContatoCard key={c.id} contato={c} index={i} onChange={handleContatoChange} onRemove={removeContato}/>
               ))}
-              <div onClick={addContato} style={{border:"2px dashed rgba(41,128,185,0.25)",borderRadius:14,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8,cursor:"pointer",padding:"32px 20px",transition:"all 0.18s",minHeight:120,background:"rgba(255,255,255,0.35)"}} onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.borderColor="rgba(41,128,185,0.5)";(e.currentTarget as HTMLDivElement).style.background="rgba(41,128,185,0.04)";}} onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.borderColor="rgba(41,128,185,0.25)";(e.currentTarget as HTMLDivElement).style.background="rgba(255,255,255,0.35)";}}>
-                <div style={{width:40,height:40,borderRadius:"50%",background:"rgba(41,128,185,0.08)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                  <Plus style={{width:18,height:18,color:"#2980b9"}}/>
+              <div onClick={addContato} style={{border:"2px dashed rgba(126,176,219,0.30)",borderRadius:14,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8,cursor:"pointer",padding:"32px 20px",transition:"all 0.18s",minHeight:120,background:"rgba(126,176,219,0.08)"}} onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.borderColor="rgba(86,164,245,0.5)";(e.currentTarget as HTMLDivElement).style.background="rgba(86,164,245,0.04)";}} onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.borderColor="rgba(86,164,245,0.25)";(e.currentTarget as HTMLDivElement).style.background="rgba(255,255,255,0.35)";}}>
+                <div style={{width:40,height:40,borderRadius:"50%",background:"rgba(86,164,245,0.08)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  <Plus style={{width:18,height:18,color:"#B6CFE4"}}/>
                 </div>
-                <span style={{fontSize:13,fontWeight:600,color:"rgba(41,128,185,0.7)"}}>Adicionar contato</span>
+                <span style={{fontSize:13,fontWeight:600,color:"#B6CFE4"}}>Adicionar contato</span>
               </div>
             </div>
           </motion.div>

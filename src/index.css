@@ -7,6 +7,8 @@
 /* Impede que arrastar para o lado mova a página inteira. */
 /* ========================= */
 html, body, #root {
+  background: #0A2540;
+  color: #EAF6FB;
   max-width: 100%;
   overflow-x: hidden;
   overscroll-behavior-x: none;
@@ -17,7 +19,7 @@ html, body, #root {
 /* ========================= */
 
 .gradient-strong {
-  background: linear-gradient(270deg, #2f80ed, #56ccf2, #27ae60);
+  background: linear-gradient(270deg, #9FD3EA, #EAF6FB, #9FD3EA);
   background-size: 400% 400%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -25,7 +27,7 @@ html, body, #root {
 }
 
 .gradient-soft {
-  background: linear-gradient(270deg, #56ccf2, #2f80ed);
+  background: linear-gradient(270deg, #EAF6FB, #9FD3EA);
   background-size: 400% 400%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -47,9 +49,9 @@ html, body, #root {
 /* ========================= */
 
 .glass {
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(18, 59, 94, 0.55);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255,255,255,0.4);
+  border: 1px solid rgba(159, 211, 234, 0.18);
 }
 
 /* ========================= */
@@ -57,8 +59,8 @@ html, body, #root {
 /* ========================= */
 
 .btn-primary {
-  background: linear-gradient(135deg, #2f80ed 0%, #27ae60 100%);
-  box-shadow: 0 10px 30px rgba(47,128,237,0.35);
+  background: #2E6F95;
+  box-shadow: 0 10px 30px rgba(10,37,64,0.45);
 }
 
 /* ========================= */
@@ -66,8 +68,8 @@ html, body, #root {
 /* ========================= */
 
 ::selection {
-  background: #2f80ed;
-  color: white;
+  background: #2E6F95;
+  color: #EAF6FB;
 }
 
 @keyframes float {

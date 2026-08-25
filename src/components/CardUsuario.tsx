@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getToken } from "../services/auth";
 
-const API = "https://backend-crm-production-157b.up.railway.app";
+const API = (process.env.REACT_APP_API_URL || "https://backend-crm-production-157b.up.railway.app");
 
 // Card de identificação do usuário logado, usado no rodapé da sidebar de TODAS
 // as páginas autenticadas. Existe em um lugar só: cada página monta a própria
@@ -42,7 +42,7 @@ export function initials(n?: string) {
 }
 
 export function avatarColor(n?: string) {
-  const c = ["#2980b9", "#1abc9c", "#8e44ad", "#e67e22", "#27ae60", "#e74c3c"];
+  const c = ["#9FD3EA", "#83DDA8", "#C9B6E4", "#F2C879", "#83DDA8", "#F7B8B1"];
   return c[(n?.charCodeAt(0) || 0) % c.length];
 }
 
@@ -95,8 +95,8 @@ export default function CardUsuario({
       aria-label={nome ? `Abrir perfil de ${nome} — ${funcao}` : "Abrir perfil"}
       style={{
         marginTop: 16, padding: compacto ? "9px 10px" : 12, width: "100%",
-        borderRadius: 12, background: "rgba(255,255,255,0.06)",
-        border: "1px solid rgba(255,255,255,0.08)", display: "flex",
+        borderRadius: 12, background:"rgba(159,211,234,0.08)",
+        border:"1px solid rgba(159,211,234,0.18)", display: "flex",
         alignItems: "center", gap: 10, cursor: "pointer", textAlign: "left",
         fontFamily: "inherit", transition: "background 0.18s, border-color 0.18s",
       }}
@@ -109,18 +109,18 @@ export default function CardUsuario({
         aria-hidden
         style={{
           width: compacto ? 30 : 34, height: compacto ? 30 : 34, borderRadius: "50%",
-          background: `linear-gradient(135deg,${avatarColor(nome)},#1abc9c)`,
+          background:`linear-gradient(135deg,${avatarColor(nome)},#2E6F95)`,
           display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 12, fontWeight: 700, color: "#fff", flexShrink: 0,
+          fontSize: 12, fontWeight: 700, color:"#fff", flexShrink: 0,
         }}
       >
         {carregando ? "…" : initials(nome)}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color:"#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
           {carregando ? "Carregando…" : nome || "Meu perfil"}
         </div>
-        <div style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.55)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+        <div style={{ fontSize: 10, fontWeight: 600, color:"rgba(255,255,255,0.55)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
           {carregando ? "" : funcao}
         </div>
       </div>

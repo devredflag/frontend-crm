@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { KeyRound, CheckCircle2 } from "lucide-react";
 import MouseGlowBackground from "../../components/landing/MouseGlowBackground";
 
+import { FUNDO_AZUL } from "../../components/FundoAzul";
 const gradientKeyframes = `
   @keyframes gradientShift {
     0%   { background-position: 0% 50%; }
@@ -18,11 +19,11 @@ const inputBase: React.CSSProperties = {
   padding: "0 16px",
   borderRadius: "12px",
   fontSize: "14px",
-  color: "#1a2e40",
-  background: "rgba(255,255,255,0.82)",
-  border: "1px solid rgba(200,225,240,0.9)",
-  boxShadow: "0 2px 6px rgba(41,128,185,0.05), inset 0 1px 0 rgba(255,255,255,0.9)",
-  outline: "none",
+  color:"#EAF6FB",
+  background:"rgba(18,59,94,0.55)",
+  border:"1px solid rgba(159,211,234,0.18)",
+  boxShadow: "0 2px 6px rgba(41,128,185,0.05), inset 0 1px 0 rgba(18,59,94,0.55)",
+  outline:"none",
   transition: "border 0.18s, box-shadow 0.18s",
   boxSizing: "border-box" as const,
 };
@@ -33,7 +34,7 @@ const labelStyle: React.CSSProperties = {
   fontWeight: 700,
   letterSpacing: "0.1em",
   textTransform: "uppercase" as const,
-  color: "rgba(20,45,70,0.55)",
+  color:"#9FD3EA",
   marginBottom: 7,
 };
 
@@ -50,13 +51,13 @@ export default function AtivarConta() {
   const onFocus = (e: React.FocusEvent<HTMLInputElement>) => {
     e.target.style.border = "1px solid rgba(41,128,185,0.55)";
     e.target.style.boxShadow =
-      "0 0 0 3px rgba(41,128,185,0.13), inset 0 1px 0 rgba(255,255,255,0.9)";
+      "0 0 0 3px rgba(41,128,185,0.13), inset 0 1px 0 rgba(18,59,94,0.55)";
   };
 
   const onBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     e.target.style.border = "1px solid rgba(200,225,240,0.9)";
     e.target.style.boxShadow =
-      "0 2px 6px rgba(41,128,185,0.05), inset 0 1px 0 rgba(255,255,255,0.9)";
+      "0 2px 6px rgba(41,128,185,0.05), inset 0 1px 0 rgba(18,59,94,0.55)";
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -70,7 +71,7 @@ export default function AtivarConta() {
     setLoading(true);
 
     try {
-       const res = await fetch("https://backend-crm-production-157b.up.railway.app/ativar-conta", {
+       const res = await fetch(`${process.env.REACT_APP_API_URL || (process.env.REACT_APP_API_URL || "https://backend-crm-production-157b.up.railway.app")}/ativar-conta`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, senha }),
@@ -96,8 +97,7 @@ export default function AtivarConta() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background:
-          "linear-gradient(145deg, #c8e8f5 0%, #d6eef5 30%, #cceee8 65%, #c5eae0 100%)",
+        background:FUNDO_AZUL.background, backgroundSize: FUNDO_AZUL.backgroundSize,
       }}
     >
       <style>{gradientKeyframes}</style>
@@ -134,12 +134,12 @@ export default function AtivarConta() {
           style={{
             borderRadius: 20,
             padding: "40px 36px 36px",
-            background: "rgba(225,242,252,0.78)",
+            background:"rgba(20,51,84,0.92)",
             backdropFilter: "blur(28px) saturate(170%)",
             WebkitBackdropFilter: "blur(28px) saturate(170%)",
-            border: "1px solid rgba(255,255,255,0.88)",
+            border:"1px solid rgba(159,211,234,0.18)",
             boxShadow:
-              "0 20px 70px rgba(41,128,185,0.16), 0 2px 8px rgba(41,128,185,0.08), inset 0 1px 0 rgba(255,255,255,0.95)",
+              "0 20px 70px rgba(41,128,185,0.16), 0 2px 8px rgba(41,128,185,0.08), inset 0 1px 0 rgba(18,59,94,0.55)",
           }}
         >
           {!success ? (
@@ -155,12 +155,11 @@ export default function AtivarConta() {
                     alignItems: "center",
                     justifyContent: "center",
                     margin: "0 auto 14px",
-                    background:
-                      "linear-gradient(135deg, rgba(41,128,185,0.12), rgba(26,188,156,0.15))",
-                    border: "1.5px solid rgba(41,128,185,0.28)",
+                    background:"linear-gradient(135deg, rgba(46,111,149,0.12), rgba(26,188,156,0.15))",
+                    border:"1.5px solid rgba(159,211,234,0.30)",
                   }}
                 >
-                  <KeyRound style={{ width: 20, height: 20, color: "#2980b9" }} />
+                  <KeyRound style={{ width: 20, height: 20, color:"#9FD3EA" }} />
                 </div>
 
                 <p
@@ -169,7 +168,7 @@ export default function AtivarConta() {
                     fontWeight: 700,
                     letterSpacing: "0.14em",
                     textTransform: "uppercase",
-                    color: "rgba(41,128,185,0.68)",
+                    color:"#9FD3EA",
                     margin: "0 0 8px",
                   }}
                 >
@@ -181,15 +180,14 @@ export default function AtivarConta() {
                     fontSize: 26,
                     fontWeight: 900,
                     letterSpacing: "-0.02em",
-                    color: "#0f2133",
+                    color:"#EAF6FB",
                     margin: 0,
                   }}
                 >
                   Crie sua{" "}
                   <span
                     style={{
-                      background:
-                        "linear-gradient(90deg, #2980b9, #1abc9c, #2ecc71, #2980b9)",
+                      background:"linear-gradient(90deg, #2E6F95, #2E6F95, #83DDA8, #2E6F95)",
                       backgroundSize: "200% 200%",
                       WebkitBackgroundClip: "text",
                       WebkitTextFillColor: "transparent",
@@ -247,19 +245,19 @@ export default function AtivarConta() {
                     width: "100%",
                     height: 52,
                     borderRadius: 12,
-                    border: "none",
+                    border:"none",
                     cursor: loading ? "not-allowed" : "pointer",
                     fontSize: 15,
                     fontWeight: 700,
-                    color: "#fff",
+                    color:"#fff",
                     letterSpacing: "0.01em",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     gap: 8,
-                    background: loading
+                    background:loading
                       ? "linear-gradient(135deg, #7ab8d4, #6fc5b5)"
-                      : "linear-gradient(135deg, #2980b9, #1abc9c, #2ecc71, #2980b9)",
+                      : "linear-gradient(135deg, #9FD3EA, #83DDA8, #83DDA8, #9FD3EA)",
                     backgroundSize: "200% 200%",
                     boxShadow: loading
                       ? "none"
@@ -310,18 +308,17 @@ export default function AtivarConta() {
                   alignItems: "center",
                   justifyContent: "center",
                   margin: "0 auto 20px",
-                  background:
-                    "linear-gradient(135deg, rgba(41,128,185,0.12), rgba(26,188,156,0.18))",
-                  border: "2px solid rgba(26,188,156,0.42)",
+                  background:"linear-gradient(135deg, rgba(46,111,149,0.12), rgba(26,188,156,0.18))",
+                  border:"2px solid rgba(26,188,156,0.42)",
                 }}
               >
-                <CheckCircle2 style={{ width: 30, height: 30, color: "#1abc9c" }} />
+                <CheckCircle2 style={{ width: 30, height: 30, color:"#9FD3EA" }} />
               </div>
               <h3
                 style={{
                   fontSize: 20,
                   fontWeight: 800,
-                  color: "#0f2133",
+                  color:"#EAF6FB",
                   margin: "0 0 10px",
                 }}
               >
@@ -330,7 +327,7 @@ export default function AtivarConta() {
               <p
                 style={{
                   fontSize: 13,
-                  color: "rgba(20,45,70,0.6)",
+                  color:"#EAF6FB",
                   lineHeight: 1.6,
                   maxWidth: 260,
                   margin: "0 auto",

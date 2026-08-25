@@ -20,6 +20,7 @@ import OutlookCallback from "./pages/auth/OutlookCallback";
 import GoogleCallback from "./pages/auth/GoogleCallback";
 import BuscarEmpresas from "./pages/buscar";
 
+import { FUNDO_AZUL } from "./components/FundoAzul";
 function App() {
   // Ao carregar/recarregar a página, restaura a sessão a partir do cookie httpOnly
   // (o access token vive só em memória). Só renderiza as rotas após essa tentativa,
@@ -38,8 +39,8 @@ function App() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(145deg, #c8e8f5 0%, #cceee8 65%, #c5eae0 100%)",
-          color: "#2980b9",
+          background:FUNDO_AZUL.background, backgroundSize: FUNDO_AZUL.backgroundSize,
+          color:"#9FD3EA",
           fontSize: 14,
           fontWeight: 600,
         }}

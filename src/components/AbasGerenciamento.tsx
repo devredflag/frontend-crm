@@ -8,6 +8,10 @@ import useIsMobile from "../hooks/useIsMobile";
 // cards, e o estado ativo é marcado por quatro sinais somados — fundo
 // preenchido, borda, cor/peso do texto e barra inferior — para não depender só
 // de cor (acessibilidade) nem só de uma linha fina.
+//
+// A direção importa: a aba ATIVA é a mais clara (#1A3F63) e a inativa a mais
+// escura (#0F2E4B). Estava invertido — o tint translúcido do ativo escurecia
+// sobre o fundo naval, e o selecionado parecia o apagado.
 
 export type AbaGerenciamento = "clientes" | "vendas";
 
@@ -52,8 +56,8 @@ export default function AbasGerenciamento({
         gap: 10,
         padding: 6,
         borderRadius: 16,
-        background: "rgba(255,255,255,0.45)",
-        border: "1px solid rgba(200,225,240,0.75)",
+        background:"rgba(3,14,26,0.25)",
+        border:"1px solid rgba(126,176,219,0.16)",
         boxShadow: "inset 0 1px 2px rgba(10,31,51,0.04)",
       }}
     >
@@ -81,15 +85,15 @@ export default function AbasGerenciamento({
               fontFamily: "inherit",
               overflow: "hidden",
               transition: "all 0.18s ease",
-              border: ativo
-                ? "1.5px solid rgba(41,128,185,0.55)"
-                : "1.5px solid rgba(200,225,240,0.9)",
-              background: ativo
-                ? "linear-gradient(135deg, rgba(41,128,185,0.14), rgba(26,188,156,0.12))"
-                : "rgba(255,255,255,0.72)",
+              border:ativo
+                ? "1.5px solid rgba(86,164,245,0.55)"
+                : "1.5px solid rgba(126,176,219,0.16)",
+              background:ativo
+                ? "#1A3F63"
+                : "#0F2E4B",
               boxShadow: ativo
-                ? "0 6px 18px rgba(41,128,185,0.18)"
-                : "0 1px 2px rgba(10,31,51,0.04)",
+                ? "0 6px 18px rgba(3,14,26,0.45)"
+                : "none",
             }}
           >
             {/* Ícone em bloco: cheio quando ativo, discreto quando inativo */}
@@ -102,10 +106,10 @@ export default function AbasGerenciamento({
                 flexShrink: 0,
                 display: "grid",
                 placeItems: "center",
-                background: ativo
-                  ? "linear-gradient(135deg,#2980b9,#1abc9c)"
-                  : "rgba(41,128,185,0.10)",
-                boxShadow: ativo ? "0 4px 12px rgba(41,128,185,0.35)" : "none",
+                background:ativo
+                  ? "rgba(86,164,245,0.18)"
+                  : "rgba(126,176,219,0.08)",
+                boxShadow: "none",
                 transition: "all 0.18s ease",
               }}
             >
@@ -113,7 +117,7 @@ export default function AbasGerenciamento({
                 style={{
                   width: compacto ? 15 : 17,
                   height: compacto ? 15 : 17,
-                  color: ativo ? "#fff" : "#2980b9",
+                  color:ativo ? "#8FC4FA" : "#B6CFE4",
                 }}
               />
             </span>
@@ -125,7 +129,7 @@ export default function AbasGerenciamento({
                   fontSize: compacto ? 13 : 13.5,
                   fontWeight: ativo ? 800 : 650,
                   letterSpacing: "-0.01em",
-                  color: ativo ? "#15547f" : "rgba(20,45,70,0.72)",
+                  color:ativo ? "#FFFFFF" : "#B6CFE4",
                   whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
@@ -140,7 +144,7 @@ export default function AbasGerenciamento({
                     fontSize: 11,
                     fontWeight: 600,
                     marginTop: 2,
-                    color: ativo ? "rgba(21,84,127,0.72)" : "rgba(20,45,70,0.45)",
+                    color:ativo ? "#B6CFE4" : "rgba(182,207,228,0.65)",
                     whiteSpace: "nowrap",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
@@ -162,7 +166,7 @@ export default function AbasGerenciamento({
                   bottom: 0,
                   height: 3,
                   borderRadius: "3px 3px 0 0",
-                  background: "linear-gradient(90deg,#2980b9,#1abc9c)",
+                  background:"#2CCD93",
                 }}
               />
             )}
@@ -176,7 +180,7 @@ export default function AbasGerenciamento({
 // Estilos de hover/foco ficam em CSS porque inline não cobre :hover/:focus-visible.
 // Cada página injeta esta string no <style> que já mantém.
 export const cssAbasGerenciamento = `
-  .aba-ger:hover { border-color:rgba(41,128,185,0.45) !important; background:rgba(255,255,255,0.92) !important; transform:translateY(-1px); }
-  .aba-ger.ativa:hover { background:linear-gradient(135deg,rgba(41,128,185,0.18),rgba(26,188,156,0.16)) !important; }
-  .aba-ger:focus-visible { outline:2px solid #2980b9; outline-offset:2px; }
+  .aba-ger:hover { border-color:rgba(126,176,219,0.30) !important; background:#143354 !important; transform:translateY(-1px); }
+  .aba-ger.ativa:hover { background:#1E4870 !important; }
+  .aba-ger:focus-visible { outline:2px solid rgba(159,211,234,0.30); outline-offset:2px; }
 `;

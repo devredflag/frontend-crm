@@ -4,7 +4,7 @@
 // pelo backend; ao carregar a página, restauramos a sessão via /refresh.
 // =========================================================================
 
-export const API_BASE = "https://backend-crm-production-157b.up.railway.app";
+export const API_BASE = (process.env.REACT_APP_API_URL || "https://backend-crm-production-157b.up.railway.app");
 
 let accessToken: string | null = null;
 let refreshTimer: ReturnType<typeof setInterval> | null = null;

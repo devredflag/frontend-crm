@@ -14,8 +14,7 @@ export default function TextureOverlay() {
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background:
-            "radial-gradient(circle at 50% 20%, rgba(255,255,255,0.4), transparent 60%)",
+          background:"radial-gradient(circle at 50% 20%, rgba(159,211,234,0.08), transparent 60%)",
         }}
       />
 
@@ -23,8 +22,7 @@ export default function TextureOverlay() {
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background:
-            "radial-gradient(circle at center, transparent 60%, rgba(0,0,0,0.05) 100%)",
+          background:"radial-gradient(circle at center, transparent 60%, rgba(0,0,0,0.05) 100%)",
         }}
       />
     </>

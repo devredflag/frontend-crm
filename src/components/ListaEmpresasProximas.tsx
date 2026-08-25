@@ -34,13 +34,13 @@ export default function ListaEmpresasProximas({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "rgba(41,128,185,0.1)",
+            background:"rgba(46,111,149,0.1)",
           }}
         >
-          <Navigation style={{ width: 26, height: 26, color: "#2980b9" }} />
+          <Navigation style={{ width: 26, height: 26, color:"#9FD3EA" }} />
         </div>
-        <h3 style={{ fontSize: 16, fontWeight: 800, color: "#0f2133" }}>Empresas próximas de você</h3>
-        <p style={{ fontSize: 13, color: "rgba(20,45,70,0.55)", marginTop: 6, maxWidth: 420, margin: "6px auto 0" }}>
+        <h3 style={{ fontSize: 16, fontWeight: 800, color:"#EAF6FB" }}>Empresas próximas de você</h3>
+        <p style={{ fontSize: 13, color:"#9FD3EA", marginTop: 6, maxWidth: 420, margin: "6px auto 0" }}>
           Use sua localização atual para listar as empresas cadastradas mais próximas e abrir a rota no Waze com um toque.
         </p>
         <button onClick={localizar} style={botaoPrimario}>
@@ -53,8 +53,8 @@ export default function ListaEmpresasProximas({
   // Carregando posição
   if (carregando) {
     return (
-      <div style={{ textAlign: "center", padding: "48px 20px", color: "rgba(20,45,70,0.6)" }}>
-        <Crosshair style={{ width: 24, height: 24, color: "#2980b9", animation: "pulseDraft 1.2s ease infinite" }} />
+      <div style={{ textAlign: "center", padding: "48px 20px", color:"#EAF6FB" }}>
+        <Crosshair style={{ width: 24, height: 24, color:"#9FD3EA", animation: "pulseDraft 1.2s ease infinite" }} />
         <p style={{ fontSize: 13, fontWeight: 600, marginTop: 12 }}>Obtendo sua localização...</p>
       </div>
     );
@@ -64,8 +64,8 @@ export default function ListaEmpresasProximas({
   if (erro) {
     return (
       <div style={{ textAlign: "center", padding: "40px 20px" }}>
-        <AlertTriangle style={{ width: 28, height: 28, color: "#e67e22", margin: "0 auto" }} />
-        <p style={{ fontSize: 13, fontWeight: 600, color: "#b9651a", marginTop: 12, maxWidth: 440, marginInline: "auto" }}>
+        <AlertTriangle style={{ width: 28, height: 28, color:"#F2C879", margin: "0 auto" }} />
+        <p style={{ fontSize: 13, fontWeight: 600, color:"#F2C879", marginTop: 12, maxWidth: 440, marginInline: "auto" }}>
           {mensagemErroGeo(erro)}
         </p>
         <button onClick={localizar} style={botaoPrimario}>
@@ -81,7 +81,7 @@ export default function ListaEmpresasProximas({
       {posicao && <MapaWaze posicao={posicao} />}
 
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(20,45,70,0.6)" }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color:"#EAF6FB" }}>
           {proximas.length} empresa{proximas.length !== 1 ? "s" : ""} próxima{proximas.length !== 1 ? "s" : ""}
         </span>
         <button
@@ -94,9 +94,9 @@ export default function ListaEmpresasProximas({
             height: 32,
             padding: "0 12px",
             borderRadius: 8,
-            border: "1px solid rgba(200,225,240,0.9)",
-            background: "rgba(255,255,255,0.78)",
-            color: "#2980b9",
+            border:"1px solid rgba(159,211,234,0.18)",
+            background:"rgba(18,59,94,0.55)",
+            color:"#9FD3EA",
             fontSize: 12,
             fontWeight: 700,
             cursor: "pointer",
@@ -107,8 +107,8 @@ export default function ListaEmpresasProximas({
       </div>
 
       {proximas.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "32px 20px", color: "rgba(20,45,70,0.55)" }}>
-          <Building2 style={{ width: 26, height: 26, color: "rgba(20,45,70,0.35)", margin: "0 auto" }} />
+        <div style={{ textAlign: "center", padding: "32px 20px", color:"#9FD3EA" }}>
+          <Building2 style={{ width: 26, height: 26, color:"#9FD3EA", margin: "0 auto" }} />
           <p style={{ fontSize: 13, fontWeight: 600, marginTop: 10 }}>
             Nenhuma empresa com localização cadastrada foi encontrada por perto.
           </p>
@@ -132,10 +132,10 @@ const botaoPrimario: React.CSSProperties = {
   padding: "0 20px",
   marginTop: 18,
   borderRadius: 10,
-  border: "none",
+  border:"none",
   cursor: "pointer",
-  background: "linear-gradient(135deg,#2980b9,#1abc9c)",
-  color: "#fff",
+  background:"linear-gradient(135deg,#2E6F95,#2E6F95)",
+  color:"#fff",
   fontSize: 13,
   fontWeight: 700,
   boxShadow: "0 4px 14px rgba(41,128,185,0.35)",

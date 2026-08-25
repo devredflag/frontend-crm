@@ -31,20 +31,20 @@ interface SelectRecipientsModalProps {
 
 // ── Config por canal ───────────────────────────────────────────
 const CHANNEL_CONFIG = {
-  email:    { label:"E-mail",    color:"#2980b9", bg:"rgba(41,128,185,0.08)",  border:"rgba(41,128,185,0.25)",  icon:Mail          },
-  whatsapp: { label:"WhatsApp",  color:"#27ae60", bg:"rgba(39,174,96,0.08)",   border:"rgba(39,174,96,0.25)",   icon:MessageCircle },
-  telefone: { label:"Telefone",  color:"#e67e22", bg:"rgba(230,126,34,0.08)",  border:"rgba(230,126,34,0.25)",  icon:Phone         },
+  email:    { label:"E-mail",    color:"#9FD3EA", bg:"rgba(159,211,234,0.55)",  border:"rgba(159,211,234,0.30)",  icon:Mail          },
+  whatsapp: { label:"WhatsApp",  color:"#83DDA8", bg:"rgba(39,174,96,0.08)",   border:"rgba(39,174,96,0.25)",   icon:MessageCircle },
+  telefone: { label:"Telefone",  color:"#F2C879", bg:"rgba(230,126,34,0.08)",  border:"rgba(230,126,34,0.25)",  icon:Phone         },
   linkedin: { label:"LinkedIn",  color:"#0077b5", bg:"rgba(0,119,181,0.08)",   border:"rgba(0,119,181,0.25)",   icon:Link2         },
 } as const;
 
-const API = "https://backend-crm-production-157b.up.railway.app";
+const API = (process.env.REACT_APP_API_URL || "https://backend-crm-production-157b.up.railway.app");
 
 const gradientShift = `
   @keyframes gradientShift { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
 `;
 
 function avatarColor(n: string) {
-  const c = ["#2980b9","#1abc9c","#8e44ad","#e67e22","#27ae60","#e74c3c"];
+  const c = ["#9FD3EA","#83DDA8","#C9B6E4","#F2C879","#83DDA8","#F7B8B1"];
   return c[(n?.charCodeAt(0)||0) % c.length];
 }
 function initials(n: string) {
@@ -149,7 +149,7 @@ export default function SelectRecipientsModal({
   };
 
   const accentColor = channel === "email" && step === "provider"
-    ? (provider === "gmail" ? "#EA4335" : "#0078d4")
+    ? (provider === "gmail" ? "#EA4335" : "#9FD3EA")
     : cfg.color;
 
   return (
@@ -179,7 +179,7 @@ export default function SelectRecipientsModal({
               onClick={e => e.stopPropagation()}
               style={{
                 width:480, maxHeight:"90vh",
-                background:"rgba(248,252,255,0.97)",
+                background:"#0F2E4B",
                 backdropFilter:"blur(24px)",
                 borderRadius:20,
                 border:`1.5px solid ${cfg.border}`,
@@ -199,14 +199,14 @@ export default function SelectRecipientsModal({
               <button onClick={onClose} style={{
                 position:"absolute", top:16, right:16,
                 width:28, height:28, borderRadius:8,
-                border:"1px solid rgba(200,225,240,0.7)",
-                background:"rgba(255,255,255,0.8)",
+                border:"1px solid rgba(159,211,234,0.18)",
+                background:"rgba(18,59,94,0.55)",
                 cursor:"pointer", display:"flex",
                 alignItems:"center", justifyContent:"center",
-                color:"rgba(20,45,70,0.4)", zIndex:2, transition:"all 0.18s",
+                color:"#9FD3EA", zIndex:2, transition:"all 0.18s",
               }}
-                onMouseEnter={e => (e.currentTarget.style.color="#e74c3c")}
-                onMouseLeave={e => (e.currentTarget.style.color="rgba(20,45,70,0.4)")}
+                onMouseEnter={e => (e.currentTarget.style.color="#F7B8B1")}
+                onMouseLeave={e => (e.currentTarget.style.color="rgba(159,211,234,0.55)")}
               >
                 <X style={{ width:13, height:13 }}/>
               </button>
@@ -216,8 +216,8 @@ export default function SelectRecipientsModal({
                 {/* ── STEP: loading auth ── */}
                 {channel === "email" && checkingAuth && (
                   <div style={{ padding:"40px 0", textAlign:"center" }}>
-                    <div style={{ width:36, height:36, border:`3px solid rgba(41,128,185,0.15)`, borderTop:`3px solid #2980b9`, borderRadius:"50%", margin:"0 auto 16px", animation:"spin 0.8s linear infinite" }}/>
-                    <div style={{ fontSize:13, fontWeight:600, color:"rgba(20,45,70,0.5)" }}>Verificando provedores...</div>
+                    <div style={{ width:36, height:36, border:`3px solid rgba(159,211,234,0.30)`, borderTop:`3px solid rgba(159,211,234,0.30)`, borderRadius:"50%", margin:"0 auto 16px", animation:"spin 0.8s linear infinite" }}/>
+                    <div style={{ fontSize:13, fontWeight:600, color:"#9FD3EA" }}>Verificando provedores...</div>
                     <style>{`@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
                   </div>
                 )}
@@ -239,12 +239,12 @@ export default function SelectRecipientsModal({
                           <Icon style={{ width:20, height:20, color:cfg.color }}/>
                         </div>
                         <div>
-                          <div style={{ fontSize:16, fontWeight:800, color:"#0f2133", letterSpacing:"-0.02em" }}>
+                          <div style={{ fontSize:16, fontWeight:800, color:"#EAF6FB", letterSpacing:"-0.02em" }}>
                             Enviar e-mail
                           </div>
-                          <div style={{ fontSize:12, color:"rgba(20,45,70,0.5)" }}>
+                          <div style={{ fontSize:12, color:"#9FD3EA" }}>
                             {provider
-                              ? <>Padrão: <strong style={{ color:"#0f2133" }}>{provider === "gmail" ? "Gmail" : "Outlook"}</strong> — clique para confirmar ou trocar</>
+                              ? <>Padrão: <strong style={{ color:"#EAF6FB" }}>{provider === "gmail" ? "Gmail" : "Outlook"}</strong> — clique para confirmar ou trocar</>
                               : "Escolha o provedor de e-mail"}
                           </div>
                         </div>
@@ -254,7 +254,7 @@ export default function SelectRecipientsModal({
                       <ProviderButton
                         name="Outlook"
                         subtitle="Microsoft Outlook"
-                        color="#0078d4"
+                        color="#9FD3EA"
                         bgColor="rgba(0,120,212,0.06)"
                         borderColor="rgba(0,120,212,0.2)"
                         hoverBg="rgba(0,120,212,0.1)"
@@ -294,22 +294,22 @@ export default function SelectRecipientsModal({
                         {channel === "email" && outlookOk && gmailOk && (
                           <button onClick={() => setStep("provider")} style={{
                             width:32, height:32, borderRadius:9,
-                            border:"1px solid rgba(200,225,240,0.9)",
-                            background:"rgba(255,255,255,0.8)",
+                            border:"1px solid rgba(159,211,234,0.18)",
+                            background:"rgba(18,59,94,0.55)",
                             cursor:"pointer", display:"flex",
                             alignItems:"center", justifyContent:"center",
                             flexShrink:0, transition:"all 0.15s",
                           }}
                             onMouseEnter={e => (e.currentTarget.style.background="rgba(255,255,255,1)")}
-                            onMouseLeave={e => (e.currentTarget.style.background="rgba(255,255,255,0.8)")}
+                            onMouseLeave={e => (e.currentTarget.style.background="rgba(18,59,94,0.55)")}
                           >
-                            <ChevronLeft style={{ width:14, height:14, color:"rgba(20,45,70,0.5)" }}/>
+                            <ChevronLeft style={{ width:14, height:14, color:"#9FD3EA" }}/>
                           </button>
                         )}
 
                         <div style={{
                           width:44, height:44, borderRadius:13,
-                          background: channel === "email"
+                          background:channel === "email"
                             ? (provider === "gmail" ? "rgba(234,67,53,0.08)" : "rgba(0,120,212,0.08)")
                             : cfg.bg,
                           border:`1.5px solid ${channel === "email"
@@ -327,12 +327,12 @@ export default function SelectRecipientsModal({
                         </div>
 
                         <div style={{ flex:1 }}>
-                          <div style={{ fontSize:16, fontWeight:800, color:"#0f2133", letterSpacing:"-0.02em" }}>
+                          <div style={{ fontSize:16, fontWeight:800, color:"#EAF6FB", letterSpacing:"-0.02em" }}>
                             {channel === "email"
                               ? `Enviar via ${provider === "gmail" ? "Gmail" : "Outlook"}`
                               : `Enviar via ${cfg.label}`}
                           </div>
-                          <div style={{ fontSize:12, color:"rgba(20,45,70,0.5)" }}>
+                          <div style={{ fontSize:12, color:"#9FD3EA" }}>
                             Escolha para quem deseja enviar
                           </div>
                         </div>
@@ -343,7 +343,7 @@ export default function SelectRecipientsModal({
                         <ModeButton
                           active={mode === "principal"}
                           color={channel === "email"
-                            ? (provider === "gmail" ? "#EA4335" : "#0078d4")
+                            ? (provider === "gmail" ? "#EA4335" : "#9FD3EA")
                             : cfg.color}
                           icon={<User style={{ width:14, height:14 }}/>}
                           label={`${cfg.label} principal`}
@@ -353,7 +353,7 @@ export default function SelectRecipientsModal({
                         <ModeButton
                           active={mode === "selecionar"}
                           color={channel === "email"
-                            ? (provider === "gmail" ? "#EA4335" : "#0078d4")
+                            ? (provider === "gmail" ? "#EA4335" : "#9FD3EA")
                             : cfg.color}
                           icon={<Users style={{ width:14, height:14 }}/>}
                           label="Contatos selecionados"
@@ -389,12 +389,12 @@ export default function SelectRecipientsModal({
                                 <button onClick={toggleAll} style={{
                                   width:"100%", display:"flex", alignItems:"center", gap:8,
                                   padding:"9px 14px", borderRadius:9, marginBottom:8,
-                                  border:`1.5px solid ${allSelected ? cfg.border : "rgba(200,225,240,0.7)"}`,
-                                  background:allSelected ? cfg.bg : "rgba(255,255,255,0.6)",
+                                  border:`1.5px solid ${allSelected ? cfg.border:"rgba(159,211,234,0.18)"}`,
+                                  background:allSelected ? cfg.bg : "rgba(18,59,94,0.55)",
                                   cursor:"pointer", transition:"all 0.18s",
                                 }}>
                                   <Checkbox checked={allSelected} color={cfg.color}/>
-                                  <span style={{ fontSize:12, fontWeight:700, color:allSelected ? cfg.color : "rgba(20,45,70,0.65)" }}>
+                                  <span style={{ fontSize:12, fontWeight:700, color:allSelected ? cfg.color:"#EAF6FB" }}>
                                     Selecionar todos ({recipients.length})
                                   </span>
                                   {selected.size > 0 && !allSelected && (
@@ -416,14 +416,14 @@ export default function SelectRecipientsModal({
                       </AnimatePresence>
 
                       {/* Divisor + botões */}
-                      <div style={{ height:1, background:"rgba(200,225,240,0.5)", margin:"18px 0 16px" }}/>
+                      <div style={{ height:1, background:"rgba(159,211,234,0.08)", margin:"18px 0 16px" }}/>
                       <div style={{ display:"flex", gap:10 }}>
                         <button onClick={onClose} style={{
                           flex:1, height:44, borderRadius:10,
-                          border:"1.5px solid rgba(200,225,240,0.9)",
-                          background:"rgba(255,255,255,0.75)",
+                          border:"1.5px solid rgba(159,211,234,0.18)",
+                          background:"rgba(18,59,94,0.55)",
                           cursor:"pointer", fontFamily:"'Plus Jakarta Sans',sans-serif",
-                          fontWeight:600, fontSize:13, color:"rgba(20,45,70,0.65)",
+                          fontWeight:600, fontSize:13, color:"#EAF6FB",
                         }}>Cancelar</button>
                         <button onClick={handleConfirm} disabled={!canConfirm} style={{
                           flex:2, height:44, borderRadius:10, border:"none",
@@ -459,7 +459,7 @@ export default function SelectRecipientsModal({
 
 // ── ProviderButton ─────────────────────────────────────────────
 function ProviderButton({ name, subtitle, color, bgColor, borderColor, hoverBg, hoverBorder, icon, selected, onClick }: {
-  name: string; subtitle: string; color: string;
+  name: string; subtitle: string; color:string;
   bgColor: string; borderColor: string; hoverBg: string; hoverBorder: string;
   icon: React.ReactNode; selected?: boolean; onClick: () => void;
 }) {
@@ -468,8 +468,8 @@ function ProviderButton({ name, subtitle, color, bgColor, borderColor, hoverBg, 
       style={{
         width:"100%", display:"flex", alignItems:"center", gap:14,
         padding:"16px 18px", borderRadius:13,
-        border:`2px solid ${selected ? color : borderColor}`,
-        background: selected ? `${color}12` : bgColor,
+        border:`2px solid ${selected ? color:borderColor}`,
+        background:selected ? `${color}12` : bgColor,
         cursor:"pointer", transition:"all 0.18s", textAlign:"left",
         boxShadow: selected ? `0 0 0 3px ${color}22` : "none",
       }}
@@ -496,15 +496,15 @@ function ProviderButton({ name, subtitle, color, bgColor, borderColor, hoverBg, 
         {icon}
       </div>
       <div style={{ flex:1 }}>
-        <div style={{ fontSize:14, fontWeight:700, color:"#0f2133" }}>{name}</div>
-        <div style={{ fontSize:11, color:"rgba(20,45,70,0.5)", marginTop:2 }}>{subtitle}</div>
+        <div style={{ fontSize:14, fontWeight:700, color:"#EAF6FB" }}>{name}</div>
+        <div style={{ fontSize:11, color:"#9FD3EA", marginTop:2 }}>{subtitle}</div>
       </div>
       <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4, flexShrink:0 }}>
         <div style={{ fontSize:10, fontWeight:700, padding:"3px 10px", borderRadius:6, background:`${color}18`, color }}>
           Conectado
         </div>
         {selected && (
-          <div style={{ fontSize:9, fontWeight:700, padding:"2px 8px", borderRadius:6, background:color, color:"#fff" }}>
+          <div style={{ fontSize:9, fontWeight:700, padding:"2px 8px", borderRadius:6, background:color, color:"#EAF6FB" }}>
             ✓ Padrão
           </div>
         )}
@@ -518,7 +518,7 @@ function OutlookIcon({ size = 22 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 22 22" fill="none">
       <rect x="1" y="5" width="20" height="13" rx="2" fill="white" fillOpacity="0.9"/>
-      <path d="M1 8l10 6 10-6" stroke="#0078d4" strokeWidth="1.5"/>
+      <path d="M1 8l10 6 10-6" stroke="#9FD3EA" strokeWidth="1.5"/>
     </svg>
   );
 }
@@ -532,12 +532,12 @@ function GmailIcon({ size = 22 }: { size?: number }) {
 }
 
 // ── Checkbox ───────────────────────────────────────────────────
-function Checkbox({ checked, color }: { checked: boolean; color: string }) {
+function Checkbox({ checked, color }: { checked: boolean; color:string }) {
   return (
     <div style={{
       width:16, height:16, borderRadius:4, flexShrink:0, transition:"all 0.15s",
-      border:`1.5px solid ${checked ? color : "rgba(200,225,240,0.9)"}`,
-      background:checked ? color : "#fff",
+      border:`1.5px solid ${checked ? color:"#EAF6FB"}`,
+      background:checked ? color:"#EAF6FB",
       display:"flex", alignItems:"center", justifyContent:"center",
     }}>
       {checked && (
@@ -559,33 +559,33 @@ function RecipientRow({ recipient, cfg, checked, onToggle, hideCheckbox }: {
     <div onClick={onToggle} style={{
       display:"flex", alignItems:"center", gap:10,
       padding:"10px 14px", borderRadius:11, transition:"all 0.15s",
-      border:`1.5px solid ${checked && !hideCheckbox ? cfg.border : "rgba(200,225,240,0.6)"}`,
-      background:checked && !hideCheckbox ? cfg.bg : "rgba(255,255,255,0.6)",
+      border:`1.5px solid ${checked && !hideCheckbox ? cfg.border:"rgba(159,211,234,0.18)"}`,
+      background:checked && !hideCheckbox ? cfg.bg : "rgba(18,59,94,0.55)",
       cursor:hideCheckbox ? "default" : "pointer",
     }}>
       {!hideCheckbox && <Checkbox checked={checked} color={cfg.color}/>}
-      <div style={{ width:32, height:32, borderRadius:"50%", background:avatarColor(recipient.nome), display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:"#fff", flexShrink:0 }}>
+      <div style={{ width:32, height:32, borderRadius:"50%", background:avatarColor(recipient.nome), display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:"#EAF6FB", flexShrink:0 }}>
         {initials(recipient.nome)}
       </div>
       <div style={{ flex:1, minWidth:0 }}>
         <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:2 }}>
-          <span style={{ fontSize:12, fontWeight:700, color:"#0f2133", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{recipient.nome}</span>
+          <span style={{ fontSize:12, fontWeight:700, color:"#EAF6FB", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{recipient.nome}</span>
           {recipient.principal && (
             <span style={{ fontSize:9, fontWeight:700, padding:"1px 6px", borderRadius:4, background:`${cfg.color}18`, color:cfg.color, border:`1px solid ${cfg.color}30`, flexShrink:0 }}>PRINCIPAL</span>
           )}
           {recipient.decisor && (
-            <span style={{ fontSize:9, fontWeight:700, padding:"1px 6px", borderRadius:4, background:"rgba(39,174,96,0.1)", color:"#27ae60", border:"1px solid rgba(39,174,96,0.2)", flexShrink:0 }}>Decisor</span>
+            <span style={{ fontSize:9, fontWeight:700, padding:"1px 6px", borderRadius:4, background:"rgba(39,174,96,0.1)", color:"#83DDA8", border:"1px solid rgba(39,174,96,0.2)", flexShrink:0 }}>Decisor</span>
           )}
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, color:cfg.color, fontWeight:500 }}>
           <cfg.icon style={{ width:10, height:10, flexShrink:0 }}/>
           <span style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-            {recipient.valor || <span style={{ color:"rgba(20,45,70,0.35)", fontStyle:"italic" }}>Não informado</span>}
+            {recipient.valor || <span style={{ color:"#9FD3EA", fontStyle:"italic" }}>Não informado</span>}
           </span>
         </div>
       </div>
       {recipient.funcao && (
-        <span style={{ fontSize:10, color:"rgba(20,45,70,0.35)", whiteSpace:"nowrap", flexShrink:0 }}>{recipient.funcao}</span>
+        <span style={{ fontSize:10, color:"#9FD3EA", whiteSpace:"nowrap", flexShrink:0 }}>{recipient.funcao}</span>
       )}
     </div>
   );
@@ -593,22 +593,22 @@ function RecipientRow({ recipient, cfg, checked, onToggle, hideCheckbox }: {
 
 // ── ModeButton ─────────────────────────────────────────────────
 function ModeButton({ active, color, icon, label, sub, onClick }: {
-  active: boolean; color: string; icon: React.ReactNode;
+  active: boolean; color:string; icon: React.ReactNode;
   label: string; sub: string; onClick: () => void;
 }) {
   return (
     <button onClick={onClick} style={{
       padding:"12px 14px", borderRadius:11, textAlign:"left", transition:"all 0.18s",
-      border:`1.5px solid ${active ? color+"50" : "rgba(200,225,240,0.8)"}`,
-      background:active ? `${color}0d` : "rgba(255,255,255,0.7)",
+      border:`1.5px solid ${active ? color+"50" : "rgba(159,211,234,0.18)"}`,
+      background:active ? `${color}0d` : "rgba(18,59,94,0.55)",
       cursor:"pointer",
       boxShadow:active ? `0 0 0 3px ${color}15` : "none",
     }}>
       <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:3 }}>
-        <span style={{ color:active ? color : "rgba(20,45,70,0.4)" }}>{icon}</span>
-        <span style={{ fontSize:12, fontWeight:700, color:active ? color : "rgba(20,45,70,0.55)" }}>{label}</span>
+        <span style={{ color:active ? color:"#9FD3EA" }}>{icon}</span>
+        <span style={{ fontSize:12, fontWeight:700, color:active ? color:"#9FD3EA" }}>{label}</span>
       </div>
-      <div style={{ fontSize:10, color:active ? color+"aa" : "rgba(20,45,70,0.35)", fontWeight:500, paddingLeft:21 }}>{sub}</div>
+      <div style={{ fontSize:10, color:active ? color+"aa" : "#9FD3EA", fontWeight:500, paddingLeft:21 }}>{sub}</div>
     </button>
   );
 }
@@ -616,9 +616,9 @@ function ModeButton({ active, color, icon, label, sub, onClick }: {
 // ── EmptyState ─────────────────────────────────────────────────
 function EmptyState({ cfg }: { cfg: typeof CHANNEL_CONFIG[SendChannel] }) {
   return (
-    <div style={{ padding:"28px 16px", textAlign:"center", borderRadius:12, border:"1.5px dashed rgba(200,225,240,0.7)", background:"rgba(255,255,255,0.4)" }}>
+    <div style={{ padding:"28px 16px", textAlign:"center", borderRadius:12, border:"1.5px dashed rgba(159,211,234,0.18)", background:"rgba(159,211,234,0.08)" }}>
       <cfg.icon style={{ width:28, height:28, color:`${cfg.color}40`, margin:"0 auto 8px" }}/>
-      <div style={{ fontSize:12, fontWeight:600, color:"rgba(20,45,70,0.4)" }}>
+      <div style={{ fontSize:12, fontWeight:600, color:"#9FD3EA" }}>
         Nenhum contato com {cfg.label} cadastrado
       </div>
     </div>

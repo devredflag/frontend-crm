@@ -8,10 +8,10 @@ import {
 } from "lucide-react";
 
 const pipelineStages = [
-  { name: "Lead", count: 24, pct: 100, color: "from-blue-400 to-blue-500" },
-  { name: "Contato", count: 18, pct: 75, color: "from-sky-400 to-teal-400" },
-  { name: "Proposta", count: 12, pct: 50, color: "from-yellow-400 to-orange-400" },
-  { name: "Fechado", count: 8, pct: 33, color: "from-green-400 to-teal-500" },
+  { name: "Lead", count: 24, pct: 100, color:"from-blue-400 to-blue-500" },
+  { name: "Contato", count: 18, pct: 75, color:"from-sky-400 to-teal-400" },
+  { name: "Proposta", count: 12, pct: 50, color:"from-yellow-400 to-orange-400" },
+  { name: "Fechado", count: 8, pct: 33, color:"from-green-400 to-teal-500" },
 ];
 
 const companies = [
@@ -66,9 +66,9 @@ export default function DashboardPreview() {
           <div
             className="rounded-2xl overflow-hidden"
             style={{
-              background: "rgba(225,244,252,0.75)",
+              background:"rgba(225,244,252,0.75)",
               backdropFilter: "blur(24px)",
-              border: "1px solid rgba(255,255,255,0.8)",
+              border:"1px solid rgba(159,211,234,0.18)",
               boxShadow: "0 24px 80px rgba(41,128,185,0.18)",
             }}
           >
