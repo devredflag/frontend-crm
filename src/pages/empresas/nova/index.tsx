@@ -21,6 +21,14 @@ import FundoAzul from "../../../components/FundoAzul";
 
 const API = (process.env.REACT_APP_API_URL || "https://backend-crm-production-157b.up.railway.app");
 
+// Token sempre lido na hora do envio: getToken() pode ter sido renovado desde a
+// montagem da tela. Os POSTs desta pagina iam sem Authorization e o backend,
+// que usa HTTPBearer sem fallback de cookie, respondia 401.
+const hdrs = () => ({
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${getToken() || ""}`,
+});
+
 const PORTES = ["Pequeno", "Médio", "Grande"];
 
 const ORIGENS_LEAD = [
@@ -716,7 +724,7 @@ export default function NovaEmpresa() {
     try {
       const empresaRes = await fetch(`${API}/empresas`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: hdrs(),
         body: JSON.stringify({
           nome: empresa.nome, segmento: segmentoValidado,
           porte: empresa.porte, cidade: empresa.cidade, endereco: empresa.endereco,
@@ -739,7 +747,7 @@ export default function NovaEmpresa() {
         for (const c of contatos.filter(c => c.nome.trim())) {
           await fetch(`${API}/contatos`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: hdrs(),
             body: JSON.stringify({
               empresa_id: empresaId, nome: c.nome, funcao: c.funcao,
               email: c.email, celular: c.celular, whatsapp: c.whatsapp,
@@ -794,7 +802,7 @@ export default function NovaEmpresa() {
       try {
         const res = await fetch(`${API}/segmentos`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: hdrs(),
           body: JSON.stringify({ nome: seg }),
         });
         const data = await res.json().catch(() => ({}));
@@ -882,7 +890,7 @@ export default function NovaEmpresa() {
     try {
       const res = await fetch(`${API}/empresas`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: hdrs(),
         body: JSON.stringify(buildRascunhoPayload()),
       });
       if (!res.ok) throw new Error("Erro ao salvar rascunho");
@@ -901,7 +909,7 @@ export default function NovaEmpresa() {
     try {
       const res = await fetch(`${API}/empresas`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: hdrs(),
         body: JSON.stringify(buildRascunhoPayload()),
       });
       if (!res.ok) throw new Error("Erro ao salvar rascunho");
