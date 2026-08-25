@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import { getToken } from "../../services/auth";
 import useIsMobile from "../../hooks/useIsMobile";
 import { openEmail, openWhatsApp } from "../../utils/commPrefs";
@@ -805,11 +806,11 @@ function ImportarCatalogo({
 
   const podeGravar = !!previa && previa.resumo.com_erro === 0 && previa.resumo.validos > 0;
 
-  return (
+  return createPortal(
     <div onClick={onFechar}
       style={{ position: "fixed", inset: 0, zIndex: 70, background:"rgba(10,31,51,0.42)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div onClick={e => e.stopPropagation()}
-        style={{ width: "100%", maxWidth: 720, maxHeight: "90vh", overflowY: "auto", background:"rgba(18,59,94,0.55)", borderRadius: 18, padding: 24, boxShadow: "0 24px 64px rgba(10,31,51,0.32)" }}>
+        style={{ width: "100%", maxWidth: 720, maxHeight: "90vh", overflowY: "auto", background:"#143354", borderRadius: 18, padding: 24, boxShadow: "0 24px 64px rgba(10,31,51,0.32)" }}>
 
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
           <div style={{ width: 34, height: 34, borderRadius: 10, background:"rgba(39,174,96,0.14)", display: "grid", placeItems: "center" }}>
@@ -945,7 +946,7 @@ function ImportarCatalogo({
           </div>
         )}
 
-        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 18, paddingTop: 14, borderTop:"1px solid rgba(159,211,234,0.18)" }}>
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 18, paddingTop: 14, borderTop:"1px solid rgba(126,176,219,0.16)", position: "sticky", bottom: -24, background:"#143354", paddingBottom: 24, marginBottom: -24, marginInline: -24, paddingInline: 24 }}>
           <button onClick={onFechar} className="vp-ghost" style={{ height: 40, padding: "0 16px", fontSize: 13 }}>
             {sucesso ? "Fechar" : "Cancelar"}
           </button>
@@ -968,7 +969,8 @@ function ImportarCatalogo({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -1035,11 +1037,11 @@ function EditorOrcamento({
   const label = { fontSize: 10, fontWeight: 800, letterSpacing: "0.06em", color:"#9FD3EA", textTransform: "uppercase" } as const;
   const field = { width: "100%", height: 42, padding: "0 12px", borderRadius: 10, border:"1.5px solid rgba(159,211,234,0.18)", background:"rgba(18,59,94,0.55)", fontSize: 13, marginTop: 5, outline:"none", fontFamily: "inherit", color:"#EAF6FB" } as const;
 
-  return (
+  return createPortal(
     <div onClick={onFechar}
       style={{ position: "fixed", inset: 0, zIndex: 60, background:"rgba(10,31,51,0.42)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div onClick={e => e.stopPropagation()}
-        style={{ width: "100%", maxWidth: 660, maxHeight: "90vh", overflowY: "auto", background:"rgba(18,59,94,0.55)", borderRadius: 18, padding: 24, boxShadow: "0 24px 64px rgba(10,31,51,0.32)" }}>
+        style={{ width: "100%", maxWidth: 660, maxHeight: "90vh", overflowY: "auto", background:"#143354", borderRadius: 18, padding: 24, boxShadow: "0 24px 64px rgba(10,31,51,0.32)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
           <div style={{ width: 34, height: 34, borderRadius: 10, background:"rgba(46,111,149,0.12)", display: "grid", placeItems: "center" }}>
             <FileText style={{ width: 17, height: 17, color:"#9FD3EA" }} />
@@ -1168,7 +1170,8 @@ function EditorOrcamento({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
