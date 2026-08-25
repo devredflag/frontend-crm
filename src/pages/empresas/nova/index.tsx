@@ -678,6 +678,7 @@ export default function NovaEmpresa() {
     segmento: "", porte: "",
     cidade: prefill?.cidade || "",
     endereco: prefill?.endereco || "",
+    numero: "",
     cep: prefill?.cep || "",
     bairro: prefill?.bairro || "",
     regiao: "", observacoes: "",
@@ -755,6 +756,7 @@ export default function NovaEmpresa() {
           status: "Lead", origem_lead: empresa.origem_lead || "Manual",
           ultima_interacao: dateInputToIso(empresa.ultima_interacao),
           proxima_acao: empresa.proxima_acao, temperatura: empresa.temperatura || "Frio",
+          numero: empresa.numero || null,
           logo_url: empresa.logo_url || null,
           ...placesExtra,
         }),
@@ -898,6 +900,7 @@ export default function NovaEmpresa() {
     ultima_interacao: dateInputToIso(empresa.ultima_interacao),
     proxima_acao: empresa.proxima_acao,
     temperatura: empresa.temperatura || "Frio",
+    numero: empresa.numero || null,
     logo_url: empresa.logo_url || null,
     ...placesExtra,
   });
@@ -1127,8 +1130,9 @@ export default function NovaEmpresa() {
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
                   <Field label="Cidade *"><IconInput icon={MapPin} placeholder="Nome da cidade" value={empresa.cidade} onChange={(e:any)=>setEmp("cidade",e.target.value)} style={showErrors&&!empresa.cidade.trim()?{borderColor:"rgba(248,113,113,0.6)",background:"rgba(248,113,113,0.03)"}:{}}/></Field>
                   <Field label="CEP *"><input className="field-input" placeholder="00000-000" value={empresa.cep} onChange={e=>setEmp("cep",formatCep(e.target.value))} style={showErrors&&!empresa.cep.trim()?{borderColor:"rgba(248,113,113,0.6)",background:"rgba(248,113,113,0.03)"}:{}}/></Field>
-                  <div style={{gridColumn:"1 / -1"}}>
-                    <Field label="Endereço *"><input className="field-input" placeholder="Rua, número, complemento" value={empresa.endereco} onChange={e=>setEmp("endereco",e.target.value)} style={showErrors&&!empresa.endereco.trim()?{borderColor:"rgba(248,113,113,0.6)",background:"rgba(248,113,113,0.03)"}:{}}/></Field>
+                  <div style={{gridColumn:"1 / -1",display:"grid",gridTemplateColumns:"1fr 120px",gap:12}}>
+                    <Field label="Endereço *"><input className="field-input" placeholder="Somente a rua, sem o número" value={empresa.endereco} onChange={e=>setEmp("endereco",e.target.value)} style={showErrors&&!empresa.endereco.trim()?{borderColor:"rgba(248,113,113,0.6)",background:"rgba(248,113,113,0.03)"}:{}}/></Field>
+                    <Field label="Número"><input className="field-input" placeholder="212" inputMode="numeric" value={empresa.numero} onChange={e=>setEmp("numero",e.target.value)}/></Field>
                   </div>
                   <Field label="Bairro *"><input className="field-input" placeholder="Bairro" value={empresa.bairro} onChange={e=>setEmp("bairro",e.target.value)} style={showErrors&&!empresa.bairro.trim()?{borderColor:"rgba(248,113,113,0.6)",background:"rgba(248,113,113,0.03)"}:{}}/></Field>
                   <Field label="Região"><input className="field-input" placeholder="ex: Sul, Norte, Centro..." value={empresa.regiao} onChange={e=>setEmp("regiao",e.target.value)}/></Field>

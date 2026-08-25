@@ -294,7 +294,7 @@ import { FUNDO_AZUL } from "../../../../components/FundoAzul";
     const [toasts, setToasts] = useState<Toast[]>([]);
 
     const [form, setForm] = useState({
-      nome:"", segmento:"", porte:"", cidade:"", endereco:"",
+      nome:"", segmento:"", porte:"", cidade:"", endereco:"", numero:"",
       cep:"", bairro:"", regiao:"", observacoes:"", cnpj:"",
       site:"", linkedin_empresa:"", responsavel_principal:"",
       ticket_medio_estimado:"", status:"", origem_lead:"",
@@ -330,7 +330,7 @@ import { FUNDO_AZUL } from "../../../../components/FundoAzul";
           const emp = await empRes.json();
           setForm({
             nome: emp.nome||"", segmento: emp.segmento||"", porte: emp.porte||"",
-            cidade: emp.cidade||"", endereco: emp.endereco||"", cep: emp.cep||"",
+            cidade: emp.cidade||"", endereco: emp.endereco||"", numero: emp.numero||"", cep: emp.cep||"",
             bairro: emp.bairro||"", regiao: emp.regiao||"", observacoes: emp.observacoes||"",
             cnpj: emp.cnpj||"", site: emp.site||"", linkedin_empresa: emp.linkedin_empresa||"",
             responsavel_principal: emp.responsavel_principal||"",
@@ -401,7 +401,7 @@ import { FUNDO_AZUL } from "../../../../components/FundoAzul";
         // 2. Salvar empresa
         const body: any = {
           nome: form.nome, segmento: segValidado, porte: form.porte,
-          cidade: form.cidade, endereco: form.endereco, cep: form.cep,
+          cidade: form.cidade, endereco: form.endereco, numero: form.numero, cep: form.cep,
           bairro: form.bairro, regiao: form.regiao, observacoes: form.observacoes,
           cnpj: form.cnpj, site: form.site, linkedin_empresa: form.linkedin_empresa,
           responsavel_principal: form.responsavel_principal,
@@ -600,7 +600,9 @@ import { FUNDO_AZUL } from "../../../../components/FundoAzul";
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
                     <Field label="Cidade"><IconInput icon={MapPin} placeholder="Nome da cidade" value={form.cidade} onChange={(e:any)=>setF("cidade",e.target.value)}/></Field>
                     <Field label="CEP"><input className="field-input" placeholder="00000-000" value={form.cep} onChange={e=>setF("cep",formatCep(e.target.value))}/></Field>
-                    <div style={{gridColumn:"1 / -1"}}><Field label="Endereço"><input className="field-input" placeholder="Rua, número, complemento" value={form.endereco} onChange={e=>setF("endereco",e.target.value)}/></Field></div>
+                    <div style={{gridColumn:"1 / -1",display:"grid",gridTemplateColumns:"1fr 120px",gap:12}}><Field label="Endereço"><input className="field-input" placeholder="Rua, número, complemento" value={form.endereco} onChange={e=>setF("endereco",e.target.value)}/></Field>
+                      <Field label="Número"><input className="field-input" placeholder="212" inputMode="numeric" value={form.numero||""} onChange={e=>setF("numero",e.target.value)}/></Field>
+                    </div>
                     <Field label="Bairro"><input className="field-input" placeholder="Bairro" value={form.bairro} onChange={e=>setF("bairro",e.target.value)}/></Field>
                     <Field label="Região"><input className="field-input" placeholder="ex: Sul, Norte, Centro..." value={form.regiao} onChange={e=>setF("regiao",e.target.value)}/></Field>
                   </div>
