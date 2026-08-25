@@ -37,6 +37,8 @@ export default function EmpresasProximasDaEmpresa({
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(false);
   const [raioKm, setRaioKm] = useState(25);
+  const [calculando, setCalculando] = useState(false);
+  const [semResultado, setSemResultado] = useState(false);
   const [soMesmoSegmento, setSoMesmoSegmento] = useState(false);
 
   const lat = Number(latitude);
@@ -61,6 +63,30 @@ export default function EmpresasProximasDaEmpresa({
     })();
     return () => { vivo = false; };
   }, [temLocalizacao, empresaId]);
+
+  // Preenche as coordenadas a partir do endereço já salvo, via Nominatim no
+  // backend — o mesmo geocodificador que alimenta o mapa. Antes a tela só
+  // mandava o usuário editar o cadastro, mas o endereço em geral já está lá:
+  // o que falta é a conversão para latitude/longitude.
+  const calcularLocalizacao = async () => {
+    setCalculando(true);
+    setSemResultado(false);
+    try {
+      const res = await fetch(`${API}/empresas/geocodificar?limite=10`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${getToken() || ""}` },
+      });
+      if (res.ok) {
+        const d = await res.json();
+        // Recarrega para a tela abrir já com a coordenada nova.
+        if (d.geocodificadas > 0) { window.location.reload(); return; }
+      }
+      setSemResultado(true);
+    } catch {
+      setSemResultado(true);
+    }
+    setCalculando(false);
+  };
 
   // A empresa aberta não entra na própria lista de vizinhas.
   const candidatas = useMemo(
@@ -97,15 +123,33 @@ export default function EmpresasProximasDaEmpresa({
         <h3 style={{ fontSize: 15, fontWeight: 800, color:"#EAF6FB" }}>
           Localização incompleta
         </h3>
-        <p style={{ fontSize: 13, color:"#EAF6FB", marginTop: 6, maxWidth: 460, marginInline: "auto", lineHeight: 1.5 }}>
+        <p style={{ fontSize: 13, color:"#FFFFFF", marginTop: 6, maxWidth: 460, marginInline: "auto", lineHeight: 1.5 }}>
           Para listar empresas próximas precisamos das coordenadas de <strong>{nome}</strong>.
-          Complete o endereço no cadastro (rua, cidade e CEP) e a localização é calculada automaticamente.
+          Elas são calculadas a partir do endereço já cadastrado, pelo OpenStreetMap.
         </p>
-        <button
-          onClick={() => navigate(`/clientes/${empresaId}/editar`)}
-          style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 40, padding: "0 20px", marginTop: 18, borderRadius: 10, border:"none", cursor: "pointer", background:"linear-gradient(135deg,#2E6F95,#2E6F95)", color:"#EAF6FB", fontSize: 13, fontWeight: 700, fontFamily: "inherit", boxShadow: "0 4px 14px rgba(159,211,234,0.30)" }}>
-          <Edit3 style={{ width: 15, height: 15 }} /> Completar endereço
-        </button>
+        {semResultado && (
+          <p style={{ fontSize: 12, color:"#F0A05A", marginTop: 10, maxWidth: 460, marginInline: "auto", lineHeight: 1.5 }}>
+            O endereço atual não foi suficiente para achar o ponto no mapa. Complete rua,
+            cidade e CEP no cadastro e tente de novo.
+          </p>
+        )}
+        <div style={{ display:"flex", gap:10, justifyContent:"center", flexWrap:"wrap", marginTop:18 }}>
+          <button
+            onClick={calcularLocalizacao}
+            disabled={calculando}
+            style={{ display:"inline-flex", alignItems:"center", gap:8, height:40, padding:"0 20px", borderRadius:10, border:"none", cursor:calculando?"default":"pointer", background:"#2CCD93", color:"#062033", fontSize:13, fontWeight:700, opacity:calculando?0.7:1 }}
+          >
+            {calculando
+              ? <><Loader2 style={{ width:15, height:15, animation:"spin 1s linear infinite" }}/> Calculando…</>
+              : <><MapPin style={{ width:15, height:15 }}/> Calcular localização</>}
+          </button>
+          <button
+            onClick={() => navigate(`/clientes/${empresaId}/editar`)}
+            style={{ display:"inline-flex", alignItems:"center", gap:8, height:40, padding:"0 18px", borderRadius:10, border:"1px solid rgba(126,176,219,0.22)", background:"transparent", cursor:"pointer", color:"#B6CFE4", fontSize:13, fontWeight:600 }}
+          >
+            <Edit3 style={{ width:15, height:15 }}/> Completar endereço
+          </button>
+        </div>
       </div>
     );
   }

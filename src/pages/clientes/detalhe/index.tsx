@@ -70,6 +70,7 @@ interface Contato {
 interface Empresa {
   empresa_id: string;
   nome: string;
+  logo_url?: string | null;
   segmento: string;
   porte: string;
   cidade: string;
@@ -432,8 +433,10 @@ export default function EmpresaDetalhe() {
               {/* Header card */}
               <motion.div className="glass-card" style={{ padding:"24px 28px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35 }}>
                 <div style={{ display:"flex", alignItems:"center", gap:18 }}>
-                  <div style={{ width:64, height:64, borderRadius:16, background:avatarColor(empresa.nome), display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, fontWeight:800, color:"#EAF6FB", flexShrink:0 }}>
-                    {initials(empresa.nome)}
+                  <div style={{ width:64, height:64, borderRadius:16, background:empresa.logo_url?"#0F2E4B":avatarColor(empresa.nome), border:empresa.logo_url?"1px solid rgba(126,176,219,0.22)":undefined, overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, fontWeight:800, color:"#FFFFFF", flexShrink:0 }}>
+                    {empresa.logo_url
+                      ? <img src={empresa.logo_url} alt={`Logo de ${empresa.nome}`} style={{ width:"100%", height:"100%", objectFit:"contain" }}/>
+                      : initials(empresa.nome)}
                   </div>
                   <div style={{ flex:1 }}>
                     <h2 style={{ fontSize:22, fontWeight:800, color:"#EAF6FB", letterSpacing:"-0.02em" }}>{empresa.nome}</h2>

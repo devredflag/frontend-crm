@@ -53,6 +53,7 @@ interface Empresa {
   origem_lead: string; ultima_interacao: string | null; proxima_acao: string;
   endereco?: string | null; endereco_completo?: string | null;
   latitude?: number | null; longitude?: number | null;
+  logo_url?: string | null;
 }
 interface Usuario { nome: string; cargo: string; }
 
@@ -478,8 +479,12 @@ export default function TodosClientes() {
 
                       {/* Nome */}
                       <div style={{display:"flex",alignItems:"center",gap:10}}>
-                        <div style={{width:34,height:34,borderRadius:10,background:isDraft?"rgba(142,68,173,0.15)":avatarColor(emp.nome),display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:isDraft?"#2E6F95":"rgba(18,59,94,0.55)",flexShrink:0,border:isDraft?"1.5px dashed rgba(142,68,173,0.4)":"none"}}>
-                          {isDraft ? <FileText style={{width:14,height:14}}/> : initials(emp.nome)}
+                        <div style={{width:34,height:34,borderRadius:10,background:isDraft?"rgba(142,68,173,0.15)":(emp.logo_url?"#0F2E4B":avatarColor(emp.nome)),overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:isDraft?"#2E6F95":"rgba(18,59,94,0.55)",flexShrink:0,border:isDraft?"1.5px dashed rgba(142,68,173,0.4)":"none"}}>
+                          {isDraft
+                            ? <FileText style={{width:14,height:14}}/>
+                            : emp.logo_url
+                              ? <img src={emp.logo_url} alt="" style={{width:"100%",height:"100%",objectFit:"contain",borderRadius:10}}/>
+                              : initials(emp.nome)}
                         </div>
                         <div>
                           <div style={{display:"flex",alignItems:"center",gap:6}}>

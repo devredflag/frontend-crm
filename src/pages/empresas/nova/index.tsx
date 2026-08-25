@@ -24,6 +24,18 @@ const API = (process.env.REACT_APP_API_URL || "https://backend-crm-production-15
 // Token sempre lido na hora do envio: getToken() pode ter sido renovado desde a
 // montagem da tela. Os POSTs desta pagina iam sem Authorization e o backend,
 // que usa HTTPBearer sem fallback de cookie, respondia 401.
+// Coordenadas a partir do endereco, via Nominatim/OpenStreetMap no backend --
+// as mesmas que o mapa de proximidade e a aba "Proximas" leem. Sem isso a
+// empresa nasce sem latitude/longitude e some das duas telas.
+//
+// Nao bloqueia o cadastro: se o Nominatim estiver fora ou o endereco for vago,
+// a empresa fica salva do mesmo jeito e o backfill em lote pega depois.
+async function calcularLocalizacao(headers: Record<string, string>) {
+  try {
+    await fetch(`${API}/empresas/geocodificar?limite=5`, { method: "POST", headers });
+  } catch {}
+}
+
 const hdrs = () => ({
   "Content-Type": "application/json",
   Authorization: `Bearer ${getToken() || ""}`,
@@ -742,6 +754,8 @@ export default function NovaEmpresa() {
       const empresaData = await empresaRes.json();
       if (!empresaRes.ok) throw new Error(empresaData.detail || "Erro ao criar empresa");
       const empresaId = empresaData.empresa_id ?? empresaData.id;
+
+      await calcularLocalizacao(hdrs());
 
       if (empresaId) {
         for (const c of contatos.filter(c => c.nome.trim())) {
