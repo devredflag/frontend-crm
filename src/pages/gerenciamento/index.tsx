@@ -66,7 +66,7 @@ const css = `
   .drop-active { border-color:rgba(159,211,234,0.30)!important; background:rgba(46,111,149,0.06)!important; }
   .skeleton { background:linear-gradient(90deg,rgba(159,211,234,0.08) 25%,rgba(220,240,252,0.7) 50%,rgba(159,211,234,0.08) 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:8px; }
 
-  .list-row { background:rgba(18,59,94,0.55); backdrop-filter:blur(12px); border:1px solid rgba(159,211,234,0.18); border-radius:12px; transition:all 0.18s; }
+  .list-row { background:#143354; border:1px solid rgba(159,211,234,0.18); border-radius:12px; transition:all 0.18s; }
   .list-row:hover { box-shadow:0 4px 16px rgba(41,128,185,0.1); border-color:rgba(159,211,234,0.30); transform:translateY(-1px); }
 
   .mini-status-select { width:100%; height:30px; border-radius:8px; border:1px solid rgba(159,211,234,0.18); background:rgba(18,59,94,0.55); font-size:11px; font-weight:700; outline:none; padding:0 26px 0 10px; cursor:pointer; appearance:none; }

@@ -32,7 +32,7 @@ const css = `
   .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:10px; cursor:pointer; font-size:13.5px; font-weight:500; color:#EAF6FB; transition:all 0.18s; user-select:none; }
   .nav-item:hover { background:rgba(159,211,234,0.08); color:#fff; }
   .nav-item.active { background:rgba(159,211,234,0.08); color:#fff; font-weight:600; }
-  .glass-card { background:rgba(18,59,94,0.55); backdrop-filter:blur(16px); border:1px solid rgba(159,211,234,0.18); border-radius:16px; }
+  .glass-card { background:#143354; border:1px solid rgba(159,211,234,0.18); border-radius:16px; }
   .chip { display:inline-flex; align-items:center; gap:4px; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; }
   .info-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid rgba(159,211,234,0.18); }
   .info-row:last-child { border-bottom:none; }

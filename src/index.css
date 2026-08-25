@@ -48,10 +48,12 @@ html, body, #root {
 /* 🌫️ GLASS EFFECT (GLOBAL) */
 /* ========================= */
 
+/* Sem backdrop-filter: o fundo e opaco, entao nao ha o que borrar, e o filtro
+   tornava o card bloco de contencao de descendentes position:fixed --
+   foi o que cortou modal e escondeu dropdown atras de outros cards. */
 .glass {
-  background: rgba(18, 59, 94, 0.55);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(159, 211, 234, 0.18);
+  background: #143354;
+  border: 1px solid rgba(126, 176, 219, 0.16);
 }
 
 /* ========================= */

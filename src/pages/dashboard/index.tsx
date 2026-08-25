@@ -33,8 +33,8 @@ import FundoAzul from "../../components/FundoAzul";
       .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:10px; cursor:pointer; font-size:13.5px; font-weight:500; color:#FFFFFF; transition:all 0.18s; user-select:none; }
       .nav-item:hover { background:rgba(126,176,219,0.08); color:#fff; }
       .nav-item.active { background:rgba(126,176,219,0.08); color:#fff; font-weight:600; }
-      .glass-card { background:#143354; backdrop-filter:blur(16px); border:1px solid rgba(126,176,219,0.16); border-radius:16px; }
-      .metric-card { background:#143354; backdrop-filter:blur(16px); border:1.5px solid rgba(126,176,219,0.16); border-radius:16px; padding:16px 14px; transition:all 0.2s; cursor:pointer; user-select:none; }
+      .glass-card { background:#143354; border:1px solid rgba(126,176,219,0.16); border-radius:16px; }
+      .metric-card { background:#143354; border:1.5px solid rgba(126,176,219,0.16); border-radius:16px; padding:16px 14px; transition:all 0.2s; cursor:pointer; user-select:none; }
       .metric-card:hover { transform:translateY(-2px); box-shadow:0 10px 30px rgba(3,14,26,0.45); }
       .preview-row { display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr; align-items:center; padding:11px 18px; border-bottom:1px solid rgba(126,176,219,0.16); cursor:pointer; transition:background 0.13s; }
       .preview-row:hover { background:rgba(126,176,219,0.07); }
@@ -626,7 +626,7 @@ import FundoAzul from "../../components/FundoAzul";
                       <motion.div
                         initial={{opacity:0,y:-8,scale:0.96}} animate={{opacity:1,y:0,scale:1}} exit={{opacity:0,y:-8,scale:0.96}}
                         transition={{duration:0.18}}
-                        style={{position:"absolute",top:"calc(100% + 10px)",right:0,width:360,background:"#0F2E4B",backdropFilter:"blur(20px)",border:"1px solid rgba(126,176,219,0.16)",borderRadius:16,boxShadow:"0 16px 48px rgba(3,14,26,0.55)",overflow:"hidden",zIndex:200}}
+                        style={{position:"absolute",top:"calc(100% + 10px)",right:0,width:360,background:"#0F2E4B",border:"1px solid rgba(126,176,219,0.16)",borderRadius:16,boxShadow:"0 16px 48px rgba(3,14,26,0.55)",overflow:"hidden",zIndex:200}}
                       >
                         {/* Header */}
                         <div style={{padding:"14px 16px",borderBottom:"1px solid rgba(126,176,219,0.16)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>

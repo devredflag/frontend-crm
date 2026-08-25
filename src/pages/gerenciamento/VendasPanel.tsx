@@ -22,7 +22,13 @@ const STATUS_INFO: Record<string, { label: string; color:string; bg: string }> =
 const STATUS_ORDEM = ["rascunho", "enviado", "em_negociacao", "aprovado", "recusado"];
 
 const css = `
-  .vp-card { background:rgba(18,59,94,0.55); backdrop-filter:blur(16px); border:1px solid rgba(159,211,234,0.18); border-radius:16px; }
+  /* flex-shrink:0 e o que faz a lista aparecer inteira: o painel e uma coluna
+     flex com overflow:auto, e sem isso os cards encolhem para caber na altura
+     da tela em vez de deixarem o painel rolar -- com overflow:hidden no card,
+     o que sobra some. O backdrop-filter saiu junto: o fundo agora e opaco
+     (nao havia o que borrar) e ele criava bloco de contencao para position:fixed,
+     que foi o que cortou os modais de importacao e de orcamento. */
+  .vp-card { background:#143354; border:1px solid rgba(126,176,219,0.16); border-radius:16px; flex-shrink:0; }
   .vp-inner { background:rgba(18,59,94,0.55); border:1px solid rgba(159,211,234,0.18); border-radius:12px; }
   .vp-num { font-variant-numeric:tabular-nums; }
   .vp-table { width:100%; border-collapse:collapse; font-size:12.5px; }

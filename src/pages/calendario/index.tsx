@@ -21,7 +21,7 @@ const css = `
   .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:10px; cursor:pointer; font-size:13.5px; font-weight:500; color:#EAF6FB; transition:all 0.18s; user-select:none; }
   .nav-item:hover { background:rgba(159,211,234,0.08); color:#fff; }
   .nav-item.active { background:rgba(159,211,234,0.08); color:#fff; font-weight:600; }
-  .glass { background:rgba(18,59,94,0.55); backdrop-filter:blur(16px); border:1px solid rgba(159,211,234,0.18); border-radius:16px; }
+  .glass { background:#143354; border:1px solid rgba(159,211,234,0.18); border-radius:16px; }
   .day-cell { border-right:1px solid rgba(159,211,234,0.18); border-bottom:1px solid rgba(159,211,234,0.18); min-height:100px; padding:6px; cursor:pointer; transition:background 0.13s; }
   .day-cell:hover { background:rgba(46,111,149,0.04); }
   .day-cell.today { background:rgba(46,111,149,0.06); }
@@ -181,7 +181,7 @@ function EmailsConvidadosField({ emails, setEmails, contatos, empresaNome, dropd
           {showDropdown && filtrados.length > 0 && (
             <motion.div initial={{ opacity:0, y:-4 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-4 }} transition={{ duration:0.15 }}
               onClick={e => e.stopPropagation()}
-              style={{ position:"absolute", top:"calc(100% + 6px)", left:0, right:0, zIndex:300, background:"#0F2E4B", backdropFilter:"blur(16px)", border:"1px solid rgba(159,211,234,0.18)", borderRadius:12, boxShadow:"0 8px 32px rgba(46,111,149,0.15)", overflow:"hidden", maxHeight:200, overflowY:"auto" }}>
+              style={{ position:"absolute", top:"calc(100% + 6px)", left:0, right:0, zIndex:300, background:"#0F2E4B", border:"1px solid rgba(159,211,234,0.18)", borderRadius:12, boxShadow:"0 8px 32px rgba(46,111,149,0.15)", overflow:"hidden", maxHeight:200, overflowY:"auto" }}>
               {empresaNome && (
                 <div style={{ padding:"8px 14px 4px", fontSize:10, fontWeight:700, color:"#9FD3EA", letterSpacing:"0.06em", textTransform:"uppercase" }}>{empresaNome}</div>
               )}
@@ -639,7 +639,7 @@ export default function Calendario() {
               initial={{opacity:0,scale:0.94,y:20}} animate={{opacity:1,scale:1,y:0}} exit={{opacity:0,scale:0.94}} transition={{duration:0.22}}
               onMouseDown={e=>e.stopPropagation()}
               onClick={e=>e.stopPropagation()}
-              style={{width:"100%",maxWidth:540,borderRadius:20,background:"#0F2E4B",backdropFilter:"blur(24px)",border:"1px solid rgba(159,211,234,0.18)",boxShadow:"0 24px 80px rgba(46,111,149,0.2)",padding:28,maxHeight:"90vh",overflowY:"auto"}}
+              style={{width:"100%",maxWidth:540,borderRadius:20,background:"#0F2E4B",border:"1px solid rgba(159,211,234,0.18)",boxShadow:"0 24px 80px rgba(46,111,149,0.2)",padding:28,maxHeight:"90vh",overflowY:"auto"}}
             >
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
                 <div style={{fontSize:16,fontWeight:800,color:"#EAF6FB"}}>{editEvento?"Editar evento":"Novo evento"}</div>

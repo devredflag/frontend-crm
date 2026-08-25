@@ -22,7 +22,7 @@ const css = `
   .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:10px; cursor:pointer; font-size:13.5px; font-weight:500; color:#EAF6FB; transition:all 0.18s; user-select:none; }
   .nav-item:hover { background:rgba(159,211,234,0.08); color:#fff; }
   .nav-item.active { background:rgba(159,211,234,0.08); color:#fff; font-weight:600; }
-  .glass-card { background:rgba(18,59,94,0.55); backdrop-filter:blur(16px); border:1px solid rgba(159,211,234,0.18); border-radius:16px; }
+  .glass-card { background:#143354; border:1px solid rgba(159,211,234,0.18); border-radius:16px; }
   .client-row { display:grid; grid-template-columns:2.4fr 1fr 1fr 1fr 1fr 120px; align-items:center; padding:14px 20px; border-bottom:1px solid rgba(159,211,234,0.18); cursor:pointer; transition:background 0.15s; user-select:none; }
   .client-row:hover { background:rgba(46,111,149,0.04); }
   .client-row.draft-row { background:rgba(142,68,173,0.03); border-left:3px solid rgba(142,68,173,0.25); }

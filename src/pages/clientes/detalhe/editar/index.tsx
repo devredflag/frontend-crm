@@ -80,7 +80,7 @@ import { FUNDO_AZUL } from "../../../../components/FundoAzul";
     .nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:10px;cursor:pointer;font-size:13.5px;font-weight:500;color:#EAF6FB;transition:all 0.18s;user-select:none;}
     .nav-item:hover{background:rgba(159,211,234,0.08);color:#fff;}
     .nav-item.active{background:rgba(159,211,234,0.08);color:#fff;font-weight:600;}
-    .glass-card{background:rgba(18,59,94,0.55);backdrop-filter:blur(16px);border:1px solid rgba(159,211,234,0.18);border-radius:16px;}
+    .glass-card{background:#143354;border:1px solid rgba(159,211,234,0.18);border-radius:16px;}
     .field-group{display:flex;flex-direction:column;gap:5px;}
     .field-label{font-size:10px;font-weight:700;letter-spacing:0.06em;color:#9FD3EA;text-transform:uppercase;}
     .field-input{height:44px;padding:0 14px;border-radius:10px;border:1.5px solid rgba(159,211,234,0.18);background:rgba(18,59,94,0.55);font-size:13px;color:#EAF6FB;outline:none;transition:border-color 0.18s,box-shadow 0.18s;width:100%;}
@@ -100,7 +100,7 @@ import { FUNDO_AZUL } from "../../../../components/FundoAzul";
     .seg-icon-left{position:absolute;left:12px;color:#9FD3EA;pointer-events:none;width:14px;height:14px;}
     .seg-chevron{position:absolute;right:12px;color:#9FD3EA;pointer-events:none;width:15px;height:15px;transition:transform 0.2s;}
     .seg-chevron.open{transform:rotate(180deg);}
-    .seg-dropdown{position:absolute;top:calc(100% - 1px);left:0;right:0;z-index:999;background:rgba(18,59,94,0.55);backdrop-filter:blur(20px);border:1.5px solid rgba(159,211,234,0.30);border-top:1px solid rgba(159,211,234,0.18);border-bottom-left-radius:10px;border-bottom-right-radius:10px;box-shadow:0 12px 40px rgba(159,211,234,0.55);max-height:240px;overflow-y:auto;}
+    .seg-dropdown{position:absolute;top:calc(100% - 1px);left:0;right:0;z-index:999;background:#16395E;border:1.5px solid rgba(159,211,234,0.30);border-top:1px solid rgba(159,211,234,0.18);border-bottom-left-radius:10px;border-bottom-right-radius:10px;box-shadow:0 12px 40px rgba(159,211,234,0.55);max-height:240px;overflow-y:auto;}
     .seg-option{padding:10px 14px;font-size:13px;color:#EAF6FB;cursor:pointer;transition:background 0.12s;display:flex;align-items:center;gap:8px;}
     .seg-option:hover,.seg-option.highlighted{background:rgba(46,111,149,0.07);color:#9FD3EA;}
     .seg-option.selected{background:rgba(46,111,149,0.1);color:#9FD3EA;font-weight:700;}

@@ -21,7 +21,7 @@ const css = `
   .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:10px; cursor:pointer; font-size:13.5px; font-weight:500; color:#EAF6FB; transition:all 0.18s; user-select:none; }
   .nav-item:hover { background:rgba(159,211,234,0.08); color:#fff; }
   .nav-item.active { background:rgba(159,211,234,0.08); color:#fff; font-weight:600; }
-  .card { background:rgba(18,59,94,0.55); backdrop-filter:blur(12px); border:1px solid rgba(159,211,234,0.18); border-radius:14px; }
+  .card { background:#143354; border:1px solid rgba(159,211,234,0.18); border-radius:14px; }
   .ipt { width:100%; height:42px; border-radius:10px; border:1px solid rgba(159,211,234,0.18); background:rgba(18,59,94,0.55); padding:0 14px; font-size:13px; color:#EAF6FB; outline:none; transition:border-color 0.15s; }
   .ipt:focus { border-color:rgba(159,211,234,0.30); box-shadow:0 0 0 3px rgba(41,128,185,0.08); }
   ::-webkit-scrollbar { width:5px; height:5px; }
