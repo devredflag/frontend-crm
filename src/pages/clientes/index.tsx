@@ -23,13 +23,14 @@ const css = `
   .nav-item:hover { background:rgba(159,211,234,0.08); color:#fff; }
   .nav-item.active { background:rgba(159,211,234,0.08); color:#fff; font-weight:600; }
   .glass-card { background:#143354; border:1px solid rgba(159,211,234,0.18); border-radius:16px; }
-  .client-row { display:grid; grid-template-columns:2.4fr 1fr 1fr 1fr 1fr 120px; align-items:center; padding:14px 20px; border-bottom:1px solid rgba(159,211,234,0.18); cursor:pointer; transition:background 0.15s; user-select:none; }
+  .client-row { display:grid; grid-template-columns:2.4fr 1fr 1fr 1fr 1fr 120px; column-gap:16px; align-items:center; padding:14px 20px; border-bottom:1px solid rgba(159,211,234,0.18); cursor:pointer; transition:background 0.15s; user-select:none; }
   .client-row:hover { background:rgba(46,111,149,0.04); }
   .client-row.draft-row { background:rgba(142,68,173,0.03); border-left:3px solid rgba(142,68,173,0.25); }
   .client-row.draft-row:hover { background:rgba(142,68,173,0.07); }
   .client-row:last-child { border-bottom:none; }
-  .th { display:grid; grid-template-columns:2.4fr 1fr 1fr 1fr 1fr 120px; align-items:center; padding:10px 20px; border-bottom:1px solid rgba(159,211,234,0.18); }
+  .th { display:grid; grid-template-columns:2.4fr 1fr 1fr 1fr 1fr 120px; column-gap:16px; align-items:center; padding:10px 20px; border-bottom:1px solid rgba(159,211,234,0.18); }
   .chip { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:700; white-space:nowrap; }
+  .client-row > .chip { justify-self:start; }
   .action-btn { width:30px; height:30px; border-radius:8px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
   .action-btn:hover { transform:translateY(-1px); }
   .filter-tab { padding:6px 14px; border-radius:20px; border:1.5px solid; cursor:pointer; font-size:12px; font-weight:600; transition:all 0.18s; white-space:nowrap; }
