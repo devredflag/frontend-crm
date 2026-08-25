@@ -463,10 +463,17 @@ function DropdownPadrao({ value, onChange, opcoes, placeholder, icon: Icone, has
 }
 
 // -- Logo da empresa -------------------------------------------
-// A imagem e reduzida para no maximo 256px e guardada como data URL. Sem
-// bucket de arquivos no projeto, e o que consegue viajar junto com o resto do
-// cadastro; o corte em 256px e o que segura o tamanho do payload.
-const LOGO_MAX_PX = 256;
+// A imagem e reduzida e guardada como data URL: o projeto nao tem bucket de
+// arquivos, entao a logo viaja junto com o resto do cadastro.
+//
+// 128px em WebP, e nao 256px em PNG, por uma razao medida: o GET /empresas faz
+// SELECT e.* e devolve TODAS as logos em TODA listagem -- dashboard, lista de
+// clientes e gerenciamento. Em PNG a 256px cada logo dava ~50 KB, que o Postgres
+// nem comprime (base64 de PNG e incompressivel), o que daria ~50 MB por
+// carregamento de tela com mil empresas. O WebP mantem transparencia e corta
+// isso em cerca de 85%. 128px sobra: a maior exibicao e o header do detalhe,
+// a 64px.
+const LOGO_MAX_PX = 128;
 const LOGO_MAX_BYTES = 4 * 1024 * 1024;
 
 function reduzirImagem(file: File): Promise<string> {
@@ -485,8 +492,9 @@ function reduzirImagem(file: File): Promise<string> {
         const ctx = canvas.getContext("2d");
         if (!ctx) { reject(new Error("Canvas indisponivel.")); return; }
         ctx.drawImage(img, 0, 0, w, h);
-        // PNG preserva transparencia, que a maioria das logos usa.
-        resolve(canvas.toDataURL("image/png"));
+        // WebP preserva transparencia e comprime bem melhor. Navegador sem
+        // suporte devolve PNG por conta propria, sem quebrar nada.
+        resolve(canvas.toDataURL("image/webp", 0.92));
       };
       img.src = reader.result as string;
     };
