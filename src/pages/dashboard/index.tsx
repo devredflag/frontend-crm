@@ -396,18 +396,6 @@ import FundoAzul from "../../components/FundoAzul";
     type FilterKey = "total"|"rascunho"|"lead"|"em_contato"|"visita"|"proposta"|"negociacao"|"fechado"|"quente";
 
     export default function Dashboard() {
-      useEffect(() => {
-        const prefs = JSON.parse(
-          localStorage.getItem(
-            "crm_comm_prefs"
-          ) || "{}"
-        );
-
-        console.log(
-          "PREFERENCIAS CRM:",
-          prefs
-        );
-      }, []);
       const navigate = useNavigate();
       const [empresas, setEmpresas] = useState<Empresa[]>([]);
       const [loading, setLoading] = useState(true);
@@ -473,6 +461,12 @@ import FundoAzul from "../../components/FundoAzul";
         await fetch(`${API}/notificacoes/ler-todas`, { method: "PUT", headers: jsonHeaders() });
         setNotificacoes(prev => prev.map(n => ({...n, lida:true})));
         setNaoLidas(0);
+      };
+
+      const marcarLida = async (id: string) => {
+        await fetch(`${API}/notificacoes/${id}/ler`, { method: "PUT", headers: headers() });
+        setNotificacoes(prev => prev.map(n => n.notificacao_id===id ? {...n, lida:true} : n));
+        setNaoLidas(prev => Math.max(0, prev-1));
       };
 
       const deletarNotificacao = async (id: string, lida: boolean) => {
@@ -660,6 +654,7 @@ import FundoAzul from "../../components/FundoAzul";
                                 <div key={n.notificacao_id} className="notif-item"
                                   style={{background:n.lida?"transparent":nc.bg, cursor:"pointer"}}
                                   onClick={()=>{
+                                  if(!n.lida) marcarLida(n.notificacao_id);
                                   setShowNotif(false);
                                   if(n.empresa_id) {
                                     const comTab = ["email_interaction","calendar_accepted","calendar_declined","calendar_tentative"];
