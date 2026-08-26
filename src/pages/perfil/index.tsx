@@ -62,6 +62,14 @@ interface IntegracoesStatus {
   remetente_sandbox: boolean;
 }
 
+interface PessoaIntegracao {
+  nome: string;
+  email: string;
+  funcao: string;
+  google_conectado: boolean;
+  canais: Record<string, CanalIntegracao>;
+}
+
 type EmailProvider = "gmail" | "outlook" | null;
 type OutlookMode = "web" | "app" | null;
 type WhatsAppMode = "web" | "app" | null;
@@ -115,23 +123,29 @@ const settingsTabs: { key: SettingsTab; icon: any; label: string; badge?: string
  */
 function PainelIntegracoes() {
   const [dados, setDados]       = useState<IntegracoesStatus | null>(null);
+  const [equipe, setEquipe]     = useState<PessoaIntegracao[] | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro]         = useState<string | null>(null);
 
   const buscar = async () => {
     setCarregando(true);
     setErro(null);
+    const cab = { Authorization: `Bearer ${getToken() || ""}` };
     try {
-      const res = await fetch(`${API}/admin/integracoes-status`, {
-        headers: { Authorization: `Bearer ${getToken() || ""}` },
-      });
+      const res = await fetch(`${API}/admin/integracoes-status`, { headers: cab });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setDados(await res.json());
     } catch (e: any) {
       setErro(e?.message || "Falha ao consultar");
-    } finally {
-      setCarregando(false);
     }
+    // A equipe e complementar: se essa falhar, o painel proprio ainda serve.
+    try {
+      const res = await fetch(`${API}/admin/integracoes-equipe`, { headers: cab });
+      setEquipe(res.ok ? (await res.json()).pessoas : null);
+    } catch {
+      setEquipe(null);
+    }
+    setCarregando(false);
   };
 
   // Só na montagem: buscar e recriado a cada render e recriaria o efeito.
@@ -229,6 +243,45 @@ function PainelIntegracoes() {
           )}
         </>
       ) : null}
+
+      {equipe && equipe.length > 1 && (
+        <div style={{ marginTop:18, paddingTop:16, borderTop:"1px solid rgba(159,211,234,0.18)" }}>
+          <div style={{ fontSize:12, fontWeight:800, color:"#EAF6FB", marginBottom:2 }}>Equipe</div>
+          <div style={{ fontSize:10.5, color:"#9FD3EA", marginBottom:10 }}>
+            Quem está sem canal ativo não recebe notificação de resposta
+          </div>
+
+          {equipe.map(p => {
+            const ativos = Object.values(p.canais || {}).filter(c => c.ativo).length;
+            const problema = !p.google_conectado || ativos === 0;
+            return (
+              <div key={p.email} style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 0",
+                                          borderBottom:"1px solid rgba(159,211,234,0.10)" }}>
+                {problema
+                  ? <AlertTriangle style={{ width:14, height:14, color:"#F0A05A", flexShrink:0 }}/>
+                  : <CheckCircle2 style={{ width:14, height:14, color:"#2CCD93", flexShrink:0 }}/>}
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:11.5, fontWeight:700, color:"#EAF6FB", overflow:"hidden",
+                                textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                    {p.nome} <span style={{ fontWeight:500, color:"#9FD3EA" }}>· {p.funcao}</span>
+                  </div>
+                  <div style={{ fontSize:10, color:"#9FD3EA", overflow:"hidden",
+                                textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                    {!p.google_conectado
+                      ? "Google não conectado"
+                      : ativos === 0
+                        ? "Conectado, mas sem canal ativo"
+                        : Object.entries(p.canais)
+                            .filter(([, c]) => c.ativo)
+                            .map(([nome]) => nome === "google_calendar" ? "Calendar" : nome === "gmail" ? "Gmail" : "Outlook")
+                            .join(" · ")}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
