@@ -7,7 +7,8 @@ import { User, Bell, Shield, Mail,
   Globe, ExternalLink, Info, Save, BarChart3,
   LayoutDashboard, Building2, Users, UserRoundCog,
   Search, ClipboardList, Calendar,
-  AlertTriangle, CalendarCheck, Repeat, Trash2, FileText, Menu
+  AlertTriangle, CalendarCheck, Repeat, Trash2, FileText, Menu,
+  RefreshCw, XCircle, CheckCircle2
 } from "lucide-react";
 import useIsMobile from "../../hooks/useIsMobile";
 import { GmailIcon, OutlookIcon, WhatsAppIcon } from "../../components/LogosMarcas";
@@ -43,7 +44,23 @@ const css = `
 
 const API = (process.env.REACT_APP_API_URL || "https://backend-crm-production-157b.up.railway.app");
 
-interface Usuario { nome: string; email: string; cargo: string; empresa_nome: string; }
+interface Usuario {
+  nome: string; email: string; cargo: string; empresa_nome: string;
+  is_gerente?: boolean; is_supervisor?: boolean;
+}
+
+interface CanalIntegracao {
+  ativo: boolean;
+  caixa?: string | null;
+  expira_em?: string | null;
+  atualizado_em?: string | null;
+}
+
+interface IntegracoesStatus {
+  canais: Record<string, CanalIntegracao>;
+  gmail_pubsub_configurado: boolean;
+  remetente_sandbox: boolean;
+}
 
 type EmailProvider = "gmail" | "outlook" | null;
 type OutlookMode = "web" | "app" | null;
@@ -89,6 +106,132 @@ const settingsTabs: { key: SettingsTab; icon: any; label: string; badge?: string
   { key: "notificacoes",  icon: Bell,          label: "Notificações" },
   { key: "seguranca",     icon: Shield,        label: "Segurança" },
 ];
+
+/** Estado das integracoes que alimentam as notificacoes.
+ *
+ * Existe porque watch que morre nao aparece em lugar nenhum da aplicacao: ate
+ * aqui, "a notificacao nao chega" era indistinguivel de "o canal nunca subiu",
+ * e responder isso exigia log do Railway ou curl com token na mao.
+ */
+function PainelIntegracoes() {
+  const [dados, setDados]       = useState<IntegracoesStatus | null>(null);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro]         = useState<string | null>(null);
+
+  const buscar = async () => {
+    setCarregando(true);
+    setErro(null);
+    try {
+      const res = await fetch(`${API}/admin/integracoes-status`, {
+        headers: { Authorization: `Bearer ${getToken() || ""}` },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setDados(await res.json());
+    } catch (e: any) {
+      setErro(e?.message || "Falha ao consultar");
+    } finally {
+      setCarregando(false);
+    }
+  };
+
+  // Só na montagem: buscar e recriado a cada render e recriaria o efeito.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { buscar(); }, []);
+
+  const linhas: { chave: string; rotulo: string; desc: string }[] = [
+    { chave: "gmail",           rotulo: "Gmail",           desc: "Resposta de e-mail de cliente vira notificação" },
+    { chave: "google_calendar", rotulo: "Google Calendar", desc: "Resposta a convite de reunião em tempo real" },
+    { chave: "outlook",         rotulo: "Outlook",         desc: "E-mail e agenda pela conta Microsoft" },
+  ];
+
+  const dataCurta = (iso?: string | null) => {
+    if (!iso) return null;
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? null : d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+  };
+
+  return (
+    <div className="glass-card" style={{ padding:18, marginBottom:20 }}>
+      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12, marginBottom:14 }}>
+        <div>
+          <div style={{ fontSize:14, fontWeight:800, color:"#EAF6FB" }}>Integrações e notificações</div>
+          <div style={{ fontSize:11, color:"#9FD3EA", marginTop:2 }}>
+            Canais que precisam estar de pé para as notificações chegarem
+          </div>
+        </div>
+        <button onClick={buscar} disabled={carregando}
+          style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 12px", borderRadius:8,
+                   border:"1px solid rgba(159,211,234,0.18)", background:"rgba(18,59,94,0.55)",
+                   color:"#9FD3EA", fontSize:11, fontWeight:700,
+                   cursor:carregando ? "default" : "pointer", opacity:carregando ? 0.6 : 1, flexShrink:0 }}>
+          <RefreshCw style={{ width:12, height:12 }}/> {carregando ? "Verificando" : "Reverificar"}
+        </button>
+      </div>
+
+      {erro ? (
+        <div style={{ fontSize:12, color:"#F7B8B1" }}>Não foi possível consultar: {erro}</div>
+      ) : carregando && !dados ? (
+        <div style={{ fontSize:12, color:"#9FD3EA" }}>Consultando…</div>
+      ) : dados ? (
+        <>
+          {linhas.map(l => {
+            const c = dados.canais?.[l.chave] || { ativo:false };
+            const validade = dataCurta(c.expira_em);
+            return (
+              <div key={l.chave} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 0",
+                                          borderBottom:"1px solid rgba(159,211,234,0.12)" }}>
+                {c.ativo
+                  ? <CheckCircle2 style={{ width:16, height:16, color:"#2CCD93", flexShrink:0 }}/>
+                  : <XCircle style={{ width:16, height:16, color:"#F87171", flexShrink:0 }}/>}
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:12, fontWeight:700, color:"#EAF6FB" }}>
+                    {l.rotulo}
+                    {c.caixa && <span style={{ fontWeight:500, color:"#9FD3EA" }}> — {c.caixa}</span>}
+                  </div>
+                  <div style={{ fontSize:10.5, color:"#9FD3EA", marginTop:1 }}>
+                    {c.ativo
+                      ? (validade ? `Ativo, renova antes de ${validade}` : "Ativo")
+                      : l.desc}
+                  </div>
+                </div>
+                <span style={{ fontSize:10, fontWeight:800, letterSpacing:"0.04em", flexShrink:0,
+                               color:c.ativo ? "#2CCD93" : "#F87171" }}>
+                  {c.ativo ? "ATIVO" : "INATIVO"}
+                </span>
+              </div>
+            );
+          })}
+
+          {!dados.gmail_pubsub_configurado && (
+            <div style={{ display:"flex", gap:8, alignItems:"flex-start", marginTop:14, padding:"10px 12px",
+                          borderRadius:10, background:"rgba(240,160,90,0.08)",
+                          border:"1px solid rgba(240,160,90,0.25)" }}>
+              <AlertTriangle style={{ width:14, height:14, color:"#F0A05A", flexShrink:0, marginTop:1 }}/>
+              <div style={{ fontSize:11, color:"#EAF6FB", lineHeight:1.5 }}>
+                <strong>Pub/Sub não configurado.</strong> Enquanto <code>GMAIL_PUBSUB_TOPIC</code> não
+                for definida no servidor, o Gmail não consegue avisar o CRM e nenhuma resposta de
+                cliente vira notificação.
+              </div>
+            </div>
+          )}
+
+          {dados.remetente_sandbox && (
+            <div style={{ display:"flex", gap:8, alignItems:"flex-start", marginTop:10, padding:"10px 12px",
+                          borderRadius:10, background:"rgba(240,160,90,0.08)",
+                          border:"1px solid rgba(240,160,90,0.25)" }}>
+              <AlertTriangle style={{ width:14, height:14, color:"#F0A05A", flexShrink:0, marginTop:1 }}/>
+              <div style={{ fontSize:11, color:"#EAF6FB", lineHeight:1.5 }}>
+                <strong>Remetente em modo de teste.</strong> O e-mail sai de um endereço de sandbox
+                do Resend, que só entrega para o dono da conta — orçamento enviado pelo CRM não
+                chega ao cliente.
+              </div>
+            </div>
+          )}
+        </>
+      ) : null}
+    </div>
+  );
+}
 
 export default function Perfil() {
   const navigate = useNavigate();
@@ -342,6 +485,9 @@ export default function Perfil() {
                     <h2 style={{ fontSize:16, fontWeight:800, color:"#EAF6FB", letterSpacing:"-0.02em" }}>Canais de Comunicação</h2>
                     <p style={{ fontSize:12, color:"#9FD3EA", marginTop:3 }}>Configure seus provedores e como deseja enviar mensagens pelo CRM</p>
                   </div>
+
+                  {/* Diagnóstico das integrações — só o gerente; para o vendedor é ruído */}
+                  {usuario?.is_gerente && <PainelIntegracoes/>}
 
                   {/* ── PROVEDORES DE E-MAIL ── */}
                   <motion.div className="glass-card" style={{ padding:"20px 22px", marginBottom:16 }} initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.05 }}>
