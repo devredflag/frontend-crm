@@ -7,7 +7,9 @@ import {
   Plus, Send, Trash2, X, FileText, Package, Check, AlertCircle, Loader2,
   DollarSign, Wallet, Target, CalendarCheck, ArrowRight, Filter,
   ChevronDown, Download, Upload, FileSpreadsheet, AlertTriangle, Hash,
+  Building2, TrendingUp,
 } from "lucide-react";
+import Dropdown from "../../components/Dropdown";
 
 const API = (process.env.REACT_APP_API_URL || "https://backend-crm-production-157b.up.railway.app");
 
@@ -38,17 +40,21 @@ const css = `
   .vp-table tbody tr { transition:background 0.14s; }
   .vp-table tbody tr:hover { background:rgba(46,111,149,0.05); }
   .vp-table .r { text-align:right; }
+  .vp-table .c { text-align:center; }
   .vp-row-link { cursor:pointer; }
   .vp-ghost { display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:700; color:#EAF6FB; border:1px solid rgba(159,211,234,0.18); border-radius:9px; padding:6px 11px; background:rgba(18,59,94,0.55); cursor:pointer; transition:all 0.15s; font-family:inherit; }
   .vp-ghost:hover { color:#EAF6FB; border-color:rgba(159,211,234,0.30); }
   .vp-icon-btn { display:flex; align-items:center; justify-content:center; border:none; cursor:pointer; border-radius:8px; transition:all 0.15s; }
   .vp-icon-btn:hover { filter:brightness(0.94); }
+  /* Remover/excluir em repouso e neutro -- pintado de vermelho o tempo todo,
+     cada linha da lista lia como alerta. O vermelho entra so no hover, quando
+     a acao esta a um clique de acontecer. */
+  .vp-btn-remover { background:rgba(159,211,234,0.08); color:#9FD3EA; border:1px solid rgba(159,211,234,0.18); }
+  .vp-btn-remover:hover { background:rgba(220,38,38,0.16); color:#FFC9C2; border-color:rgba(220,38,38,0.45); filter:none; }
+  .vp-btn-remover:focus-visible { outline:2px solid rgba(220,38,38,0.5); outline-offset:2px; }
   .vp-chip { padding:5px 12px; border-radius:20px; border:1.5px solid rgba(159,211,234,0.18); background:rgba(18,59,94,0.55); font-size:11px; font-weight:700; cursor:pointer; transition:all 0.15s; color:#EAF6FB; font-family:inherit; }
   .vp-chip:hover { border-color:rgba(159,211,234,0.30); }
   .vp-tab { display:flex; align-items:center; gap:6px; padding:10px 4px; margin-right:18px; border:none; background:none; cursor:pointer; font-family:inherit; font-size:13px; border-bottom:2.5px solid transparent; margin-bottom:-1px; transition:color 0.15s; }
-  .vp-bar { border-radius:5px 5px 0 0; background:rgba(46,111,149,0.22); transition:background 0.15s; }
-  .vp-bar.hi { background:linear-gradient(180deg,#2E6F95,#2E6F95); }
-  .vp-bar:hover { background:#2E6F95; }
   .vp-facts > div { display:flex; justify-content:space-between; gap:10px; padding:7px 0; font-size:12.5px; border-bottom:1px solid rgba(159,211,234,0.18); }
   .vp-facts > div:last-child { border-bottom:0; }
   .vp-catalogo-btn:hover:not(:disabled) { border-color:rgba(159,211,234,0.30) !important; box-shadow:0 4px 14px rgba(41,128,185,0.20) !important; transform:translateY(-1px); }
@@ -170,19 +176,27 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
   useEffect(() => { fetchTudo(); }, []);
 
   // Valor aprovado por mês, dos últimos 6 meses — calculado do que já temos.
+  // `qtd` entra junto porque valor sozinho não distingue um mês de um contrato
+  // grande de um mês de muitos negócios pequenos.
   const serieMensal = useMemo(() => {
-    const meses: { rotulo: string; valor: number }[] = [];
+    const meses: { rotulo: string; valor: number; qtd: number; atual: boolean }[] = [];
     const hoje = new Date();
     for (let i = 5; i >= 0; i--) {
       const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
-      meses.push({ rotulo: d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", ""), valor: 0 });
+      meses.push({
+        rotulo: d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", ""),
+        valor: 0, qtd: 0, atual: i === 0,
+      });
     }
     orcamentos.filter(o => o.status === "aprovado").forEach(o => {
       const ref = o.data_decisao || o.data_envio || o.criado_em;
       if (!ref) return;
       const d = new Date(ref);
       const diff = (hoje.getFullYear() - d.getFullYear()) * 12 + (hoje.getMonth() - d.getMonth());
-      if (diff >= 0 && diff <= 5) meses[5 - diff].valor += Number(o.total || 0);
+      if (diff >= 0 && diff <= 5) {
+        meses[5 - diff].valor += Number(o.total || 0);
+        meses[5 - diff].qtd += 1;
+      }
     });
     return meses;
   }, [orcamentos]);
@@ -446,8 +460,9 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
                                     ? <Loader2 style={{ width: 13, height: 13, animation: "spin 1s linear infinite" }} />
                                     : <Send style={{ width: 13, height: 13 }} />}
                                 </button>
-                                <button onClick={() => excluir(o.orcamento_id)} title="Excluir orçamento" className="vp-icon-btn"
-                                  style={{ width: 28, height: 28, background:"rgba(220,38,38,0.08)", color:"#F7B8B1" }}>
+                                <button onClick={() => excluir(o.orcamento_id)} title="Excluir orçamento"
+                                  aria-label={`Excluir orçamento ${numeroOrcamento(o)}`}
+                                  className="vp-icon-btn vp-btn-remover" style={{ width: 28, height: 28 }}>
                                   <Trash2 style={{ width: 13, height: 13 }} />
                                 </button>
                               </div>
@@ -486,28 +501,7 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
             </div>
 
             {/* Série mensal */}
-            <div className="vp-card" style={{ padding: 16 }}>
-              <h4 style={{ fontSize: 12.5, fontWeight: 800, color:"#EAF6FB", marginBottom: 14 }}>Aprovado — últimos 6 meses</h4>
-              {(() => {
-                const max = Math.max(1, ...serieMensal.map(m => m.valor));
-                return (
-                  <>
-                    <div style={{ display: "flex", alignItems: "flex-end", gap: 7, height: 92 }}>
-                      {serieMensal.map((m, i) => (
-                        <div key={i} className={`vp-bar${m.valor > 0 && m.valor === max ? " hi" : ""}`}
-                          title={`${m.rotulo} · ${brl(m.valor)}`}
-                          style={{ flex: 1, height: `${Math.max(3, (m.valor / max) * 100)}%` }} />
-                      ))}
-                    </div>
-                    <div style={{ display: "flex", gap: 7, marginTop: 7 }}>
-                      {serieMensal.map((m, i) => (
-                        <span key={i} style={{ flex: 1, textAlign: "center", fontSize: 10.5, color:"#9FD3EA" }}>{m.rotulo}</span>
-                      ))}
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
+            <GraficoMensal serie={serieMensal} />
 
             {/* Equipamentos mais orçados */}
             <div className="vp-card" style={{ padding: 16 }}>
@@ -542,6 +536,181 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
           onSalvo={() => { setEditando(null); fetchTudo(); }}
           onErro={setErro}
         />
+      )}
+    </div>
+  );
+}
+
+// ── Aprovado por mês ──────────────────────────────────────────
+// Era uma fileira de <div>s com altura em % e nada mais: sem escala, sem
+// valores, sem eixo — dava para ver que uma barra era maior que a outra e só.
+// Agora é um SVG com grade, rótulo de valor em cada barra, mês corrente
+// destacado e um rodapé com total, média e melhor mês do período.
+interface MesSerie { rotulo: string; valor: number; qtd: number; atual: boolean }
+
+/** Escala "bonita": arredonda o topo para 1/2/5 × 10^n, para a grade cair em números redondos. */
+function topoEscala(v: number) {
+  if (v <= 0) return 1;
+  const exp = Math.floor(Math.log10(v));
+  const base = Math.pow(10, exp);
+  const n = v / base;
+  const passo = n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10;
+  return passo * base;
+}
+/** Rótulo curto para os eixos — "12k", "1,5 mi". */
+function eixoCurto(n: number) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}mi`;
+  if (n >= 1_000) return `${(n / 1_000).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}k`;
+  return n.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+}
+
+function GraficoMensal({ serie }: { serie: MesSerie[] }) {
+  const [ativo, setAtivo] = useState<number | null>(null);
+
+  const total = serie.reduce((s, m) => s + m.valor, 0);
+  const totalQtd = serie.reduce((s, m) => s + m.qtd, 0);
+  const comVenda = serie.filter(m => m.valor > 0);
+  const media = comVenda.length ? total / comVenda.length : 0;
+  const melhor = serie.reduce((a, b) => (b.valor > a.valor ? b : a), serie[0]);
+
+  // Variação do mês corrente contra o anterior — é o número que o gerente
+  // procura primeiro ao abrir o painel.
+  const atualV = serie[serie.length - 1]?.valor ?? 0;
+  const anteriorV = serie[serie.length - 2]?.valor ?? 0;
+  const variacao = anteriorV > 0 ? ((atualV - anteriorV) / anteriorV) * 100 : null;
+
+  const vazio = total === 0;
+  const topo = topoEscala(Math.max(...serie.map(m => m.valor)));
+
+  // Geometria do SVG. viewBox fixo + width 100% deixa o gráfico acompanhar a
+  // coluna sem recalcular nada em JS.
+  const L = 34, R = 6, T = 20, B = 24;
+  const W = 268, H = 158;
+  const pw = W - L - R, ph = H - T - B;
+  const passo = pw / serie.length;
+  const larguraBarra = Math.min(26, passo * 0.62);
+
+  const y = (v: number) => T + ph - (v / topo) * ph;
+
+  return (
+    <div className="vp-card" style={{ padding: 16 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 2 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h4 style={{ fontSize: 12.5, fontWeight: 800, color:"#EAF6FB" }}>Aprovado por mês</h4>
+          <p style={{ fontSize: 10.5, color:"#9FD3EA", marginTop: 1 }}>Últimos 6 meses</p>
+        </div>
+        {variacao !== null && (
+          <span style={{
+            display: "inline-flex", alignItems: "center", gap: 3, padding: "3px 8px", borderRadius: 20,
+            fontSize: 10.5, fontWeight: 800, flexShrink: 0,
+            background: variacao >= 0 ? "rgba(44,205,147,0.14)" : "rgba(248,113,113,0.14)",
+            color: variacao >= 0 ? "#2CCD93" : "#F87171",
+          }}>
+            <TrendingUp style={{ width: 10, height: 10, transform: variacao >= 0 ? "none" : "scaleY(-1)" }} />
+            {variacao >= 0 ? "+" : ""}{Math.round(variacao)}%
+          </span>
+        )}
+      </div>
+
+      <div style={{ display: "flex", alignItems: "baseline", gap: 6, margin: "8px 0 4px" }}>
+        <span className="vp-num" style={{ fontSize: 20, fontWeight: 900, color:"#EAF6FB", letterSpacing: "-0.02em" }}>
+          {brlCurto(total)}
+        </span>
+        <span style={{ fontSize: 10.5, color:"#9FD3EA", fontWeight: 600 }}>
+          em {totalQtd} orçamento{totalQtd === 1 ? "" : "s"}
+        </span>
+      </div>
+
+      {vazio ? (
+        <div style={{ padding: "26px 0", textAlign: "center", color:"#9FD3EA" }}>
+          <CalendarCheck style={{ width: 22, height: 22, marginBottom: 6 }} />
+          <p style={{ fontSize: 11.5, fontWeight: 700 }}>Nenhuma aprovação no período.</p>
+        </div>
+      ) : (
+        <>
+          <svg width="100%" viewBox={`0 0 ${W} ${H}`} role="img"
+            aria-label={`Valor aprovado por mês: ${serie.map(m => `${m.rotulo}, ${brl(m.valor)}`).join("; ")}`}
+            onMouseLeave={() => setAtivo(null)} style={{ display: "block", overflow: "visible" }}>
+            <defs>
+              <linearGradient id="vpBarra" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#56A4F5" />
+                <stop offset="100%" stopColor="#2E6F95" />
+              </linearGradient>
+              <linearGradient id="vpBarraTopo" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#2CCD93" />
+                <stop offset="100%" stopColor="#1E8E68" />
+              </linearGradient>
+            </defs>
+
+            {/* Grade e escala do eixo Y */}
+            {[0, 0.5, 1].map(f => {
+              const vy = T + ph - f * ph;
+              return (
+                <g key={f}>
+                  <line x1={L} y1={vy} x2={W - R} y2={vy}
+                    stroke="rgba(126,176,219,0.16)" strokeWidth="1"
+                    strokeDasharray={f === 0 ? undefined : "3 3"} />
+                  <text x={L - 6} y={vy + 3} textAnchor="end" fontSize="8.5" fontWeight="700" fill="#7FA6C4">
+                    {f === 0 ? "0" : eixoCurto(topo * f)}
+                  </text>
+                </g>
+              );
+            })}
+
+            {serie.map((m, i) => {
+              const cx = L + passo * i + passo / 2;
+              const alt = m.valor > 0 ? Math.max(2, ph - (y(m.valor) - T)) : 0;
+              const topoBarra = T + ph - alt;
+              const destaque = m.valor > 0 && m.valor === melhor.valor;
+              const on = ativo === i;
+              return (
+                <g key={i} onMouseEnter={() => setAtivo(i)} style={{ cursor: "default" }}>
+                  {/* alvo de hover cobrindo a coluna inteira, não só a barra */}
+                  <rect x={L + passo * i} y={T} width={passo} height={ph} fill="transparent" />
+                  {on && (
+                    <rect x={L + passo * i + 1} y={T} width={passo - 2} height={ph}
+                      fill="rgba(126,176,219,0.07)" rx="4" />
+                  )}
+                  {m.valor > 0 && (
+                    <rect
+                      x={cx - larguraBarra / 2} y={topoBarra} width={larguraBarra} height={alt} rx="4"
+                      fill={destaque ? "url(#vpBarraTopo)" : "url(#vpBarra)"}
+                      opacity={ativo === null || on ? 1 : 0.55}
+                      style={{ transition: "opacity 0.15s" }}
+                    >
+                      <title>{`${m.rotulo} · ${brl(m.valor)} · ${m.qtd} orçamento${m.qtd === 1 ? "" : "s"}`}</title>
+                    </rect>
+                  )}
+                  {/* valor acima da barra — sem isso, o gráfico só mostra formas */}
+                  {m.valor > 0 && (
+                    <text x={cx} y={topoBarra - 5} textAnchor="middle" fontSize="8.5" fontWeight="800"
+                      fill={destaque ? "#2CCD93" : "#B6CFE4"}>
+                      {eixoCurto(m.valor)}
+                    </text>
+                  )}
+                  <text x={cx} y={H - B + 13} textAnchor="middle" fontSize="9.5"
+                    fontWeight={m.atual ? 800 : 600} fill={m.atual ? "#EAF6FB" : "#7FA6C4"}>
+                    {m.rotulo}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
+
+          {/* Leitura de apoio: o gráfico mostra a forma, estes números dão a conta. */}
+          <div style={{ display: "flex", gap: 8, marginTop: 12, paddingTop: 11, borderTop: "1px solid rgba(126,176,219,0.16)" }}>
+            {[
+              { lab: "Média/mês", val: brlCurto(media), cor: "#B6CFE4" },
+              { lab: "Melhor mês", val: melhor.valor > 0 ? melhor.rotulo : "—", cor: "#2CCD93" },
+              { lab: "Este mês", val: brlCurto(atualV), cor: "#EAF6FB" },
+            ].map(s => (
+              <div key={s.lab} style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color:"#7FA6C4" }}>{s.lab}</div>
+                <div className="vp-num" style={{ fontSize: 12, fontWeight: 800, color: s.cor, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.val}</div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
@@ -691,7 +860,7 @@ function CatalogoEquipamentos({
         <div style={{ overflowX: "auto" }}>
           <table className="vp-table">
             <thead>
-              <tr><th>Código</th><th>Equipamento</th><th>Descrição</th><th className="r">Estoque</th><th className="r">Preço base</th><th className="r">Ações</th></tr>
+              <tr><th>Código</th><th>Equipamento</th><th>Descrição</th><th className="c">Estoque</th><th className="r">Preço base</th><th className="r">Ações</th></tr>
             </thead>
             <tbody>
               {equipamentos.map(e => (
@@ -706,14 +875,15 @@ function CatalogoEquipamentos({
                     </span>
                   </td>
                   <td style={{ color:"#EAF6FB" }}>{e.descricao || "—"}</td>
-                  <td className="vp-num r" style={{ fontWeight: 700, color:e.quantidade > 0 ? "#83DDA8" : "#9FD3EA" }}>
+                  <td className="vp-num c" style={{ fontWeight: 700, color:e.quantidade > 0 ? "#83DDA8" : "#9FD3EA" }}>
                     {e.quantidade ?? 0}
                   </td>
                   <td className="vp-num r" style={{ fontWeight: 800, whiteSpace: "nowrap" }}>{brl(e.preco_base)}</td>
                   <td className="r">
-                    <button onClick={() => desativar(e.equipamento_id)} className="vp-icon-btn"
+                    <button onClick={() => desativar(e.equipamento_id)} className="vp-icon-btn vp-btn-remover"
                       title="Desativar — orçamentos antigos continuam intactos"
-                      style={{ width: 28, height: 28, background:"rgba(220,38,38,0.08)", color:"#F7B8B1", marginLeft: "auto" }}>
+                      aria-label={`Desativar ${e.nome}`}
+                      style={{ width: 28, height: 28, marginLeft: "auto" }}>
                       <Trash2 style={{ width: 13, height: 13 }} />
                     </button>
                   </td>
@@ -1063,11 +1233,17 @@ function EditorOrcamento({
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div>
             <label style={label} htmlFor="orc-empresa">Empresa</label>
-            <select id="orc-empresa" value={empresaId} onChange={e => setEmpresaId(e.target.value)} disabled={!novo}
-              style={{ ...field, cursor: novo ? "pointer" : "not-allowed" }}>
-              <option value="">Selecione…</option>
-              {empresas.map(e => <option key={e.empresa_id} value={e.empresa_id}>{e.nome}</option>)}
-            </select>
+            {/* Era um <select> nativo: no Windows a lista abre branca, com a
+                fonte do sistema, destoando do resto da tela. */}
+            <div style={{ marginTop: 5 }}>
+              <Dropdown
+                id="orc-empresa" ariaLabel="Empresa do orçamento"
+                valor={empresaId} onChange={setEmpresaId} disabled={!novo}
+                placeholder="Selecione a empresa…"
+                busca={empresas.length > 8}
+                opcoes={empresas.map(e => ({ valor: e.empresa_id, rotulo: e.nome, icone: Building2 }))}
+              />
+            </div>
           </div>
 
           <div>
@@ -1117,6 +1293,16 @@ function EditorOrcamento({
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {/* Cabeçalho das colunas. Sem ele, o item avulso entra como
+                    "Descrição · 1 · 0" e não dá para saber qual campo é a
+                    quantidade e qual é o preço. */}
+                <div style={{ display: "flex", gap: 6, alignItems: "center", padding: "0 2px 2px" }}>
+                  <span style={{ width: 24, flexShrink: 0 }} />
+                  <span style={{ ...label, flex: 1, minWidth: 0 }}>Descrição</span>
+                  <span style={{ ...label, width: 62, flexShrink: 0, textAlign: "center" }}>Qtd.</span>
+                  <span style={{ ...label, width: 104, flexShrink: 0, textAlign: "right" }}>Valor unit.</span>
+                  <span style={{ width: 32, flexShrink: 0 }} />
+                </div>
                 {itens.map((it, idx) => (
                   <div key={idx} style={{ display: "flex", gap: 6, alignItems: "center" }}>
                     {/* Origem do item: do catálogo (ícone cheio) ou avulso (contorno) */}
@@ -1134,7 +1320,7 @@ function EditorOrcamento({
                         : <Plus style={{ width: 11, height: 11, color:"#9FD3EA" }} />}
                     </span>
                     <input value={it.descricao} onChange={e => mudarItem(idx, { descricao: e.target.value })}
-                      placeholder="Descrição" aria-label="Descrição do item"
+                      placeholder="Ex.: Gerador 15 kVA" aria-label="Descrição do item"
                       style={{ ...field, marginTop: 0, flex: 1, minWidth: 0, height: 36, fontSize: 12 }} />
                     <input type="number" min={1} value={it.quantidade} aria-label="Quantidade"
                       onChange={e => mudarItem(idx, { quantidade: Number(e.target.value) })} className="vp-num"
@@ -1142,9 +1328,12 @@ function EditorOrcamento({
                     <input type="number" min={0} step="0.01" value={it.preco_unitario} aria-label="Preço unitário"
                       onChange={e => mudarItem(idx, { preco_unitario: Number(e.target.value) })} className="vp-num"
                       style={{ ...field, marginTop: 0, width: 104, height: 36, fontSize: 12, textAlign: "right", padding: "0 8px" }} />
-                    <button onClick={() => setItens(prev => prev.filter((_, i) => i !== idx))} className="vp-icon-btn"
-                      aria-label="Remover item"
-                      style={{ width: 32, height: 36, background:"rgba(220,38,38,0.08)", color:"#F7B8B1", flexShrink: 0 }}>
+                    {/* Botão neutro: o vermelho só aparece no hover (regra
+                        .vp-btn-remover). Pintado o tempo todo, cada linha da
+                        lista virava um alerta. */}
+                    <button onClick={() => setItens(prev => prev.filter((_, i) => i !== idx))}
+                      className="vp-icon-btn vp-btn-remover" aria-label="Remover item" title="Remover item"
+                      style={{ width: 32, height: 36, flexShrink: 0 }}>
                       <X style={{ width: 12, height: 12 }} />
                     </button>
                   </div>
@@ -1233,9 +1422,9 @@ function SeletorCatalogo({
           width: "100%", display: "flex", alignItems: "center", gap: 10,
           height: 52, padding: "0 14px", borderRadius: 12, cursor: vazio ? "not-allowed" : "pointer",
           fontFamily: "inherit", textAlign: "left", opacity: vazio ? 0.6 : 1,
-          border:`1.5px solid ${aberto ? "rgba(159,211,234,0.30)" : "rgba(159,211,234,0.30)"}`,
-          background:"linear-gradient(135deg, rgba(46,111,149,0.12), rgba(26,188,156,0.10))",
-          boxShadow: aberto ? "0 0 0 3px rgba(41,128,185,0.14)" : "0 2px 8px rgba(41,128,185,0.10)",
+          border:`1.5px solid ${aberto ? "rgba(159,211,234,0.45)" : "rgba(159,211,234,0.22)"}`,
+          background:"#123253",
+          boxShadow: aberto ? "0 0 0 3px rgba(86,164,245,0.16)" : "none",
           transition: "all 0.16s ease",
         }}
       >
@@ -1246,10 +1435,11 @@ function SeletorCatalogo({
           <Package style={{ width: 16, height: 16, color:"#fff" }} />
         </span>
         <span style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ display: "block", fontSize: 13, fontWeight: 800, color:"#9FD3EA", letterSpacing: "-0.01em" }}>
+          <span style={{ display: "block", fontSize: 13, fontWeight: 800, color:"#EAF6FB", letterSpacing: "-0.01em" }}>
             Adicionar do catálogo
           </span>
-          <span style={{ display: "block", fontSize: 10.5, fontWeight: 600, color:"rgba(21,84,127,0.62)", marginTop: 1 }}>
+          {/* era rgba(21,84,127,0.62) — azul escuro sobre fundo naval, ilegível */}
+          <span style={{ display: "block", fontSize: 10.5, fontWeight: 600, color:"#9FD3EA", marginTop: 1 }}>
             {vazio
               ? "Nenhum equipamento cadastrado ainda"
               : `${equipamentos.length} ${equipamentos.length === 1 ? "item disponível" : "itens disponíveis"} — preço já preenchido`}
@@ -1259,18 +1449,21 @@ function SeletorCatalogo({
       </button>
 
       {aberto && (
+        // Painel OPACO: com fundo translúcido o formulário atrás vazava por
+        // baixo dos itens e a lista virava um borrão.
         <div role="listbox" aria-label="Itens do catálogo" style={{
           position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 20,
-          maxHeight: 300, overflowY: "auto", borderRadius: 12, background:"rgba(18,59,94,0.55)",
-          border:"1px solid rgba(159,211,234,0.18)", boxShadow: "0 14px 40px rgba(10,31,51,0.22)",
+          maxHeight: 300, overflowY: "auto", borderRadius: 12, background:"#12385C",
+          border:"1px solid rgba(159,211,234,0.45)", boxShadow: "0 18px 48px rgba(3,14,26,0.55)",
         }}>
-          <div style={{ position: "sticky", top: 0, background:"rgba(18,59,94,0.55)", padding: 8, borderBottom:"1px solid rgba(159,211,234,0.18)" }}>
+          <div style={{ position: "sticky", top: 0, background:"#12385C", padding: 8, borderBottom:"1px solid rgba(159,211,234,0.22)" }}>
             <input
               autoFocus value={busca} onChange={e => setBusca(e.target.value)}
               placeholder="Buscar no catálogo…" aria-label="Buscar no catálogo"
               style={{
                 width: "100%", height: 34, padding: "0 12px", borderRadius: 8, fontSize: 12,
-                border:"1.5px solid rgba(159,211,234,0.18)", outline:"none", fontFamily: "inherit", color:"#EAF6FB",
+                border:"1.5px solid rgba(159,211,234,0.22)", background:"#0F2E4B",
+                outline:"none", fontFamily: "inherit", color:"#EAF6FB",
               }}
             />
           </div>

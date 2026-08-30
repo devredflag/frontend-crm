@@ -51,12 +51,21 @@ const css = `
 
 const API = (process.env.REACT_APP_API_URL || "https://backend-crm-production-157b.up.railway.app");
 
+// Cada tipo tem hue própria e três tons: `color` é o acento (ícone, borda),
+// `bg` o fundo da marcação e `texto` a cor do rótulo em cima dele.
+//
+// Antes três dos cinco tipos dividiam o MESMO texto (#9FD3EA) — dava para ver
+// que havia um evento, não de que tipo era — e o fundo ficava em 0.12 de alpha,
+// que sobre o naval do calendário praticamente sumia. "Call" era o oposto:
+// 0.55 de azul claro com texto azul claro por cima, ilegível pelo excesso.
+// Agora o fundo vai a 0.26 (marcação visível sem virar bloco sólido) e o texto
+// é um tom claro da própria hue, com contraste folgado.
 const TIPOS = [
-  { key:"call",    label:"Call",     icon:Phone,    color:"#9FD3EA", bg:"rgba(159,211,234,0.55)"  },
-  { key:"visita",  label:"Visita",   icon:Eye,      color:"#83DDA8", bg:"rgba(39,174,96,0.12)"   },
-  { key:"reuniao", label:"Reunião",  icon:Users2,   color:"#9FD3EA", bg:"rgba(142,68,173,0.12)"  },
-  { key:"proposta",label:"Proposta", icon:FileText, color:"#F2C879", bg:"rgba(230,126,34,0.12)"  },
-  { key:"outro",   label:"Outro",    icon:Calendar, color:"#9FD3EA", bg:"rgba(149,165,166,0.12)" },
+  { key:"call",    label:"Call",     icon:Phone,    color:"#56A4F5", bg:"rgba(86,164,245,0.26)",  texto:"#CFE4FF" },
+  { key:"visita",  label:"Visita",   icon:Eye,      color:"#2CCD93", bg:"rgba(44,205,147,0.24)",  texto:"#B3F0D9" },
+  { key:"reuniao", label:"Reunião",  icon:Users2,   color:"#A78BFA", bg:"rgba(167,139,250,0.26)", texto:"#DCD2FF" },
+  { key:"proposta",label:"Proposta", icon:FileText, color:"#F0A05A", bg:"rgba(240,160,90,0.26)",  texto:"#FFDCC0" },
+  { key:"outro",   label:"Outro",    icon:Calendar, color:"#8FA9C4", bg:"rgba(143,169,196,0.26)", texto:"#DCE7F2" },
 ];
 
 const DIAS_SEMANA = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
@@ -410,8 +419,10 @@ export default function Calendario() {
   const EventChip = ({ev,onClick}:{ev:Evento;onClick:(e:React.MouseEvent)=>void}) => {
     const t=tipoInfo(ev.tipo);
     return (
-      <div onClick={onClick} style={{display:"flex",alignItems:"center",gap:4,padding:"2px 7px",borderRadius:6,background:t.bg,color:t.color,fontSize:10,fontWeight:700,cursor:"pointer",marginBottom:2,overflow:"hidden"}}>
-        <t.icon style={{width:9,height:9,flexShrink:0}}/>
+      // barra de acento à esquerda: identifica o tipo mesmo quando a célula do
+      // dia é estreita e o rótulo sai cortado
+      <div onClick={onClick} style={{display:"flex",alignItems:"center",gap:4,padding:"2px 7px",borderRadius:5,background:t.bg,borderLeft:`3px solid ${t.color}`,color:t.texto,fontSize:10,fontWeight:700,cursor:"pointer",marginBottom:2,overflow:"hidden"}}>
+        <t.icon style={{width:9,height:9,flexShrink:0,color:t.color}}/>
         <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ev.hora_inicio?.slice(0,5)} {ev.titulo}</span>
       </div>
     );
@@ -603,16 +614,16 @@ export default function Calendario() {
                           {evs.map(ev=>{
                             const t=tipoInfo(ev.tipo);
                             return (
-                              <motion.div key={ev.evento_id} initial={{opacity:0,x:-8}} animate={{opacity:1,x:0}} onClick={e=>openEdit(ev,e)} style={{padding:"8px 14px",borderRadius:10,background:t.bg,border:`1.5px solid ${t.color}30`,display:"flex",alignItems:"center",gap:10,cursor:"pointer"}}>
-                                <div style={{width:28,height:28,borderRadius:8,background:t.color,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><t.icon style={{width:13,height:13,color:"#fff"}}/></div>
+                              <motion.div key={ev.evento_id} initial={{opacity:0,x:-8}} animate={{opacity:1,x:0}} onClick={e=>openEdit(ev,e)} style={{padding:"8px 14px",borderRadius:10,background:t.bg,border:`1px solid ${t.color}55`,borderLeft:`4px solid ${t.color}`,display:"flex",alignItems:"center",gap:10,cursor:"pointer"}}>
+                                <div style={{width:28,height:28,borderRadius:8,background:t.color,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><t.icon style={{width:13,height:13,color:"#0A2338"}}/></div>
                                 <div style={{flex:1}}>
-                                  <div style={{fontSize:13,fontWeight:700,color:"#EAF6FB"}}>{ev.titulo}</div>
-                                  <div style={{fontSize:11,color:"#9FD3EA",display:"flex",gap:8}}>
+                                  <div style={{fontSize:13,fontWeight:700,color:"#FFFFFF"}}>{ev.titulo}</div>
+                                  <div style={{fontSize:11,color:"#C3D8EA",display:"flex",gap:8}}>
                                     <span><Clock style={{width:10,height:10,display:"inline",marginRight:3}}/>{ev.hora_inicio?.slice(0,5)}{ev.hora_fim?` – ${ev.hora_fim.slice(0,5)}`:""}</span>
                                     {ev.empresa_nome&&<span>· {ev.empresa_nome}</span>}
                                   </div>
                                 </div>
-                                <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:6,background:`${t.color}20`,color:t.color}}>{t.label}</span>
+                                <span style={{fontSize:10,fontWeight:800,padding:"3px 9px",borderRadius:6,background:`${t.color}33`,border:`1px solid ${t.color}66`,color:t.texto}}>{t.label}</span>
                               </motion.div>
                             );
                           })}
@@ -659,7 +670,7 @@ export default function Calendario() {
                 <label style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"#9FD3EA",display:"block",marginBottom:8}}>Tipo</label>
                 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                   {TIPOS.map(t=>(
-                    <button type="button" key={t.key} className={`tipo-btn${form.tipo===t.key?" selected":""}`} style={{background:form.tipo===t.key?t.bg:"rgba(18,59,94,0.55)",color:t.color,borderColor:form.tipo===t.key?t.color:"transparent"}} onClick={()=>setForm({...form,tipo:t.key})}>
+                    <button type="button" key={t.key} className={`tipo-btn${form.tipo===t.key?" selected":""}`} aria-pressed={form.tipo===t.key} style={{background:form.tipo===t.key?t.color:"rgba(18,59,94,0.55)",color:form.tipo===t.key?"#0A2338":t.texto,borderColor:form.tipo===t.key?t.color:"rgba(159,211,234,0.18)",fontWeight:form.tipo===t.key?800:600}} onClick={()=>setForm({...form,tipo:t.key})}>
                       <t.icon style={{width:13,height:13}}/>{t.label}
                     </button>
                   ))}

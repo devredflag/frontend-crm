@@ -197,19 +197,27 @@ export default function EmpresasProximasDaEmpresa({
 
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
           <Filter style={{ width: 12, height: 12, color:"#9FD3EA" }} />
-          {RAIOS.map(r => (
-            <button key={r} onClick={() => setRaioKm(r)}
-              aria-pressed={raioKm === r}
-              style={{
-                padding: "4px 11px", borderRadius: 20, cursor: "pointer", fontFamily: "inherit",
-                fontSize: 11, fontWeight: 700,
-                border:`1.5px solid ${raioKm === r ? "rgba(159,211,234,0.30)" : "rgba(159,211,234,0.18)"}`,
-                background:raioKm === r ? "rgba(46,111,149,0.12)" : "rgba(18,59,94,0.55)",
-                color:raioKm === r ? "#9FD3EA" : "#9FD3EA",
-              }}>
-              {r} km
-            </button>
-          ))}
+          {/* O raio ativo muda a lista inteira — precisa ficar óbvio qual está
+              valendo. Antes selecionado e não-selecionado dividiam a MESMA cor
+              de texto e mudavam só 12% de fundo, o que sumia no card. */}
+          {RAIOS.map(r => {
+            const on = raioKm === r;
+            return (
+              <button key={r} onClick={() => setRaioKm(r)}
+                aria-pressed={on}
+                style={{
+                  padding: "5px 13px", borderRadius: 20, cursor: "pointer", fontFamily: "inherit",
+                  fontSize: 11, fontWeight: on ? 800 : 600,
+                  border:`1.5px solid ${on ? "#56A4F5" : "rgba(159,211,234,0.18)"}`,
+                  background:on ? "#2E6F95" : "rgba(18,59,94,0.55)",
+                  color:on ? "#FFFFFF" : "#9FD3EA",
+                  boxShadow:on ? "0 0 0 3px rgba(86,164,245,0.20)" : "none",
+                  transition:"all 0.15s",
+                }}>
+                {r} km
+              </button>
+            );
+          })}
           {segmento && (
             <button onClick={() => setSoMesmoSegmento(v => !v)}
               aria-pressed={soMesmoSegmento}

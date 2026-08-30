@@ -308,10 +308,17 @@ import FundoAzul from "../../components/FundoAzul";
             destaca: false,
           },
           {
-            titulo: "Leads sem responsável",
-            sub: "Precisam de atribuição",
-            valor: ativas.filter(e => e.status === "Lead" && !e.vendedor_id).length,
-            cor: "#F0A05A",
+            // Substituiu "Leads sem responsável": essa contagem não existe mais
+            // como situação real. É a mesma ideia de cobrança — compromisso
+            // combinado que passou da data — e sai dos dados que a tela já tem.
+            titulo: "Retorno vencido",
+            sub: "Follow-up passou da data",
+            valor: ativas.filter(e => {
+              if (!e.data_proxima_acao) return false;
+              const inicioHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+              return new Date(e.data_proxima_acao).getTime() < inicioHoje.getTime();
+            }).length,
+            cor: "#F87171",
             destaca: true,
           },
           {
@@ -771,7 +778,7 @@ import FundoAzul from "../../components/FundoAzul";
                     </div>
                   </div>
                   <button onClick={()=>navigate(activeFilter==="rascunho" ? "/clientes" : "/gerenciamento")}
-                    style={{display:"flex",alignItems:"center",gap:5,padding:"6px 12px",borderRadius:8,border:`1px solid ${activeCard.color}40`,background:activeCard.bg,fontSize:11,fontWeight:600,color:activeCard.color,cursor:"pointer"}}>
+                    style={{display:"flex",alignItems:"center",gap:5,padding:"6px 12px",borderRadius:8,border:`1px solid ${activeCard.color}40`,background:activeCard.bg,fontSize:11,fontWeight:600,color:"#FFFFFF",cursor:"pointer"}}>
                     Ver no CRM <ArrowRight style={{width:11,height:11}}/>
                   </button>
                 </div>

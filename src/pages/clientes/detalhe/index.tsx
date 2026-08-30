@@ -8,7 +8,7 @@ import {
   ClipboardList, Calendar, ArrowLeft, Edit3,
   MapPin, Tag, Thermometer, TrendingUp, DollarSign,
   Phone, Mail, User, Clock, ChevronRight, MessageCircle, Link2,
-  ChevronDown, Check, X as XIcon,
+  ChevronDown,
   FileText, Hash, Globe, Percent, NotebookPen,
 } from "lucide-react";
 
@@ -177,8 +177,6 @@ export default function EmpresaDetalhe() {
   const [orcamentosErro, setOrcamentosErro] = useState(false);
   const [loading, setLoading]     = useState(true);
   const [expandedContato, setExpandedContato] = useState<string | null>(null);
-  const [editValor, setEditValor] = useState(false);
-  const [valorDraft, setValorDraft] = useState("");
 
   // Aba ativa espelhada na URL (?tab=), para dar link direto de fora — o sino de
   // notificações e a tela de vendas apontam para abas específicas.
@@ -302,22 +300,6 @@ export default function EmpresaDetalhe() {
     }
   };
 
-  const saveValor = async () => {
-    if (!empresa) return;
-    const norm = valorDraft.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
-    const valor = Number.isFinite(Number(norm)) && Number(norm) > 0 ? Number(norm) : null;
-    const anterior = empresa.ticket_medio_estimado;
-    setEmpresa(prev => prev ? { ...prev, ticket_medio_estimado: valor } : prev);
-    setEditValor(false);
-    try {
-      await fetch(`${API}/empresas/${empresa.empresa_id}`, {
-        method: "PUT", headers: hdrs(), body: JSON.stringify({ ticket_medio_estimado: valor }),
-      });
-    } catch {
-      setEmpresa(prev => prev ? { ...prev, ticket_medio_estimado: anterior } : prev);
-    }
-  };
-
   // Métricas do card "Informações rápidas". Só o que tem fonte hoje: faturamento,
   // budget e nº de vendas do mock dependem de vendas faturadas, que não existem.
   // Mesmo critério do LATERAL join do backend em GET /empresas/{id}: decisor primeiro.
@@ -331,6 +313,15 @@ export default function EmpresaDetalhe() {
   const conversao  = decididos ? Math.round((aprovados.length / decididos) * 100) : null;
   const valorAprovado = aprovados.reduce((s, o) => s + num(o.total), 0);
   const valorEmAberto = emAberto.reduce((s, o) => s + num(o.total), 0);
+
+  // Ticket médio REAL: média dos orçamentos que o cliente aprovou. Deixou de ser
+  // um número digitado à mão no card — o vendedor não tinha como saber o valor
+  // certo antes de fechar, e o campo virava chute que ninguém revisava depois.
+  // Enquanto não há nada aprovado, cai no valor estimado do cadastro (usado pelo
+  // score da carteira e pelo funil), sinalizado como estimativa.
+  const ticketReal   = aprovados.length ? valorAprovado / aprovados.length : null;
+  const ticketMedio  = ticketReal ?? empresa?.ticket_medio_estimado ?? null;
+  const ticketEhReal = ticketReal !== null;
 
   const sc = empresa ? statusColor(empresa.status)      : statusColor("");
 
@@ -442,16 +433,34 @@ export default function EmpresaDetalhe() {
                     <h2 style={{ fontSize:22, fontWeight:800, color:"#EAF6FB", letterSpacing:"-0.02em" }}>{empresa.nome}</h2>
                     <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:6, flexWrap:"wrap" }}>
                       <span className="chip" style={{ background:sc.bg, color:sc.text, border:`1px solid ${sc.border}` }}>{empresa.status}</span>
-                      {/* Temperatura interativa */}
+                      {/* Temperatura interativa. Os emojis saíram: renderizavam
+                          em tamanhos diferentes por sistema e desalinhavam a
+                          linha. A cor sólida do estado ativo já diz qual é. */}
                       {[
-                        { key:"Quente", icon:"🔥", color:"#F7B8B1", bg:"rgba(192,57,43,0.13)", border:"rgba(192,57,43,0.35)" },
-                        { key:"Morno",  icon:"🌡️", color:"#F2C879", bg:"rgba(214,137,16,0.13)", border:"rgba(214,137,16,0.35)" },
-                        { key:"Frio",   icon:"❄️", color:"#9FD3EA", bg:"rgba(159,211,234,0.55)", border:"rgba(159,211,234,0.30)" },
-                      ].map(t => (
-                        <button key={t.key} onClick={() => updateTemperatura(t.key)} style={{ display:"inline-flex", alignItems:"center", gap:3, padding:"4px 11px", borderRadius:20, fontSize:11, fontWeight:700, border:`1.5px solid ${empresa.temperatura===t.key ? t.border:"rgba(159,211,234,0.18)"}`, background:empresa.temperatura===t.key ? t.bg : "rgba(159,211,234,0.08)", color:empresa.temperatura===t.key ? t.color:"#9FD3EA", cursor:"pointer", transition:"all 0.15s" }}>
-                          {t.icon} {t.key}
-                        </button>
-                      ))}
+                        { key:"Quente", solido:"#E06B5E", bg:"rgba(224,107,94,0.14)" },
+                        { key:"Morno",  solido:"#E0A040", bg:"rgba(224,160,64,0.14)" },
+                        { key:"Frio",   solido:"#56A4F5", bg:"rgba(86,164,245,0.14)" },
+                      ].map(t => {
+                        const on = empresa.temperatura === t.key;
+                        return (
+                          <button key={t.key} onClick={() => updateTemperatura(t.key)}
+                            aria-pressed={on}
+                            style={{
+                              display:"inline-flex", alignItems:"center", gap:6, padding:"5px 13px",
+                              borderRadius:20, fontSize:11, fontWeight:on?800:600, cursor:"pointer",
+                              border:`1.5px solid ${on ? t.solido : "rgba(159,211,234,0.18)"}`,
+                              background:on ? t.solido : "rgba(159,211,234,0.08)",
+                              color:on ? "#FFFFFF" : "#9FD3EA",
+                              boxShadow:on ? `0 0 0 3px ${t.bg}` : "none",
+                              transition:"all 0.15s",
+                            }}>
+                            {/* ponto de cor: dá o código visual que o emoji dava,
+                                sem depender da fonte de emoji do sistema */}
+                            <span style={{ width:7, height:7, borderRadius:"50%", flexShrink:0, background:on ? "#FFFFFF" : t.solido }} />
+                            {t.key}
+                          </button>
+                        );
+                      })}
                       <span style={{ fontSize:12, color:"#9FD3EA", display:"flex", alignItems:"center", gap:4 }}>
                         <MapPin style={{ width:12, height:12 }} />
                         {empresa.cidade}{empresa.estado ? `, ${empresa.estado}` : ""}
@@ -459,38 +468,26 @@ export default function EmpresaDetalhe() {
                     </div>
                   </div>
                   <div style={{ display:"flex", gap:16, flexShrink:0 }}>
-                    <div style={{ textAlign:"center" }}>
-                      {editValor ? (
-                        <div style={{ display:"flex", alignItems:"center", gap:4 }}>
-                          <input
-                            autoFocus
-                            value={valorDraft}
-                            onChange={e => setValorDraft(e.target.value)}
-                            onKeyDown={e => { if (e.key === "Enter") saveValor(); if (e.key === "Escape") setEditValor(false); }}
-                            placeholder="Ex: 5000"
-                            style={{ width:90, height:30, borderRadius:8, border:"1.5px solid rgba(159,211,234,0.30)", background:"rgba(18,59,94,0.55)", fontSize:12, fontWeight:700, padding:"0 8px", outline:"none", color:"#EAF6FB" }}
-                          />
-                          <button onClick={saveValor} style={{ width:26, height:26, borderRadius:7, border:"1px solid rgba(39,174,96,0.4)", background:"rgba(39,174,96,0.1)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"#83DDA8" }}><Check style={{ width:12, height:12 }}/></button>
-                          <button onClick={() => setEditValor(false)} style={{ width:26, height:26, borderRadius:7, border:"1px solid rgba(159,211,234,0.18)", background:"rgba(18,59,94,0.55)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"#9FD3EA" }}><XIcon style={{ width:12, height:12 }}/></button>
-                        </div>
-                      ) : (
-                        <div
-                          onClick={empresa.status === "Proposta" ? () => { setEditValor(true); setValorDraft(empresa.ticket_medio_estimado?.toString() || ""); } : undefined}
-                          title={empresa.status === "Proposta" ? "Clique para definir o valor" : undefined}
-                          style={{ cursor: empresa.status === "Proposta" ? "pointer" : "default" }}
-                        >
-                          <div style={{ fontSize:20, fontWeight:800, color:"#9FD3EA", display:"flex", alignItems:"center", gap:4, justifyContent:"center" }}>
-                            {empresa.ticket_medio_estimado
-                              ? `R$ ${(empresa.ticket_medio_estimado/1000).toFixed(0)}k`
-                              : empresa.status === "Proposta"
-                                ? <span style={{ fontSize:13, color:"#9FD3EA" }}>Definir</span>
-                                : "—"
-                            }
-                            {empresa.status === "Proposta" && <Edit3 style={{ width:11, height:11, color:"#9FD3EA" }}/>}
-                          </div>
-                          <div style={{ fontSize:10, color:"#9FD3EA", fontWeight:600 }}>Ticket médio</div>
-                        </div>
-                      )}
+                    {/* Ticket médio — calculado, não digitado. Sai da média dos
+                        orçamentos aprovados desta empresa e se atualiza sozinho
+                        a cada aprovação. */}
+                    <div style={{ textAlign:"center" }}
+                      title={ticketEhReal
+                        ? `Média de ${aprovados.length} orçamento${aprovados.length === 1 ? "" : "s"} aprovado${aprovados.length === 1 ? "" : "s"} — ${brl(valorAprovado)} no total`
+                        : "Estimativa do cadastro. Vira média real assim que o primeiro orçamento for aprovado."}>
+                      <div style={{ fontSize:20, fontWeight:800, color:ticketEhReal ? "#83DDA8" : "#9FD3EA", display:"flex", alignItems:"center", gap:4, justifyContent:"center" }}>
+                        {ticketMedio
+                          ? `R$ ${(ticketMedio/1000).toFixed(ticketMedio >= 10000 ? 0 : 1)}k`
+                          : "—"}
+                      </div>
+                      <div style={{ fontSize:10, color:"#9FD3EA", fontWeight:600 }}>
+                        Ticket médio
+                        {ticketMedio !== null && (
+                          <span style={{ color:ticketEhReal ? "#83DDA8" : "#9FD3EA", fontWeight:700 }}>
+                            {ticketEhReal ? ` · ${aprovados.length} aprov.` : " · estimado"}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div style={{ textAlign:"center" }}>
                       <div style={{ fontSize:20, fontWeight:800, color:"#9FD3EA" }}>{contatos.length || "—"}</div>
@@ -553,7 +550,9 @@ export default function EmpresaDetalhe() {
                     { icon: Building2,   label:"Porte",          value:empresa.porte },
                     { icon: MapPin,      label:"Cidade",         value:`${empresa.cidade}${empresa.estado ? ` / ${empresa.estado}` : ""}` },
                     { icon: TrendingUp,  label:"Origem do lead", value:empresa.origem_lead },
-                    { icon: DollarSign,  label:"Ticket médio",   value:empresa.ticket_medio_estimado ? `R$ ${empresa.ticket_medio_estimado.toLocaleString("pt-BR")}` : "Não informado" },
+                    { icon: DollarSign,  label:"Ticket médio",   value:ticketMedio
+                        ? `R$ ${ticketMedio.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}${ticketEhReal ? "" : " (estimado)"}`
+                        : "Sem orçamento aprovado" },
                     { icon: Thermometer, label:"Temperatura",    value:empresa.temperatura },
                   ].map(({ icon: Icon, label, value }) => (
                     <div key={label} className="info-row">

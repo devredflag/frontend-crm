@@ -8,6 +8,7 @@ import {
   Mail, X, Crown, CheckCircle2, Ban, TrendingUp, UserRoundCog, Network,
 } from "lucide-react";
 import useIsMobile from "../../hooks/useIsMobile";
+import Dropdown from "../../components/Dropdown";
 import CardUsuario from "../../components/CardUsuario";
 
 import FundoAzul from "../../components/FundoAzul";
@@ -574,11 +575,13 @@ export default function Equipe() {
                         {/* Função — quem não é gerente vê o rótulo, sem poder editar */}
                         <div>
                           {ehGerente ? (
-                            <select value={u.role} onChange={e => alterarRole(u, e.target.value)}
-                              aria-label={`Função de ${u.nome}`}
-                              style={{ height: 30, padding: "0 8px", borderRadius: 7, border:`1px solid ${cor}55`, background:`${cor}14`, fontSize: 11, fontWeight: 700, color:cor, outline:"none", cursor: "pointer" }}>
-                              {FUNCOES.map(f => <option key={f.valor} value={f.valor}>{f.rotulo}</option>)}
-                            </select>
+                            <Dropdown
+                              valor={u.role} onChange={v => alterarRole(u, v)}
+                              ariaLabel={`Função de ${u.nome}`} altura={30} corAtiva={cor}
+                              opcoes={FUNCOES.map(f => ({
+                                valor: f.valor, rotulo: f.rotulo, detalhe: f.desc, cor: f.cor,
+                              }))}
+                            />
                           ) : (
                             <span style={{ display: "inline-block", padding: "4px 10px", borderRadius: 7, background:`${cor}14`, color:cor, fontSize: 11, fontWeight: 700 }}>
                               {rotuloFuncao(u.role)}
@@ -592,15 +595,25 @@ export default function Equipe() {
                           {u.role !== "vendedor" ? (
                             <span style={{ fontSize: 11, fontWeight: 600, color:"#9FD3EA" }}>—</span>
                           ) : ehGerente ? (
-                            <select value={u.supervisor_id || ""} onChange={e => definirSupervisor(u, e.target.value)}
-                              aria-label={`Supervisor de ${u.nome}`}
+                            <Dropdown
+                              valor={u.supervisor_id || ""} onChange={v => definirSupervisor(u, v)}
+                              ariaLabel={`Supervisor de ${u.nome}`} altura={30}
                               disabled={supervisores.length === 0}
-                              style={{ width: "100%", height: 30, padding: "0 8px", borderRadius: 7, border:`1px solid ${u.supervisor_id ? "rgba(142,68,173,0.4)" : "rgba(217,119,6,0.4)"}`, background:u.supervisor_id ? "rgba(142,68,173,0.08)" : "rgba(217,119,6,0.08)", fontSize: 11, fontWeight: 700, color: u.supervisor_id ? "#C9B6E4" : "#F2C879", outline:"none", cursor: supervisores.length === 0 ? "not-allowed" : "pointer" }}>
-                              <option value="">{supervisores.length === 0 ? "Nenhum supervisor" : "Sem supervisor"}</option>
-                              {supervisores.map(sv => (
-                                <option key={sv.usuario_id} value={sv.usuario_id}>{sv.nome}</option>
-                              ))}
-                            </select>
+                              corAtiva={u.supervisor_id ? "#C9B6E4" : "#F2C879"}
+                              busca={supervisores.length > 8}
+                              placeholder={supervisores.length === 0 ? "Nenhum supervisor" : "Sem supervisor"}
+                              opcoes={[
+                                {
+                                  valor: "",
+                                  rotulo: supervisores.length === 0 ? "Nenhum supervisor" : "Sem supervisor",
+                                  cor: "#F2C879",
+                                },
+                                ...supervisores.map(sv => ({
+                                  valor: sv.usuario_id, rotulo: sv.nome,
+                                  icone: UserRoundCog, cor: "#C9B6E4",
+                                })),
+                              ]}
+                            />
                           ) : (
                             <span style={{ fontSize: 11.5, fontWeight: 600, color:u.supervisor_nome ? "#C9B6E4" : "#9FD3EA" }}>
                               {u.supervisor_nome || "Sem supervisor"}
@@ -654,11 +667,15 @@ export default function Equipe() {
       <AnimatePresence>
         {showInvite && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={() => !saving && setShowInvite(false)}
+            /* Fecha no MOUSEDOWN sobre o próprio overlay, não no click. Com
+               `onClick`, o navegador dispara o evento no ancestral comum de
+               mousedown e mouseup: selecionar texto dentro do modal e soltar o
+               botão fora fechava tudo, levando junto o que já fora digitado. */
+            onMouseDown={e => { if (e.target === e.currentTarget && !saving) setShowInvite(false); }}
             style={{ position: "fixed", inset: 0, background:"rgba(10,31,51,0.5)", backdropFilter: "blur(4px)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
             <motion.div initial={{ scale: 0.94, y: 14 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.94, y: 14 }}
-              onClick={e => e.stopPropagation()}
-              style={{ width: "100%", maxWidth: 440, background:"rgba(18,59,94,0.55)", borderRadius: 18, padding: 26, boxShadow: "0 24px 70px rgba(0,0,0,0.3)" }}>
+              onMouseDown={e => e.stopPropagation()}
+              style={{ width: "100%", maxWidth: 440, background:"#143354", border:"1px solid rgba(159,211,234,0.22)", borderRadius: 18, padding: 26, boxShadow: "0 24px 70px rgba(3,14,26,0.55)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
                 <div style={{ width: 40, height: 40, borderRadius: 11, background:"linear-gradient(135deg,#2E6F95,#2E6F95)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <UserPlus style={{ width: 19, height: 19, color:"#fff" }} />
@@ -699,14 +716,24 @@ export default function Equipe() {
                       const info = FUNCOES.find(f => f.valor === opt.v)!;
                       const on = role === opt.v;
                       return (
+                        // O não-selecionado era `background:"#fff"` — um bloco
+                        // branco dentro de um modal escuro, com texto claro por
+                        // cima. Agora repousa na superfície do modal e o estado
+                        // ativo é fundo sólido na cor da função.
                         <button key={opt.v} type="button" onClick={() => { setRole(opt.v); if (opt.v !== "vendedor") setSupervisorId(""); }}
                           aria-pressed={on}
-                          style={{ padding: "10px 9px", borderRadius: 10, border:`1.5px solid ${on ? info.cor : "rgba(159,211,234,0.18)"}`, background:on ? `${info.cor}12` : "#fff", cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}>
+                          style={{
+                            padding: "10px 9px", borderRadius: 10, cursor: "pointer", textAlign: "left", fontFamily: "inherit",
+                            border:`1.5px solid ${on ? info.cor : "rgba(159,211,234,0.18)"}`,
+                            background:on ? info.cor : "#123253",
+                            boxShadow:on ? `0 0 0 3px ${info.cor}33` : "none",
+                            transition:"all 0.15s",
+                          }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
-                            <opt.ic style={{ width: 14, height: 14, color:on ? info.cor : "#9FD3EA", flexShrink: 0 }} />
-                            <span style={{ fontSize: 12, fontWeight: 700, color:on ? info.cor : "#EAF6FB" }}>{info.rotulo}</span>
+                            <opt.ic style={{ width: 14, height: 14, color:on ? "#0A2338" : "#9FD3EA", flexShrink: 0 }} />
+                            <span style={{ fontSize: 12, fontWeight: on ? 800 : 700, color:on ? "#0A2338" : "#EAF6FB" }}>{info.rotulo}</span>
                           </div>
-                          <div style={{ fontSize: 10, color:"#9FD3EA", lineHeight: 1.35 }}>{info.desc}</div>
+                          <div style={{ fontSize: 10, color:on ? "rgba(10,35,56,0.78)" : "#9FD3EA", lineHeight: 1.35, fontWeight:on ? 600 : 400 }}>{info.desc}</div>
                         </button>
                       );
                     })}
@@ -725,11 +752,21 @@ export default function Equipe() {
                         Nenhum supervisor cadastrado ainda. Você pode criar o vendedor agora e atribuir depois.
                       </div>
                     ) : (
-                      <select id="novo-supervisor" className="ipt" value={supervisorId} onChange={e => setSupervisorId(e.target.value)}
-                        style={{ cursor: "pointer" }}>
-                        <option value="">Sem supervisor (definir depois)</option>
-                        {supervisores.map(sv => <option key={sv.usuario_id} value={sv.usuario_id}>{sv.nome}</option>)}
-                      </select>
+                      <Dropdown
+                        id="novo-supervisor" ariaLabel="Supervisor do novo vendedor"
+                        valor={supervisorId} onChange={setSupervisorId}
+                        corAtiva="#C9B6E4" altura={44}
+                        busca={supervisores.length > 8}
+                        placeholder="Sem supervisor (definir depois)"
+                        opcoes={[
+                          { valor: "", rotulo: "Sem supervisor (definir depois)" },
+                          ...supervisores.map(sv => ({
+                            valor: sv.usuario_id, rotulo: sv.nome,
+                            detalhe: `${sv.total_empresas} empresa${sv.total_empresas === 1 ? "" : "s"}`,
+                            icone: UserRoundCog, cor: "#C9B6E4",
+                          })),
+                        ]}
+                      />
                     )}
                   </div>
                 )}
