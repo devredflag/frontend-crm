@@ -1,11 +1,9 @@
 import { getToken } from "../../../services/auth";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { openEmail, openWhatsApp } from "../../../utils/commPrefs";
-import { dataLocal, diasDesde, formatarData } from "../../../utils/data";
-import { brl, brlCurto } from "../../../utils/moeda";
-import { STATUS_ORCAMENTO, STATUS_ORDEM, numeroOrcamento } from "../../../utils/orcamento";
+import { formatarData } from "../../../utils/data";
 import {
   BarChart3, LayoutDashboard, Search, Building2, Users,
   ClipboardList, Calendar, ArrowLeft, Edit3,
@@ -13,7 +11,6 @@ import {
   Phone, Mail, User, Clock, ChevronRight, MessageCircle, Link2,
   ChevronDown,
   FileText, Hash, Globe, Percent, NotebookPen,
-  Wallet, Target, CalendarCheck, Filter,
 } from "lucide-react";
 
 import SelectRecipientsModal, {
@@ -24,8 +21,6 @@ import SelectRecipientsModal, {
 import EmpresaNotificationBell from "../../../components/EmpresaNotificationBell";
 import CardUsuario from "../../../components/CardUsuario";
 import EmpresasProximasDaEmpresa from "../../../components/EmpresasProximasDaEmpresa";
-import GraficoAprovadoMensal, { DonutConversao, serieAprovadaPorMes, somaSerie } from "../../../components/GraficoAprovadoMensal";
-import useValoresOrcamento, { aoMudarOrcamentos } from "../../../hooks/useValoresOrcamento";
 
 import FundoAzul from "../../../components/FundoAzul";
 const API = (process.env.REACT_APP_API_URL || "https://backend-crm-production-157b.up.railway.app");
@@ -107,13 +102,6 @@ interface Orcamento {
   criado_em?: string | null;
   data_envio?: string | null;
   data_decisao?: string | null;
-  motivo_recusa?: string | null;
-  // Vêm do GET /orcamentos enriquecido. Opcionais de propósito: enquanto o
-  // backend novo não subir, a coluna mostra "—" em vez de quebrar a tela.
-  vendedor_nome?: string | null;
-  qtd_itens?: number | null;
-  qtd_pecas?: number | null;
-  item_principal?: string | null;
 }
 
 function statusColor(s: string) {
@@ -131,9 +119,19 @@ function avatarColor(name: string) {
 }
 const formatDate = (d: string | null) => formatarData(d);
 
-// Celulas da tabela de orcamentos — repetidas em nove colunas, viram constante.
-const TD: React.CSSProperties = { padding: "10px 12px", borderBottom: "1px solid rgba(159,211,234,0.18)", color: "#EAF6FB" };
-const TD_NUM: React.CSSProperties = { ...TD, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" };
+// Mesmo vocabulário e mesmas cores do VendasPanel, para o orçamento não trocar
+// de cara quando o usuário vem de lá para cá.
+const STATUS_ORCAMENTO: Record<string, { label: string; color:string; bg: string }> = {
+  rascunho:      { label: "Rascunho",      color:"#9FD3EA", bg: "rgba(86,101,115,0.12)" },
+  enviado:       { label: "Enviado",       color:"#9FD3EA", bg: "rgba(159,211,234,0.55)" },
+  em_negociacao: { label: "Em negociação", color:"#F2C879", bg: "rgba(214,137,16,0.13)" },
+  aprovado:      { label: "Aprovado",      color:"#83DDA8", bg: "rgba(39,174,96,0.13)"  },
+  recusado:      { label: "Recusado",      color:"#F7B8B1", bg: "rgba(220,38,38,0.1)"   },
+};
+
+function brl(v: number) {
+  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+}
 
 const TABS = [
   { key: "resumo",      label: "Resumo",      icon: FileText },
@@ -176,8 +174,6 @@ export default function EmpresaDetalhe() {
   const [orcamentosErro, setOrcamentosErro] = useState(false);
   const [loading, setLoading]     = useState(true);
   const [expandedContato, setExpandedContato] = useState<string | null>(null);
-  // Filtro de status da aba Orçamentos, no mesmo vocabulário do painel de vendas.
-  const [filtroStatus, setFiltroStatus] = useState("todos");
 
   // Aba ativa espelhada na URL (?tab=), para dar link direto de fora — o sino de
   // notificações e a tela de vendas apontam para abas específicas.
@@ -193,21 +189,6 @@ export default function EmpresaDetalhe() {
   const [sendChannel, setSendChannel] = useState<SendChannel | null>(null);
   // provider escolhido na sessão (persiste entre aberturas do modal)
   const [lastProvider, setLastProvider] = useState<EmailProvider>("outlook");
-
-  // Orçamento é o dado que manda nesta tela agora (KPIs, gráfico, conversão),
-  // então a busca sai do useEffect: o store avisa quando alguém mexe num
-  // orçamento em qualquer aba e a ficha se reconstrói sem F5.
-  const carregarOrcamentos = useCallback(async () => {
-    try {
-      const res = await fetch(`${API}/orcamentos?empresa_id=${id}`, {
-        headers: { Authorization: `Bearer ${getToken() || ""}` },
-      });
-      if (res.ok) { setOrcamentos(await res.json()); setOrcamentosErro(false); }
-      else setOrcamentosErro(true);
-    } catch { setOrcamentosErro(true); }
-  }, [id]);
-
-  useEffect(() => aoMudarOrcamentos(carregarOrcamentos), [carregarOrcamentos]);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -225,7 +206,11 @@ export default function EmpresaDetalhe() {
           const aRes = await fetch(`${API}/empresas/${id}/atividades`, { headers });
           if (aRes.ok) setAtividades(await aRes.json());
         } catch {}
-        await carregarOrcamentos();
+        try {
+          const oRes = await fetch(`${API}/orcamentos?empresa_id=${id}`, { headers });
+          if (oRes.ok) { setOrcamentos(await oRes.json()); setOrcamentosErro(false); }
+          else setOrcamentosErro(true);
+        } catch { setOrcamentosErro(true); }
       } catch {}
       setLoading(false);
     };
@@ -243,7 +228,7 @@ export default function EmpresaDetalhe() {
     };
     const iv = setInterval(refreshAtividades, 20_000);
     return () => clearInterval(iv);
-  }, [id, carregarOrcamentos]);
+  }, [id]);
 
   const buildRecipients = (channel: SendChannel): Recipient[] =>
     contatos.map((c, i) => {
@@ -323,84 +308,14 @@ export default function EmpresaDetalhe() {
   const emAberto   = orcamentos.filter(o => o.status === "enviado" || o.status === "em_negociacao");
   const decididos  = aprovados.length + recusados.length;
   const conversao  = decididos ? Math.round((aprovados.length / decididos) * 100) : null;
+  const valorAprovado = aprovados.reduce((s, o) => s + num(o.total), 0);
+  const valorEmAberto = emAberto.reduce((s, o) => s + num(o.total), 0);
 
-  // O dinheiro desta empresa sai do store ao vivo — a mesma fonte da lista de
-  // clientes e do dashboard, para o mesmo cliente não aparecer com dois valores
-  // em duas telas. Assinar o store também é o que mantém o relógio de 5s
-  // ligado: sem isso, `aoMudarOrcamentos` acima nunca dispararia aqui.
-  // A lista local continua servindo para o que o store não agrega: datas,
-  // contagem por status e a série mensal.
-  //
-  // Ticket médio é média dos orçamentos que o cliente aprovou, e só isso — o
-  // campo estimado do cadastro foi removido do sistema. Sem nada aprovado, o
-  // número não existe e mostramos "—" em vez de inventar.
-  const valoresEmpresa = useValoresOrcamento().valorDe(id || "");
-  const valorAprovado = valoresEmpresa.aprovado;
-  const valorEmAberto = valoresEmpresa.emAberto;
-  const ticketMedio = valoresEmpresa.ticketMedio;
-
-  // Aprovado mês a mês desta empresa, e o semestre anterior ao lado para a
-  // variação. Mesma conta do painel de vendas, com o recorte de uma empresa.
-  const serieMensal = useMemo(() => serieAprovadaPorMes(orcamentos), [orcamentos]);
-  const serieAnterior = useMemo(() => serieAprovadaPorMes(orcamentos, 6, 6), [orcamentos]);
-  const totalSemestre = somaSerie(serieMensal);
-  const totalSemestreAnterior = somaSerie(serieAnterior);
-  // Só existe variação quando havia base para comparar — sem semestre anterior,
-  // qualquer número seria "+100%" e não diria nada.
-  const variacaoSemestre = totalSemestreAnterior > 0
-    ? ((totalSemestre - totalSemestreAnterior) / totalSemestreAnterior) * 100
-    : null;
-
-  // Data do último fechamento — a leitura de "esse cliente ainda está vivo?".
-  const ultimoFechamento = aprovados
-    .map(o => o.data_decisao || o.data_envio || o.criado_em || null)
-    .filter(Boolean)
-    .sort((a, b) => (dataLocal(b)?.getTime() ?? 0) - (dataLocal(a)?.getTime() ?? 0))[0] || null;
-  const diasDoUltimo = ultimoFechamento ? diasDesde(ultimoFechamento) : null;
-  const textoUltimo = diasDoUltimo === null || !Number.isFinite(diasDoUltimo)
-    ? "nada fechado ainda"
-    : diasDoUltimo === 0 ? "hoje"
-    : diasDoUltimo === 1 ? "ontem"
-    : `há ${diasDoUltimo} dias`;
-
-  const kpis = [
-    {
-      lab: "Valor aprovado", icon: DollarSign, cor: "#83DDA8",
-      val: valorAprovado ? brlCurto(valorAprovado) : "—",
-      sub: `${aprovados.length} orçamento${aprovados.length === 1 ? "" : "s"} fechado${aprovados.length === 1 ? "" : "s"}`,
-      badge: variacaoSemestre,
-      title: variacaoSemestre !== null
-        ? `${brl(totalSemestre)} nos últimos 6 meses contra ${brl(totalSemestreAnterior)} nos 6 anteriores`
-        : "Soma dos orçamentos que esta empresa aprovou.",
-    },
-    {
-      badge: null, lab: "Em aberto", icon: Wallet, cor: "#C9B6E4",
-      val: valorEmAberto ? brlCurto(valorEmAberto) : "—",
-      sub: `${emAberto.length} enviado${emAberto.length === 1 ? "" : "s"} ou em negociação`,
-      title: "Rascunho não entra: enquanto não foi ao cliente, não é dinheiro em jogo.",
-    },
-    {
-      badge: null, lab: "Ticket médio", icon: Target, cor: "#F2C879",
-      val: ticketMedio !== null ? brlCurto(ticketMedio) : "—",
-      sub: "por orçamento aprovado",
-      title: ticketMedio !== null
-        ? `Média de ${aprovados.length} orçamento${aprovados.length === 1 ? "" : "s"} aprovado${aprovados.length === 1 ? "" : "s"} — ${brl(valorAprovado)} no total`
-        : "Aparece assim que o primeiro orçamento desta empresa for aprovado.",
-    },
-    {
-      badge: null, lab: "Último fechamento", icon: CalendarCheck, cor: "#9FD3EA",
-      val: formatDate(ultimoFechamento), sub: textoUltimo,
-      title: "Data da última aprovação desta empresa.",
-    },
-  ];
-
-  // Chips de filtro: só os status que esta empresa tem. Cinco chips zerados
-  // numa carteira de dois orçamentos é ruído, não filtro.
-  const statusPresentes = STATUS_ORDEM.filter(st => orcamentos.some(o => o.status === st));
-  const orcamentosVisiveis = filtroStatus === "todos"
-    ? orcamentos
-    : orcamentos.filter(o => o.status === filtroStatus);
-  const totalVisivel = orcamentosVisiveis.reduce((acc, o) => acc + num(o.total), 0);
+  // Ticket médio: média dos orçamentos que o cliente aprovou, e só isso. O
+  // campo estimado do cadastro foi removido do sistema — era chute digitado uma
+  // vez e nunca revisado. Sem nada aprovado, o número não existe e mostramos
+  // "—" em vez de inventar.
+  const ticketMedio = aprovados.length ? valorAprovado / aprovados.length : null;
 
   const sc = empresa ? statusColor(empresa.status)      : statusColor("");
 
@@ -546,6 +461,33 @@ export default function EmpresaDetalhe() {
                       </span>
                     </div>
                   </div>
+                  <div style={{ display:"flex", gap:16, flexShrink:0 }}>
+                    {/* Ticket médio — calculado, não digitado. Sai da média dos
+                        orçamentos aprovados desta empresa e se atualiza sozinho
+                        a cada aprovação. */}
+                    <div style={{ textAlign:"center" }}
+                      title={ticketMedio !== null
+                        ? `Média de ${aprovados.length} orçamento${aprovados.length === 1 ? "" : "s"} aprovado${aprovados.length === 1 ? "" : "s"} — ${brl(valorAprovado)} no total`
+                        : "Aparece assim que o primeiro orçamento desta empresa for aprovado."}>
+                      <div style={{ fontSize:20, fontWeight:800, color:ticketMedio !== null ? "#83DDA8" : "#9FD3EA", display:"flex", alignItems:"center", gap:4, justifyContent:"center" }}>
+                        {ticketMedio
+                          ? `R$ ${(ticketMedio/1000).toFixed(ticketMedio >= 10000 ? 0 : 1)}k`
+                          : "—"}
+                      </div>
+                      <div style={{ fontSize:10, color:"#9FD3EA", fontWeight:600 }}>
+                        Ticket médio
+                        {ticketMedio !== null && (
+                          <span style={{ color:"#83DDA8", fontWeight:700 }}>
+                            {` · ${aprovados.length} aprov.`}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ textAlign:"center" }}>
+                      <div style={{ fontSize:20, fontWeight:800, color:"#9FD3EA" }}>{contatos.length || "—"}</div>
+                      <div style={{ fontSize:10, color:"#9FD3EA", fontWeight:600 }}>Contatos</div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Identificação — CNPJ, site e contato principal */}
@@ -565,33 +507,6 @@ export default function EmpresaDetalhe() {
                       ) : (
                         <span style={{ fontSize:12, color:value ? "#EAF6FB" : "#9FD3EA", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{value || "—"}</span>
                       )}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Faixa de indicadores — o mesmo resumo de carteira do painel de
-                    vendas, com o recorte de um cliente só. Substitui os dois
-                    números soltos que ficavam no topo do card. */}
-                <div style={{ marginTop:16, display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))", gap:12 }}>
-                  {kpis.map(k => (
-                    <div key={k.lab} title={k.title} style={{ background:"rgba(18,59,94,0.55)", border:"1px solid rgba(159,211,234,0.18)", borderRadius:12, padding:14, display:"flex", gap:12, alignItems:"flex-start" }}>
-                      <div style={{ width:36, height:36, borderRadius:10, display:"grid", placeItems:"center", flexShrink:0, background:`${k.cor}1f` }}>
-                        <k.icon style={{ width:18, height:18, color:k.cor }} />
-                      </div>
-                      <div style={{ minWidth:0 }}>
-                        <div style={{ fontSize:10, letterSpacing:"0.07em", textTransform:"uppercase", color:"#9FD3EA", fontWeight:800, marginBottom:3 }}>{k.lab}</div>
-                        <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
-                          <span style={{ fontSize:18, fontWeight:900, color:"#EAF6FB", letterSpacing:"-0.02em", fontVariantNumeric:"tabular-nums" }}>{k.val}</span>
-                          {k.badge !== null && (
-                            <span style={{ display:"inline-flex", alignItems:"center", gap:3, padding:"2px 7px", borderRadius:20, fontSize:10, fontWeight:800, background:k.badge >= 0 ? "rgba(44,205,147,0.14)" : "rgba(248,113,113,0.14)", color:k.badge >= 0 ? "#2CCD93" : "#F87171" }}
-                              title="Últimos 6 meses contra os 6 anteriores">
-                              <TrendingUp style={{ width:10, height:10, transform:k.badge >= 0 ? "none" : "scaleY(-1)" }} />
-                              {k.badge >= 0 ? "+" : ""}{Math.round(k.badge)}%
-                            </span>
-                          )}
-                        </div>
-                        <div style={{ fontSize:11, color:"#9FD3EA", marginTop:2 }}>{k.sub}</div>
-                      </div>
                     </div>
                   ))}
                 </div>
@@ -683,33 +598,6 @@ export default function EmpresaDetalhe() {
                     </div>
                   ))}
                 </motion.div>
-
-                {/* Conversão — o mesmo donut do painel de vendas, aqui só com
-                    os orçamentos desta empresa. */}
-                <motion.div className="glass-card" style={{ padding:"22px 24px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.2 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:"#EAF6FB", marginBottom:16, display:"flex", alignItems:"center", gap:7 }}>
-                    <Percent style={{ width:15, height:15, color:"#83DDA8" }} /> Taxa de conversão
-                  </div>
-                  <DonutConversao pct={conversao ?? 0} />
-                  <div style={{ textAlign:"center", marginTop:10 }}>
-                    <div style={{ fontSize:13, fontWeight:800, color:"#EAF6FB", fontVariantNumeric:"tabular-nums" }}>
-                      {aprovados.length} aprovado{aprovados.length === 1 ? "" : "s"}
-                    </div>
-                    <div style={{ fontSize:11, color:"#9FD3EA", fontVariantNumeric:"tabular-nums" }}>
-                      {decididos ? `de ${decididos} decidido${decididos === 1 ? "" : "s"}` : "nenhum orçamento decidido"}
-                    </div>
-                  </div>
-                </motion.div>
-
-                {/* Evolução do que esta empresa fechou, mês a mês */}
-                <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.24 }}>
-                  <GraficoAprovadoMensal
-                    serie={serieMensal}
-                    titulo="Aprovado por mês"
-                    subtitulo="Últimos 6 meses desta empresa"
-                    vazioTexto="Esta empresa não fechou nada no período."
-                  />
-                </motion.div>
               </div>
               )}
 
@@ -757,105 +645,33 @@ export default function EmpresaDetalhe() {
                       <div style={{ fontSize:11, color:"#9FD3EA", marginTop:3 }}>Crie o primeiro em Gerenciamento → Vendas</div>
                     </div>
                   ) : (
-                    <>
-                      {/* Filtro por status. So aparece quando ha mais de um
-                          status na carteira desta empresa — chips zerados em
-                          cima de dois orcamentos sao ruido, nao filtro. */}
-                      {statusPresentes.length > 1 && (
-                        <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:14, alignItems:"center" }}>
-                          <Filter style={{ width:13, height:13, color:"#9FD3EA", marginRight:2 }} />
-                          {["todos", ...statusPresentes].map(st => {
-                            const info = STATUS_ORCAMENTO[st];
-                            const on = filtroStatus === st;
-                            const qtd = st === "todos" ? orcamentos.length : orcamentos.filter(o => o.status === st).length;
+                    <div style={{ overflowX:"auto" }}>
+                      <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12.5 }}>
+                        <thead>
+                          <tr>
+                            {["Título", "Criado em", "Enviado em", "Status", "Total"].map((h, i) => (
+                              <th key={h} style={{ textAlign: i === 4 ? "right" : "left", padding:"8px 12px", fontSize:10.5, letterSpacing:"0.06em", textTransform:"uppercase", color:"#9FD3EA", fontWeight:700, borderBottom:"1px solid rgba(159,211,234,0.18)", whiteSpace:"nowrap" }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {orcamentos.map(o => {
+                            const info = STATUS_ORCAMENTO[o.status] || STATUS_ORCAMENTO.rascunho;
                             return (
-                              <button key={st} onClick={() => setFiltroStatus(st)}
-                                style={{
-                                  padding:"5px 12px", borderRadius:20, fontSize:11, fontWeight:700, cursor:"pointer",
-                                  fontFamily:"'Plus Jakarta Sans',sans-serif",
-                                  border:`1.5px solid ${on ? (info ? info.color : "rgba(159,211,234,0.45)") : "rgba(159,211,234,0.18)"}`,
-                                  background:on ? (info ? info.bg : "rgba(159,211,234,0.12)") : "rgba(18,59,94,0.55)",
-                                  color:on ? (info ? info.color : "#EAF6FB") : "#9FD3EA",
-                                  transition:"all 0.15s",
-                                }}>
-                                {info ? info.label : "Todos"} ({qtd})
-                              </button>
+                              <tr key={o.orcamento_id}>
+                                <td style={{ padding:"10px 12px", borderBottom:"1px solid rgba(159,211,234,0.18)", color:"#EAF6FB", fontWeight:600 }}>{o.titulo || "Sem título"}</td>
+                                <td style={{ padding:"10px 12px", borderBottom:"1px solid rgba(159,211,234,0.18)", color:"#EAF6FB", fontVariantNumeric:"tabular-nums", whiteSpace:"nowrap" }}>{formatDate(o.criado_em || null)}</td>
+                                <td style={{ padding:"10px 12px", borderBottom:"1px solid rgba(159,211,234,0.18)", color:"#EAF6FB", fontVariantNumeric:"tabular-nums", whiteSpace:"nowrap" }}>{formatDate(o.data_envio || null)}</td>
+                                <td style={{ padding:"10px 12px", borderBottom:"1px solid rgba(159,211,234,0.18)" }}>
+                                  <span className="chip" style={{ background:info.bg, color:info.color }}>{info.label}</span>
+                                </td>
+                                <td style={{ padding:"10px 12px", borderBottom:"1px solid rgba(159,211,234,0.18)", textAlign:"right", color:"#EAF6FB", fontWeight:700, fontVariantNumeric:"tabular-nums", whiteSpace:"nowrap" }}>{brl(num(o.total))}</td>
+                              </tr>
                             );
                           })}
-                        </div>
-                      )}
-
-                      {orcamentosVisiveis.length === 0 ? (
-                        <div style={{ padding:"24px 0", textAlign:"center", fontSize:12, color:"#9FD3EA", fontWeight:600 }}>
-                          Nenhum orçamento com esse status.
-                        </div>
-                      ) : (
-                      <div style={{ overflowX:"auto" }}>
-                        <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12.5 }}>
-                          <thead>
-                            <tr>
-                              {[
-                                { h: "#" }, { h: "Nº" }, { h: "Título / item" }, { h: "Itens", r: true },
-                                { h: "Vendedor" }, { h: "Enviado em" },
-                                { h: "Status" }, { h: "Total", r: true },
-                              ].map(c => (
-                                <th key={c.h} style={{ textAlign: c.r ? "right" : "left", padding:"8px 12px", fontSize:10.5, letterSpacing:"0.06em", textTransform:"uppercase", color:"#9FD3EA", fontWeight:700, borderBottom:"1px solid rgba(159,211,234,0.18)", whiteSpace:"nowrap" }}>{c.h}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {orcamentosVisiveis.map((o, i) => {
-                              const info = STATUS_ORCAMENTO[o.status] || STATUS_ORCAMENTO.rascunho;
-                              return (
-                                <tr key={o.orcamento_id}>
-                                  <td style={{ ...TD_NUM, color:"#9FD3EA", width:26 }}>{i + 1}</td>
-                                  <td style={TD_NUM} title="Número do orçamento">{numeroOrcamento(o)}</td>
-                                  <td style={{ ...TD, fontWeight:600 }}>
-                                    {o.titulo || "Sem título"}
-                                    {/* Item de maior peso no orçamento: diz do que
-                                        se trata sem precisar abrir a proposta. */}
-                                    {o.item_principal && (
-                                      <span style={{ display:"block", fontSize:10.5, color:"#9FD3EA", fontWeight:500, marginTop:1 }}>
-                                        {o.item_principal}
-                                        {(o.qtd_itens || 0) > 1 ? ` +${(o.qtd_itens || 1) - 1}` : ""}
-                                      </span>
-                                    )}
-                                    {o.motivo_recusa && (
-                                      <span style={{ display:"block", fontSize:10.5, color:"#F7B8B1", fontWeight:600, marginTop:1 }}>
-                                        Recusa: {o.motivo_recusa}
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td style={{ ...TD_NUM, textAlign:"right" }}
-                                    title={o.qtd_pecas != null ? `${o.qtd_pecas} peça(s) em ${o.qtd_itens} linha(s)` : undefined}>
-                                    {o.qtd_itens != null ? o.qtd_itens : "—"}
-                                  </td>
-                                  <td style={{ ...TD, color:o.vendedor_nome ? "#EAF6FB" : "#9FD3EA", whiteSpace:"nowrap" }}>{o.vendedor_nome || "—"}</td>
-                                  {/* So a data de envio: e ela que marca o inicio
-                                      da espera pelo cliente. A de criacao vira
-                                      tooltip — quase sempre o mesmo dia, e o
-                                      rascunho ainda nao enviado precisa dela. */}
-                                  <td style={TD_NUM} title={o.criado_em ? `Criado em ${formatDate(o.criado_em)}` : undefined}>
-                                    {formatDate(o.data_envio || null)}
-                                  </td>
-                                  <td style={TD}>
-                                    <span className="chip" style={{ background:info.bg, color:info.color }}>{info.label}</span>
-                                  </td>
-                                  <td style={{ ...TD_NUM, textAlign:"right", fontWeight:700 }}>{brl(num(o.total))}</td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                      )}
-
-                      {/* Fecho da lista: quanto vale o que está na tela. */}
-                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:12, flexWrap:"wrap", marginTop:12, paddingTop:12, borderTop:"1px solid rgba(159,211,234,0.18)", fontSize:11.5, color:"#9FD3EA" }}>
-                        <span>Mostrando {orcamentosVisiveis.length} de {orcamentos.length} orçamento{orcamentos.length === 1 ? "" : "s"}</span>
-                        <span style={{ fontWeight:800, color:"#EAF6FB", fontVariantNumeric:"tabular-nums" }}>{brl(totalVisivel)}</span>
-                      </div>
-                    </>
+                        </tbody>
+                      </table>
+                    </div>
                   )}
                 </motion.div>
               )}
