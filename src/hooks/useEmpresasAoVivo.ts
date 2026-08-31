@@ -164,7 +164,13 @@ export function removerEmpresaLocal(empresaId: string) {
  * lista já tipada. Só existe UMA requisição por ciclo, mesmo com várias telas
  * montadas.
  */
-export default function useEmpresasAoVivo<T>(aplicar: (lista: T[]) => void) {
+export default function useEmpresasAoVivo<T>(
+  aplicar: (lista: T[]) => void,
+  /** Passe `false` quando a tela ainda nao precisa da lista: nada e buscado e o
+   *  relogio nao roda. Serve para casos como "so busca se a empresa tem
+   *  coordenada", que antes eram um `if` dentro do useEffect. */
+  ativo: boolean = true,
+) {
   const [estado, setEstado] = useState({ carregando, erro });
   // A tela pode passar uma função nova a cada render; a inscrição não deve
   // depender disso.
@@ -172,6 +178,7 @@ export default function useEmpresasAoVivo<T>(aplicar: (lista: T[]) => void) {
   ultimoAplicar.current = aplicar;
 
   useEffect(() => {
+    if (!ativo) return;
     const receber = (l: Linha[]) => {
       ultimoAplicar.current(l as unknown as T[]);
       // Objeto novo só quando algo mudou de fato: senão cada ciclo do relógio
@@ -191,7 +198,7 @@ export default function useEmpresasAoVivo<T>(aplicar: (lista: T[]) => void) {
       inscritos.delete(receber);
       if (inscritos.size === 0) desligarRelogio();
     };
-  }, []);
+  }, [ativo]);
 
   return { ...estado, recarregar: buscar };
 }

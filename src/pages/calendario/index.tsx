@@ -9,6 +9,7 @@ import {
   Mail, CheckCircle2, Link2, ChevronDown, Menu, UserRoundCog,
 } from "lucide-react";
 import useIsMobile from "../../hooks/useIsMobile";
+import useEmpresasAoVivo from "../../hooks/useEmpresasAoVivo";
 import { OutlookIcon, GoogleIcon } from "../../components/LogosMarcas";
 import CardUsuario from "../../components/CardUsuario";
 
@@ -226,6 +227,8 @@ export default function Calendario() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  // Empresa cadastrada em outra aba aparece no seletor sem precisar de F5.
+  useEmpresasAoVivo<Empresa>(setEmpresas);
   const [contatos, setContatos] = useState<Contato[]>([]);
   const [usuario, setUsuario] = useState<{nome:string;cargo:string}|null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -272,13 +275,12 @@ export default function Calendario() {
       const token = getToken();
       if (!token) return;
       const h = authHeaders();
-      const [evRes, empRes, meRes] = await Promise.all([
+      // As empresas vem do store ao vivo; aqui ficam eventos e /me.
+      const [evRes, meRes] = await Promise.all([
         fetch(`${API}/eventos`, { headers: h }),
-        fetch(`${API}/empresas`, { headers: h }),
         fetch(`${API}/me`, { headers: h }),
       ]);
       if (evRes.ok) setEventos(await evRes.json());
-      if (empRes.ok) setEmpresas(await empRes.json());
       if (meRes.ok) setUsuario(await meRes.json());
     } catch {}
   };

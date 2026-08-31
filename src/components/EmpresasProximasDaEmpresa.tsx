@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   MapPin, Navigation, Building2, Search, AlertTriangle, Edit3, Loader2, Filter,
@@ -6,6 +6,7 @@ import {
 import { getToken } from "../services/auth";
 import { formatarDistancia } from "../utils/distancia";
 import useEmpresasProximas, { EmpresaComGeo } from "../hooks/useEmpresasProximas";
+import useEmpresasAoVivo from "../hooks/useEmpresasAoVivo";
 
 const API = (process.env.REACT_APP_API_URL || "https://backend-crm-production-157b.up.railway.app");
 
@@ -34,8 +35,6 @@ export default function EmpresasProximasDaEmpresa({
 }: Props) {
   const navigate = useNavigate();
   const [todas, setTodas] = useState<EmpresaComGeo[]>([]);
-  const [carregando, setCarregando] = useState(true);
-  const [erro, setErro] = useState(false);
   const [raioKm, setRaioKm] = useState(25);
   const [calculando, setCalculando] = useState(false);
   const [semResultado, setSemResultado] = useState(false);
@@ -45,24 +44,14 @@ export default function EmpresasProximasDaEmpresa({
   const lon = Number(longitude);
   const temLocalizacao = Number.isFinite(lat) && Number.isFinite(lon) && (lat !== 0 || lon !== 0);
 
-  useEffect(() => {
-    if (!temLocalizacao) { setCarregando(false); return; }
-    let vivo = true;
-    (async () => {
-      try {
-        const res = await fetch(`${API}/empresas`, {
-          headers: { Authorization: `Bearer ${getToken() || ""}` },
-        });
-        if (!res.ok) throw new Error();
-        const dados = await res.json();
-        if (vivo) setTodas(Array.isArray(dados) ? dados : []);
-      } catch {
-        if (vivo) setErro(true);
-      }
-      if (vivo) setCarregando(false);
-    })();
-    return () => { vivo = false; };
-  }, [temLocalizacao, empresaId]);
+  // A lista das vizinhas vem do store compartilhado — a mesma que o funil e o
+  // dashboard ja carregaram, entao aqui costuma aparecer sem espera. So liga
+  // com coordenada: sem ela nao ha o que medir, e o relogio nao roda a toa.
+  const vivas = useEmpresasAoVivo<EmpresaComGeo>(setTodas, temLocalizacao);
+  const carregando = temLocalizacao && vivas.carregando;
+  // Erro so toma a tela quando nao ha nada para mostrar. Com releitura a cada
+  // 5s, uma falha passageira de rede apagaria uma lista que ja estava boa.
+  const erro = vivas.erro && todas.length === 0;
 
   // Preenche as coordenadas a partir do endereço já salvo, via Nominatim no
   // backend — o mesmo geocodificador que alimenta o mapa. Antes a tela só
