@@ -21,6 +21,7 @@ import FundoAzul from "../../components/FundoAzul";
   import { dataLocal, inicioDoDia, mesmoDia, diasDesde } from "../../utils/data";
   import useIsMobile from "../../hooks/useIsMobile";
   import useValoresOrcamento from "../../hooks/useValoresOrcamento";
+  import useEmpresasAoVivo, { notificarEmpresas } from "../../hooks/useEmpresasAoVivo";
 
     const css = `
       @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
@@ -754,7 +755,9 @@ import FundoAzul from "../../components/FundoAzul";
     export default function Dashboard() {
       const navigate = useNavigate();
       const [empresas, setEmpresas] = useState<Empresa[]>([]);
-      const [loading, setLoading] = useState(true);
+      // Lista viva: o dashboard acompanha o funil sem precisar de F5.
+      const empresasVivas = useEmpresasAoVivo<Empresa>(setEmpresas);
+      const loading = empresasVivas.carregando;
       const isMobile = useIsMobile();
       const [menuOpen, setMenuOpen] = useState(false);
       const [activeFilter, setActiveFilter] = useState<FilterKey>("total");
@@ -791,17 +794,14 @@ import FundoAzul from "../../components/FundoAzul";
       const headers = () => ({ Authorization: `Bearer ${token()}` });
       const jsonHeaders = () => ({ "Content-Type": "application/json", Authorization: `Bearer ${token()}` });
 
+      // As empresas vem do store ao vivo; o botao de recarregar do topo chama
+      // isto, entao aqui fica o pedido explicito de releitura + o /me.
       const fetchData = async () => {
-        setLoading(true);
+        notificarEmpresas();
         try {
-          const [empRes, meRes] = await Promise.all([
-            fetch(`${API}/empresas`, { headers: headers() }),
-            fetch(`${API}/me`, { headers: headers() }),
-          ]);
-          if(empRes.ok) setEmpresas(await empRes.json());
-          if(meRes.ok)  setUsuario(await meRes.json());
+          const meRes = await fetch(`${API}/me`, { headers: headers() });
+          if(meRes.ok) setUsuario(await meRes.json());
         } catch {}
-        setLoading(false);
       };
 
       const fetchNotificacoes = async () => {

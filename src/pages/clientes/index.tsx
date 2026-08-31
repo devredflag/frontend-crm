@@ -12,6 +12,7 @@ import MapaProximidade from "../../components/MapaProximidade";
 import { diasDesde } from "../../utils/data";
 import useIsMobile from "../../hooks/useIsMobile";
 import useValoresOrcamento from "../../hooks/useValoresOrcamento";
+import useEmpresasAoVivo, { notificarEmpresas, removerEmpresaLocal } from "../../hooks/useEmpresasAoVivo";
 import CardUsuario from "../../components/CardUsuario";
 
 import FundoAzul from "../../components/FundoAzul";
@@ -151,7 +152,8 @@ export default function TodosClientes() {
   const navigate = useNavigate();
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [usuario, setUsuario] = useState<Usuario|null>(null);
-  const [loading, setLoading] = useState(true);
+  const empresasVivas = useEmpresasAoVivo<Empresa>(setEmpresas);
+  const loading = empresasVivas.carregando;
   const [search, setSearch] = useState("");
   const [filterPorte, setFilterPorte] = useState("Todos");
   const [filterRascunho, setFilterRascunho] = useState(false);
@@ -173,17 +175,13 @@ export default function TodosClientes() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchAll(); }, []);
 
+  // A lista vem do store ao vivo; isto cobre o /me e o botao de recarregar.
   const fetchAll = async () => {
-    setLoading(true);
+    notificarEmpresas();
     try {
-      const [empRes, meRes] = await Promise.all([
-        fetch(`${API}/empresas`, { headers: headers() }),
-        fetch(`${API}/me`, { headers: headers() }),
-      ]);
-      if(empRes.ok) setEmpresas(await empRes.json());
-      if(meRes.ok)  setUsuario(await meRes.json());
+      const meRes = await fetch(`${API}/me`, { headers: headers() });
+      if(meRes.ok) setUsuario(await meRes.json());
     } catch {}
-    setLoading(false);
   };
 
   const confirmDelete = async () => {
@@ -192,7 +190,7 @@ export default function TodosClientes() {
     try {
       const res = await fetch(`${API}/empresas/${deleteTarget.empresa_id}`, { method:"DELETE", headers: headers() });
       if(!res.ok) { const err = await res.json().catch(()=>({})); throw new Error(err.detail||`Erro ${res.status}`); }
-      setEmpresas(prev=>prev.filter(e=>e.empresa_id!==deleteTarget.empresa_id));
+      removerEmpresaLocal(deleteTarget.empresa_id);
       setDeleteTarget(null);
     } catch(e) { alert(e instanceof Error?e.message:"Erro ao excluir empresa"); }
     finally { setDeleting(false); }

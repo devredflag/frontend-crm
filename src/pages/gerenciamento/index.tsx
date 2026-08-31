@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import useIsMobile from "../../hooks/useIsMobile";
 import useValoresOrcamento from "../../hooks/useValoresOrcamento";
+import useEmpresasAoVivo, { notificarEmpresas, patchLocalEmpresa } from "../../hooks/useEmpresasAoVivo";
 import { dataLocal, formatarData, diasDesde, diasAte } from "../../utils/data";
 import VendasPanel from "./VendasPanel";
 import CardUsuario from "../../components/CardUsuario";
@@ -317,10 +318,13 @@ export default function Gerenciamento() {
   const isMobile = useIsMobile();
   const [menuOpen, setMenuOpen] = useState(false);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  // A lista se mantem viva sozinha: releitura periodica, ao voltar o foco e a
+  // cada mudanca — inclusive de outra pessoa mexendo no mesmo funil.
+  const empresasVivas = useEmpresasAoVivo<Empresa>(setEmpresas);
+  const loading = empresasVivas.carregando;
   // Todo o dinheiro desta tela sai daqui — dos orcamentos, nao do cadastro.
   const valores = useValoresOrcamento();
   const [usuario, setUsuario] = useState<Usuario|null>(null);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterTemp, setFilterTemp] = useState("Todas");
   const [filterStatus, setFilterStatus] = useState("Todos");
@@ -364,22 +368,25 @@ export default function Gerenciamento() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchAll(); }, []);
 
+  // As empresas vem do store ao vivo — aqui sobra so "quem sou eu". O botao de
+  // recarregar continua chamando isto, por isso o pedido explicito de releitura.
   const fetchAll = async () => {
-    setLoading(true);
+    notificarEmpresas();
     try {
-      const [e,m] = await Promise.all([
-        fetch(`${API}/empresas`,{headers:hdrs()}),
-        fetch(`${API}/me`,{headers:hdrs()}),
-      ]);
-      if(e.ok) setEmpresas(await e.json());
+      const m = await fetch(`${API}/me`,{headers:hdrs()});
       if(m.ok) setUsuario(await m.json());
     } catch {}
-    setLoading(false);
   };
 
   // Geocodifica empresas sem coordenada (em lotes) e recarrega o mapa.
+  // Aplica no store, nao so nesta tela: o dashboard aberto em outra aba recebe
+  // a mesma mudanca. O patch fica pinado ate o servidor confirmar, senao um
+  // ciclo do relogio no meio do caminho devolveria o card para a coluna antiga.
   const updateLocal = (id: string, patch: Partial<Empresa>) => {
-    setEmpresas(p=>p.map(e=>e.empresa_id===id?{...e,...patch}:e));
+    // O servidor confirma pelo status. `status_atualizado_em` vai junto so para
+    // o "0 dias na etapa" acertar na hora — carimbo feito aqui, que o backend
+    // nunca devolve igual, entao nao serve para confirmar nada.
+    patchLocalEmpresa(id, patch as Record<string, unknown>, ["status"]);
   };
 
   const savePatch = async (id: string, patch: Partial<Empresa>) => {
@@ -405,7 +412,7 @@ export default function Gerenciamento() {
     }
     setMovingId(id);
     updateLocal(id,{status,motivo_perdido,status_atualizado_em:new Date().toISOString()});
-    try { await savePatch(id,{status,motivo_perdido}); } catch {}
+    try { await savePatch(id,{status,motivo_perdido}); notificarEmpresas(); } catch {}
     setTimeout(()=>setMovingId(null),400);
   };
 

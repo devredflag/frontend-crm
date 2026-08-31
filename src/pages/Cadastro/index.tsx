@@ -6,6 +6,7 @@ import CardUsuario from "../../components/CardUsuario";
 import FundoAzul from "../../components/FundoAzul";
 import { diasDesde } from "../../utils/data";
 import useValoresOrcamento from "../../hooks/useValoresOrcamento";
+import useEmpresasAoVivo, { notificarEmpresas, removerEmpresaLocal } from "../../hooks/useEmpresasAoVivo";
 import {
   LayoutDashboard, Search, Building2, Users, ClipboardList,
   Calendar, BarChart3, ChevronDown, Plus, Filter,
@@ -134,7 +135,8 @@ export default function TodosClientes() {
   const navigate = useNavigate();
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [usuario, setUsuario] = useState<Usuario|null>(null);
-  const [loading, setLoading] = useState(true);
+  const empresasVivas = useEmpresasAoVivo<Empresa>(setEmpresas);
+  const loading = empresasVivas.carregando;
   const [search, setSearch] = useState("");
   const [filterPorte, setFilterPorte] = useState("Todos");
   const [sortField, setSortField] = useState<"nome"|"score"|"porte">("score");
@@ -150,17 +152,13 @@ export default function TodosClientes() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchAll(); }, []);
 
+  // A lista vem do store ao vivo; isto cobre o /me e o botao de recarregar.
   const fetchAll = async () => {
-    setLoading(true);
+    notificarEmpresas();
     try {
-      const [empRes, meRes] = await Promise.all([
-        fetch(`${API}/empresas`, { headers }),
-        fetch(`${API}/me`, { headers }),
-      ]);
-      if (empRes.ok) setEmpresas(await empRes.json());
-      if (meRes.ok)  setUsuario(await meRes.json());
+      const meRes = await fetch(`${API}/me`, { headers });
+      if (meRes.ok) setUsuario(await meRes.json());
     } catch {}
-    setLoading(false);
   };
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
@@ -168,7 +166,7 @@ export default function TodosClientes() {
     if (deleteConfirm !== id) { setDeleteConfirm(id); return; }
     try {
       await fetch(`${API}/empresas/${id}`, { method:"DELETE", headers });
-      setEmpresas(empresas.filter(e => e.empresa_id !== id));
+      removerEmpresaLocal(id);
     } catch {}
     setDeleteConfirm(null);
   };
