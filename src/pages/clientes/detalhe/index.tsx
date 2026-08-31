@@ -796,7 +796,7 @@ export default function EmpresaDetalhe() {
                             <tr>
                               {[
                                 { h: "#" }, { h: "Nº" }, { h: "Título / item" }, { h: "Itens", r: true },
-                                { h: "Vendedor" }, { h: "Criado em" }, { h: "Enviado em" },
+                                { h: "Vendedor" }, { h: "Enviado em" },
                                 { h: "Status" }, { h: "Total", r: true },
                               ].map(c => (
                                 <th key={c.h} style={{ textAlign: c.r ? "right" : "left", padding:"8px 12px", fontSize:10.5, letterSpacing:"0.06em", textTransform:"uppercase", color:"#9FD3EA", fontWeight:700, borderBottom:"1px solid rgba(159,211,234,0.18)", whiteSpace:"nowrap" }}>{c.h}</th>
@@ -831,8 +831,13 @@ export default function EmpresaDetalhe() {
                                     {o.qtd_itens != null ? o.qtd_itens : "—"}
                                   </td>
                                   <td style={{ ...TD, color:o.vendedor_nome ? "#EAF6FB" : "#9FD3EA", whiteSpace:"nowrap" }}>{o.vendedor_nome || "—"}</td>
-                                  <td style={TD_NUM}>{formatDate(o.criado_em || null)}</td>
-                                  <td style={TD_NUM}>{formatDate(o.data_envio || null)}</td>
+                                  {/* So a data de envio: e ela que marca o inicio
+                                      da espera pelo cliente. A de criacao vira
+                                      tooltip — quase sempre o mesmo dia, e o
+                                      rascunho ainda nao enviado precisa dela. */}
+                                  <td style={TD_NUM} title={o.criado_em ? `Criado em ${formatDate(o.criado_em)}` : undefined}>
+                                    {formatDate(o.data_envio || null)}
+                                  </td>
                                   <td style={TD}>
                                     <span className="chip" style={{ background:info.bg, color:info.color }}>{info.label}</span>
                                   </td>
