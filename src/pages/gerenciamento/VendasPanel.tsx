@@ -438,7 +438,7 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
                         <th>Título</th>
                         <th>Enviado</th>
                         <th className="r">Valor</th>
-                        <th>Status</th>
+                        <th className="c">Status</th>
                         <th className="r">Ações</th>
                       </tr>
                     </thead>
@@ -464,15 +464,22 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
                             </td>
                             <td className="vp-num" style={{ color:"#EAF6FB", whiteSpace: "nowrap" }}>{formatDate(o.data_envio)}</td>
                             <td className="vp-num r" style={{ fontWeight: 800, whiteSpace: "nowrap" }}>{brl(o.total)}</td>
-                            <td>
-                              <select
-                                value={o.status}
-                                onChange={e => mudarStatus(o.orcamento_id, e.target.value)}
-                                aria-label={`Status do orçamento ${numeroOrcamento(o)}`}
-                                style={{ height: 28, padding: "0 8px", borderRadius: 20, border:`1.5px solid ${info.color}40`, background:info.bg, fontSize: 10.5, fontWeight: 800, color: info.color, cursor: "pointer", fontFamily: "inherit", appearance: "none", textAlign: "center" }}
-                              >
-                                {STATUS_ORDEM.map(s => <option key={s} value={s}>{STATUS_INFO[s].label}</option>)}
-                              </select>
+                            <td className="c">
+                              {/* Envolve num inline-block para o `text-align:center`
+                                  da celula alcancar o dropdown, que e bloco. */}
+                              <div style={{ display: "inline-block", verticalAlign: "middle" }}>
+                                <Dropdown
+                                  valor={o.status}
+                                  opcoes={STATUS_ORDEM.map(s => ({
+                                    valor: s, rotulo: STATUS_INFO[s].label, cor: STATUS_INFO[s].color,
+                                  }))}
+                                  onChange={v => mudarStatus(o.orcamento_id, v)}
+                                  ariaLabel={`Status do orçamento ${numeroOrcamento(o)}`}
+                                  corAtiva={info.color}
+                                  altura={30}
+                                  largura={158}
+                                />
+                              </div>
                             </td>
                             <td className="r">
                               <div style={{ display: "flex", gap: 5, justifyContent: "flex-end" }}>
