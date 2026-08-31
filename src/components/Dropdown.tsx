@@ -56,7 +56,14 @@ export default function Dropdown({
   // de containers com overflow (a tabela da equipe rola na horizontal, o modal
   // do orçamento na vertical) — em fluxo normal ele seria recortado pela borda
   // desses containers em vez de flutuar sobre a tela.
-  const [pos, setPos] = useState<{ left: number; top: number; width: number; maxAltura: number } | null>(null);
+  // Abrindo para cima, o painel é ancorado pelo `bottom` — nunca pelo `top`.
+  // Com `top` seria preciso saber a altura REAL do painel, que só existe depois
+  // de renderizar; usar a altura máxima no lugar dela jogava uma lista curta
+  // (duas opções) 300px acima do campo, solta no meio da tela. Ancorando o
+  // rodapé do painel logo acima do gatilho, ele encosta certo em qualquer altura.
+  const [pos, setPos] = useState<
+    { left: number; width: number; maxAltura: number; top?: number; bottom?: number } | null
+  >(null);
 
   const medir = useCallback(() => {
     const el = caixa.current;
@@ -64,8 +71,14 @@ export default function Dropdown({
     const r = el.getBoundingClientRect();
     const espacoAbaixo = window.innerHeight - r.bottom - 10;
     const espacoAcima = r.top - 10;
-    // Abre para cima quando não cabe embaixo e há mais espaço em cima.
-    const paraCima = espacoAbaixo < 180 && espacoAcima > espacoAbaixo;
+
+    // Embaixo do gatilho é o esperado — é onde o olho vai depois do clique.
+    // Subir é a exceção, e só vale a pena quando a lista REALMENTE não cabe
+    // embaixo. O critério antigo era um 180 fixo: com 3 opções (~150px) ele
+    // mandava para cima mesmo havendo espaço de sobra, e a lista aparecia longe
+    // do campo. Agora a comparação é com a altura estimada do conteúdo.
+    const alturaEstimada = Math.min(300, (busca ? 50 : 0) + Math.max(opcoes.length, 1) * 46 + 8);
+    const paraCima = espacoAbaixo < alturaEstimada && espacoAcima > espacoAbaixo;
     const maxAltura = Math.min(300, Math.max(140, paraCima ? espacoAcima : espacoAbaixo));
     // Em colunas estreitas (a de "Função" tem 110px) o painel herdaria a largura
     // do gatilho e cortaria o texto das opções — daí a largura mínima, alinhada
@@ -74,11 +87,13 @@ export default function Dropdown({
     const left = Math.max(8, Math.min(r.left, window.innerWidth - largura - 8));
     setPos({
       left,
-      top: paraCima ? r.top - 6 - maxAltura : r.bottom + 6,
       width: largura,
       maxAltura,
+      ...(paraCima
+        ? { bottom: Math.max(8, window.innerHeight - r.top + 6) }
+        : { top: r.bottom + 6 }),
     });
-  }, []);
+  }, [opcoes.length, busca]);
 
   useEffect(() => {
     if (!aberto) { setPos(null); return; }
@@ -149,7 +164,7 @@ export default function Dropdown({
 
       {aberto && pos && createPortal(
         <div ref={painel} role="listbox" aria-label={ariaLabel} style={{
-          position: "fixed", left: pos.left, top: pos.top, width: pos.width, zIndex: 3000,
+          position: "fixed", left: pos.left, top: pos.top, bottom: pos.bottom, width: pos.width, zIndex: 3000,
           maxHeight: pos.maxAltura, overflowY: "auto", borderRadius: 12,
           background: PAINEL, border: `1px solid ${BORDA_FORTE}`,
           boxShadow: "0 18px 48px rgba(3,14,26,0.55)",
