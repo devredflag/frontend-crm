@@ -7,23 +7,17 @@ import {
   Plus, Send, Trash2, X, FileText, Package, Check, AlertCircle, Loader2,
   DollarSign, Wallet, Target, CalendarCheck, ArrowRight, Filter,
   ChevronDown, Download, Upload, FileSpreadsheet, AlertTriangle, Hash,
-  Building2, TrendingUp,
+  Building2,
 } from "lucide-react";
 import Dropdown from "../../components/Dropdown";
 import { dataLocal, formatarData } from "../../utils/data";
+import { brl, brlCurto } from "../../utils/moeda";
+import { STATUS_ORCAMENTO as STATUS_INFO, STATUS_ORDEM, numeroOrcamento } from "../../utils/orcamento";
+import GraficoAprovadoMensal, { DonutConversao, serieAprovadaPorMes } from "../../components/GraficoAprovadoMensal";
 import { notificarOrcamentos, aoMudarOrcamentos } from "../../hooks/useValoresOrcamento";
 
 const API = (process.env.REACT_APP_API_URL || "https://backend-crm-production-157b.up.railway.app");
 
-// Fluxo do orçamento, na ordem em que acontece.
-const STATUS_INFO: Record<string, { label: string; color:string; bg: string }> = {
-  rascunho:      { label: "Rascunho",      color:"#9FD3EA", bg: "rgba(86,101,115,0.12)"  },
-  enviado:       { label: "Enviado",       color:"#9FD3EA", bg: "rgba(159,211,234,0.55)"  },
-  em_negociacao: { label: "Em negociação", color:"#F2C879", bg: "rgba(214,137,16,0.13)"  },
-  aprovado:      { label: "Aprovado",      color:"#83DDA8", bg: "rgba(39,174,96,0.13)"   },
-  recusado:      { label: "Recusado",      color:"#F7B8B1", bg: "rgba(220,38,38,0.1)"    },
-};
-const STATUS_ORDEM = ["rascunho", "enviado", "em_negociacao", "aprovado", "recusado"];
 
 const css = `
   /* flex-shrink:0 e o que faz a lista aparecer inteira: o painel e uma coluna
@@ -116,21 +110,7 @@ interface PreviaEmail {
   texto: string;
 }
 
-function brl(v?: number | null) {
-  return `R$ ${Number(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-function brlCurto(v?: number | null) {
-  const n = Number(v || 0);
-  if (n >= 1_000_000) return `R$ ${(n / 1_000_000).toLocaleString("pt-BR", { maximumFractionDigits: 2 })} mi`;
-  if (n >= 1_000) return `R$ ${(n / 1_000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mil`;
-  return brl(n);
-}
 const formatDate = (v?: string | null) => formatarData(v);
-/** Nº legível do orçamento a partir do UUID — ORC-2026-A3F1 */
-function numeroOrcamento(o: Orcamento) {
-  const ano = dataLocal(o.criado_em)?.getFullYear() ?? new Date().getFullYear();
-  return `ORC-${ano}-${o.orcamento_id.slice(0, 4).toUpperCase()}`;
-}
 
 export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
   const isMobile = useIsMobile();
@@ -202,31 +182,9 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
     fetchTudo();
   }), [fetchTudo]);
 
-  // Valor aprovado por mês, dos últimos 6 meses — calculado do que já temos.
-  // `qtd` entra junto porque valor sozinho não distingue um mês de um contrato
-  // grande de um mês de muitos negócios pequenos.
-  const serieMensal = useMemo(() => {
-    const meses: { rotulo: string; valor: number; qtd: number; atual: boolean }[] = [];
-    const hoje = new Date();
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
-      meses.push({
-        rotulo: d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", ""),
-        valor: 0, qtd: 0, atual: i === 0,
-      });
-    }
-    orcamentos.filter(o => o.status === "aprovado").forEach(o => {
-      const d = dataLocal(o.data_decisao || o.data_envio || o.criado_em);
-      if (!d) return;
-      const diff = (hoje.getFullYear() - d.getFullYear()) * 12 + (hoje.getMonth() - d.getMonth());
-      if (diff >= 0 && diff <= 5) {
-        meses[5 - diff].valor += Number(o.total || 0);
-        meses[5 - diff].qtd += 1;
-      }
-    });
-    return meses;
-  }, [orcamentos]);
-
+  // Valor aprovado por mes, dos ultimos 6 meses. A conta mora no componente
+  // do grafico: a ficha da empresa faz a mesma leitura com outro recorte.
+  const serieMensal = useMemo(() => serieAprovadaPorMes(orcamentos), [orcamentos]);
   const aprovados = orcamentos.filter(o => o.status === "aprovado");
   const ticketMedio = aprovados.length ? (insights?.valor_aprovado || 0) / aprovados.length : 0;
   const ultimaVenda = aprovados
@@ -544,7 +502,7 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
             {/* Conversão */}
             <div className="vp-card" style={{ padding: 16 }}>
               <h4 style={{ fontSize: 12.5, fontWeight: 800, color:"#EAF6FB", marginBottom: 14 }}>Taxa de conversão</h4>
-              <Donut pct={insights?.taxa_conversao || 0} />
+              <DonutConversao pct={insights?.taxa_conversao || 0} />
               <div style={{ textAlign: "center", marginTop: 10 }}>
                 <div className="vp-num" style={{ fontSize: 13, fontWeight: 800, color:"#EAF6FB" }}>
                   {insights?.por_status?.aprovado?.total || 0} aprovado{(insights?.por_status?.aprovado?.total || 0) === 1 ? "" : "s"}
@@ -556,7 +514,7 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
             </div>
 
             {/* Série mensal */}
-            <GraficoMensal serie={serieMensal} />
+            <GraficoAprovadoMensal serie={serieMensal} />
 
             {/* Equipamentos mais orçados */}
             <div className="vp-card" style={{ padding: 16 }}>
@@ -592,208 +550,6 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
           onErro={setErro}
         />
       )}
-    </div>
-  );
-}
-
-// ── Aprovado por mês ──────────────────────────────────────────
-// Era uma fileira de <div>s com altura em % e nada mais: sem escala, sem
-// valores, sem eixo — dava para ver que uma barra era maior que a outra e só.
-// Agora é um SVG com grade, rótulo de valor em cada barra, mês corrente
-// destacado e um rodapé com total, média e melhor mês do período.
-interface MesSerie { rotulo: string; valor: number; qtd: number; atual: boolean }
-
-/** Escala "bonita": arredonda o topo para 1/2/5 × 10^n, para a grade cair em números redondos. */
-function topoEscala(v: number) {
-  if (v <= 0) return 1;
-  const exp = Math.floor(Math.log10(v));
-  const base = Math.pow(10, exp);
-  const n = v / base;
-  const passo = n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10;
-  return passo * base;
-}
-/** Rótulo curto para os eixos — "12k", "1,5 mi". */
-function eixoCurto(n: number) {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}mi`;
-  if (n >= 1_000) return `${(n / 1_000).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}k`;
-  return n.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
-}
-
-function GraficoMensal({ serie }: { serie: MesSerie[] }) {
-  const [ativo, setAtivo] = useState<number | null>(null);
-
-  const total = serie.reduce((s, m) => s + m.valor, 0);
-  const totalQtd = serie.reduce((s, m) => s + m.qtd, 0);
-  const comVenda = serie.filter(m => m.valor > 0);
-  const media = comVenda.length ? total / comVenda.length : 0;
-  const melhor = serie.reduce((a, b) => (b.valor > a.valor ? b : a), serie[0]);
-
-  // Variação do mês corrente contra o anterior — é o número que o gerente
-  // procura primeiro ao abrir o painel.
-  const atualV = serie[serie.length - 1]?.valor ?? 0;
-  const anteriorV = serie[serie.length - 2]?.valor ?? 0;
-  const variacao = anteriorV > 0 ? ((atualV - anteriorV) / anteriorV) * 100 : null;
-
-  const vazio = total === 0;
-  const topo = topoEscala(Math.max(...serie.map(m => m.valor)));
-
-  // Geometria do SVG. viewBox fixo + width 100% deixa o gráfico acompanhar a
-  // coluna sem recalcular nada em JS.
-  const L = 34, R = 6, T = 20, B = 24;
-  const W = 268, H = 158;
-  const pw = W - L - R, ph = H - T - B;
-  const passo = pw / serie.length;
-  const larguraBarra = Math.min(26, passo * 0.62);
-
-  const y = (v: number) => T + ph - (v / topo) * ph;
-
-  return (
-    <div className="vp-card" style={{ padding: 16 }}>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 2 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h4 style={{ fontSize: 12.5, fontWeight: 800, color:"#EAF6FB" }}>Aprovado por mês</h4>
-          <p style={{ fontSize: 10.5, color:"#9FD3EA", marginTop: 1 }}>Últimos 6 meses</p>
-        </div>
-        {variacao !== null && (
-          <span style={{
-            display: "inline-flex", alignItems: "center", gap: 3, padding: "3px 8px", borderRadius: 20,
-            fontSize: 10.5, fontWeight: 800, flexShrink: 0,
-            background: variacao >= 0 ? "rgba(44,205,147,0.14)" : "rgba(248,113,113,0.14)",
-            color: variacao >= 0 ? "#2CCD93" : "#F87171",
-          }}>
-            <TrendingUp style={{ width: 10, height: 10, transform: variacao >= 0 ? "none" : "scaleY(-1)" }} />
-            {variacao >= 0 ? "+" : ""}{Math.round(variacao)}%
-          </span>
-        )}
-      </div>
-
-      <div style={{ display: "flex", alignItems: "baseline", gap: 6, margin: "8px 0 4px" }}>
-        <span className="vp-num" style={{ fontSize: 20, fontWeight: 900, color:"#EAF6FB", letterSpacing: "-0.02em" }}>
-          {brlCurto(total)}
-        </span>
-        <span style={{ fontSize: 10.5, color:"#9FD3EA", fontWeight: 600 }}>
-          em {totalQtd} orçamento{totalQtd === 1 ? "" : "s"}
-        </span>
-      </div>
-
-      {vazio ? (
-        <div style={{ padding: "26px 0", textAlign: "center", color:"#9FD3EA" }}>
-          <CalendarCheck style={{ width: 22, height: 22, marginBottom: 6 }} />
-          <p style={{ fontSize: 11.5, fontWeight: 700 }}>Nenhuma aprovação no período.</p>
-        </div>
-      ) : (
-        <>
-          <svg width="100%" viewBox={`0 0 ${W} ${H}`} role="img"
-            aria-label={`Valor aprovado por mês: ${serie.map(m => `${m.rotulo}, ${brl(m.valor)}`).join("; ")}`}
-            onMouseLeave={() => setAtivo(null)} style={{ display: "block", overflow: "visible" }}>
-            <defs>
-              <linearGradient id="vpBarra" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#56A4F5" />
-                <stop offset="100%" stopColor="#2E6F95" />
-              </linearGradient>
-              <linearGradient id="vpBarraTopo" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#2CCD93" />
-                <stop offset="100%" stopColor="#1E8E68" />
-              </linearGradient>
-            </defs>
-
-            {/* Grade e escala do eixo Y */}
-            {[0, 0.5, 1].map(f => {
-              const vy = T + ph - f * ph;
-              return (
-                <g key={f}>
-                  <line x1={L} y1={vy} x2={W - R} y2={vy}
-                    stroke="rgba(126,176,219,0.16)" strokeWidth="1"
-                    strokeDasharray={f === 0 ? undefined : "3 3"} />
-                  <text x={L - 6} y={vy + 3} textAnchor="end" fontSize="8.5" fontWeight="700" fill="#7FA6C4">
-                    {f === 0 ? "0" : eixoCurto(topo * f)}
-                  </text>
-                </g>
-              );
-            })}
-
-            {serie.map((m, i) => {
-              const cx = L + passo * i + passo / 2;
-              const alt = m.valor > 0 ? Math.max(2, ph - (y(m.valor) - T)) : 0;
-              const topoBarra = T + ph - alt;
-              const destaque = m.valor > 0 && m.valor === melhor.valor;
-              const on = ativo === i;
-              return (
-                <g key={i} onMouseEnter={() => setAtivo(i)} style={{ cursor: "default" }}>
-                  {/* alvo de hover cobrindo a coluna inteira, não só a barra */}
-                  <rect x={L + passo * i} y={T} width={passo} height={ph} fill="transparent" />
-                  {on && (
-                    <rect x={L + passo * i + 1} y={T} width={passo - 2} height={ph}
-                      fill="rgba(126,176,219,0.07)" rx="4" />
-                  )}
-                  {m.valor > 0 && (
-                    <rect
-                      x={cx - larguraBarra / 2} y={topoBarra} width={larguraBarra} height={alt} rx="4"
-                      fill={destaque ? "url(#vpBarraTopo)" : "url(#vpBarra)"}
-                      opacity={ativo === null || on ? 1 : 0.55}
-                      style={{ transition: "opacity 0.15s" }}
-                    >
-                      <title>{`${m.rotulo} · ${brl(m.valor)} · ${m.qtd} orçamento${m.qtd === 1 ? "" : "s"}`}</title>
-                    </rect>
-                  )}
-                  {/* valor acima da barra — sem isso, o gráfico só mostra formas */}
-                  {m.valor > 0 && (
-                    <text x={cx} y={topoBarra - 5} textAnchor="middle" fontSize="8.5" fontWeight="800"
-                      fill={destaque ? "#2CCD93" : "#B6CFE4"}>
-                      {eixoCurto(m.valor)}
-                    </text>
-                  )}
-                  <text x={cx} y={H - B + 13} textAnchor="middle" fontSize="9.5"
-                    fontWeight={m.atual ? 800 : 600} fill={m.atual ? "#EAF6FB" : "#7FA6C4"}>
-                    {m.rotulo}
-                  </text>
-                </g>
-              );
-            })}
-          </svg>
-
-          {/* Leitura de apoio: o gráfico mostra a forma, estes números dão a conta. */}
-          <div style={{ display: "flex", gap: 8, marginTop: 12, paddingTop: 11, borderTop: "1px solid rgba(126,176,219,0.16)" }}>
-            {[
-              { lab: "Média/mês", val: brlCurto(media), cor: "#B6CFE4" },
-              { lab: "Melhor mês", val: melhor.valor > 0 ? melhor.rotulo : "—", cor: "#2CCD93" },
-              { lab: "Este mês", val: brlCurto(atualV), cor: "#EAF6FB" },
-            ].map(s => (
-              <div key={s.lab} style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color:"#7FA6C4" }}>{s.lab}</div>
-                <div className="vp-num" style={{ fontSize: 12, fontWeight: 800, color: s.cor, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.val}</div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-// ── Donut de conversão ────────────────────────────────────────
-function Donut({ pct }: { pct: number }) {
-  const r = 54;
-  const circ = 2 * Math.PI * r;
-  const off = circ - (Math.min(100, Math.max(0, pct)) / 100) * circ;
-  return (
-    <div style={{ display: "grid", placeItems: "center" }}>
-      <svg width="132" height="132" viewBox="0 0 132 132" role="img" aria-label={`${pct}% de conversão`}>
-        <circle cx="66" cy="66" r={r} fill="none" stroke="rgba(200,225,240,0.75)" strokeWidth="12" />
-        <circle cx="66" cy="66" r={r} fill="none" stroke="url(#vpGrad)" strokeWidth="12" strokeLinecap="round"
-          strokeDasharray={circ} strokeDashoffset={off} transform="rotate(-90 66 66)"
-          style={{ transition: "stroke-dashoffset 0.6s ease" }} />
-        <defs>
-          <linearGradient id="vpGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#9FD3EA" />
-            <stop offset="100%" stopColor="#83DDA8" />
-          </linearGradient>
-        </defs>
-        <text x="66" y="66" textAnchor="middle" dominantBaseline="central"
-          fill="#EAF6FB" fontSize="26" fontWeight="800" style={{ fontVariantNumeric: "tabular-nums" }}>
-          {Math.round(pct)}%
-        </text>
-      </svg>
     </div>
   );
 }
