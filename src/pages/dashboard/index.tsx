@@ -143,18 +143,46 @@ import FundoAzul from "../../components/FundoAzul";
       return `R$ ${n.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
     };
 
-    /** Rodapé padrão de todo indicador medido POR MÊS (não cumulativo). */
-    function statsPorMes(valores: number[], moeda: boolean, cor: string): Estatistica[] {
+    /** Variação assinada, com o sinal na frente do número e não do "R$". */
+    function variacaoFmt(n: number, moeda: boolean) {
+      const sinal = n > 0 ? "+" : n < 0 ? "−" : "";
+      return sinal + (moeda ? brlCompacto(Math.abs(n)) : String(Math.abs(n)));
+    }
+
+    /**
+     * Rodapé padrão: valor do mês, variação contra o mês anterior, a perda
+     * correspondente ao indicador e o fechamento do período.
+     *
+     * A série de perda é diferente em cada indicador (descartado, recusado,
+     * valor perdido...) e SEMPRE sai de dado real — onde não existe fonte, o
+     * indicador simplesmente não oferece esse número em vez de estimar.
+     */
+    function statsPadrao(o: {
+      rotuloPrincipal: string;
+      valores: number[];
+      rotuloPerda: string;
+      perdas: number[];
+      rotuloFecho?: string;
+      /** Métrica de estoque (ex.: valor em negociação) fecha com o pico, não com a soma. */
+      pico?: boolean;
+      moeda?: boolean;
+      cor: string;
+    }): Estatistica[] {
+      const moeda = !!o.moeda;
       const fmt = (n: number) => moeda ? brlCompacto(n) : String(n);
-      const total = valores.reduce((s, v) => s + v, 0);
-      const atual = valores[valores.length - 1] ?? 0;
-      const anterior = valores[valores.length - 2] ?? 0;
-      const media = valores.length ? total / valores.length : 0;
+      const atual = o.valores[o.valores.length - 1] ?? 0;
+      const anterior = o.valores[o.valores.length - 2] ?? 0;
+      const delta = atual - anterior;
+      const perdaMes = o.perdas[o.perdas.length - 1] ?? 0;
+      const fecho = o.pico
+        ? Math.max(...o.valores, 0)
+        : o.valores.reduce((s, v) => s + v, 0);
       return [
-        { rotulo: "Total no período", valor: fmt(total) },
-        { rotulo: "Este mês",         valor: fmt(atual), cor: atual > 0 ? cor : "#B6CFE4" },
-        { rotulo: "Mês anterior",     valor: fmt(anterior) },
-        { rotulo: "Média por mês",    valor: moeda ? brlCompacto(media) : media.toFixed(media % 1 === 0 ? 0 : 1) },
+        { rotulo: o.rotuloPrincipal, valor: fmt(atual), cor: atual > 0 ? o.cor : "#B6CFE4" },
+        { rotulo: "Variação no mês", valor: variacaoFmt(delta, moeda),
+          cor: delta > 0 ? "#2CCD93" : delta < 0 ? "#F87171" : "#B6CFE4" },
+        { rotulo: o.rotuloPerda, valor: fmt(perdaMes), cor: perdaMes > 0 ? "#F87171" : "#B6CFE4" },
+        { rotulo: o.rotuloFecho ?? "Total no período", valor: fmt(fecho) },
       ];
     }
 
@@ -170,6 +198,16 @@ import FundoAzul from "../../components/FundoAzul";
       avisaSemData?: boolean;
       calcular: (c: ContextoInd) => { valores: number[]; stats: Estatistica[] };
     }
+
+    // Contagens reaproveitadas por vários indicadores.
+    const perdidasNoMes = (empresas: Empresa[], baldes: Balde[]) =>
+      baldes.map(b => empresas.filter(e =>
+        e.status === "Perdido" && noBalde(dataLocal(e.status_atualizado_em), b)
+      ).length);
+    const recusadosNoMes = (orcamentos: OrcamentoLite[], baldes: Balde[]) =>
+      baldes.map(b => orcamentos.filter(o =>
+        o.status === "recusado" && noBalde(dataLocal(o.data_decisao), b)
+      ).length);
 
     const INDICADORES: Indicador[] = [
       {
@@ -199,12 +237,93 @@ import FundoAzul from "../../components/FundoAzul";
         },
       },
       {
-        chave: "novos", rotulo: "Leads captados", legenda: "Empresas cadastradas por mês",
+        chave: "novos", rotulo: "Leads captados", legenda: "Novos contatos entrando no funil",
         cor: "#2CCD93", precisa: [], avisaSemData: true,
         calcular: ({ empresas, baldes }) => {
           const reais = empresas.filter(e => e.status !== "Rascunho");
           const valores = baldes.map(b => reais.filter(e => noBalde(dataLocal(e.criado_em), b)).length);
-          return { valores, stats: statsPorMes(valores, false, "#2CCD93") };
+          return { valores, stats: statsPadrao({
+            rotuloPrincipal: "Leads no mês", valores,
+            rotuloPerda: "Descartados no mês", perdas: perdidasNoMes(reais, baldes),
+            cor: "#2CCD93",
+          }) };
+        },
+      },
+      {
+        chave: "visitas", rotulo: "Visitas realizadas", legenda: "Visitas da agenda já cumpridas",
+        cor: "#A78BFA", precisa: ["eventos"],
+        calcular: ({ eventos, baldes }) => {
+          const agora = new Date();
+          const visitas = eventos.filter(ev => ev.tipo === "visita");
+          const valores = baldes.map(b => visitas.filter(ev => {
+            const d = dataLocal(ev.data);
+            return noBalde(d, b) && !!d && d <= agora;   // agendada no futuro ainda não foi cumprida
+          }).length);
+          // O evento não guarda comparecimento, então "não compareceram" não tem
+          // fonte. No lugar, o que ainda está por vir — que é acionável.
+          const aFrente = baldes.map(b => visitas.filter(ev => {
+            const d = dataLocal(ev.data);
+            return noBalde(d, b) && !!d && d > agora;
+          }).length);
+          const stats = statsPadrao({
+            rotuloPrincipal: "Visitas no mês", valores,
+            rotuloPerda: "Ainda agendadas", perdas: aFrente,
+            cor: "#A78BFA",
+          });
+          stats[2].cor = (aFrente[aFrente.length - 1] ?? 0) > 0 ? "#8FC4FA" : "#B6CFE4";
+          return { valores, stats };
+        },
+      },
+      {
+        chave: "orcamentos", rotulo: "Orçamentos criados", legenda: "Orçamentos abertos por mês",
+        cor: "#F0A05A", precisa: ["orcamentos"],
+        calcular: ({ orcamentos, baldes }) => {
+          const valores = baldes.map(b => orcamentos.filter(o => noBalde(dataLocal(o.criado_em), b)).length);
+          return { valores, stats: statsPadrao({
+            rotuloPrincipal: "Orçamentos no mês", valores,
+            rotuloPerda: "Recusados no mês", perdas: recusadosNoMes(orcamentos, baldes),
+            cor: "#F0A05A",
+          }) };
+        },
+      },
+      {
+        chave: "propostas", rotulo: "Propostas enviadas", legenda: "Orçamentos que saíram para o cliente",
+        cor: "#56A4F5", precisa: ["orcamentos"],
+        calcular: ({ orcamentos, baldes }) => {
+          const valores = baldes.map(b => orcamentos.filter(o => noBalde(dataLocal(o.data_envio), b)).length);
+          return { valores, stats: statsPadrao({
+            rotuloPrincipal: "Propostas no mês", valores,
+            rotuloPerda: "Recusadas no mês", perdas: recusadosNoMes(orcamentos, baldes),
+            cor: "#56A4F5",
+          }) };
+        },
+      },
+      {
+        chave: "negociacao", rotulo: "Valor em negociação", legenda: "Soma das propostas em aberto",
+        cor: "#F2C879", precisa: ["orcamentos"], moeda: true,
+        calcular: ({ orcamentos, baldes }) => {
+          // Métrica de ESTOQUE, reconstruída no fim de cada mês: já tinha saído
+          // para o cliente (data_envio) e ainda não tinha decisão naquela data.
+          // Um orçamento hoje aprovado esteve em negociação nos meses anteriores,
+          // e é isso que data_envio + data_decisao permitem recuperar.
+          const valores = baldes.map(b => orcamentos
+            .filter(o => {
+              const enviou = dataLocal(o.data_envio);
+              if (!enviou || enviou > b.fim) return false;
+              const decidiu = dataLocal(o.data_decisao);
+              return !decidiu || decidiu > b.fim;
+            })
+            .reduce((s, o) => s + (Number(o.total) || 0), 0));
+          const perdido = baldes.map(b => orcamentos
+            .filter(o => o.status === "recusado" && noBalde(dataLocal(o.data_decisao), b))
+            .reduce((s, o) => s + (Number(o.total) || 0), 0));
+          return { valores, stats: statsPadrao({
+            rotuloPrincipal: "Em negociação", valores,
+            rotuloPerda: "Valor perdido", perdas: perdido,
+            // Somar um estoque mês a mês contaria o mesmo orçamento várias vezes.
+            rotuloFecho: "Pico no período", pico: true,
+            moeda: true, cor: "#F2C879",
+          }) };
         },
       },
       {
@@ -215,46 +334,32 @@ import FundoAzul from "../../components/FundoAzul";
           const valores = baldes.map(b => empresas.filter(e =>
             e.status === "Fechado" && noBalde(dataLocal(e.status_atualizado_em), b)
           ).length);
-          return { valores, stats: statsPorMes(valores, false, "#2CCD93") };
+          return { valores, stats: statsPadrao({
+            rotuloPrincipal: "Fechados no mês", valores,
+            rotuloPerda: "Perdidos no mês", perdas: perdidasNoMes(empresas, baldes),
+            cor: "#2CCD93",
+          }) };
         },
       },
       {
         chave: "perdidos", rotulo: "Negócios perdidos", legenda: "Empresas marcadas como perdidas",
         cor: "#F87171", precisa: [],
         calcular: ({ empresas, baldes }) => {
-          const valores = baldes.map(b => empresas.filter(e =>
-            e.status === "Perdido" && noBalde(dataLocal(e.status_atualizado_em), b)
+          const valores = perdidasNoMes(empresas, baldes);
+          const fechados = baldes.map(b => empresas.filter(e =>
+            e.status === "Fechado" && noBalde(dataLocal(e.status_atualizado_em), b)
           ).length);
-          return { valores, stats: statsPorMes(valores, false, "#F87171") };
-        },
-      },
-      {
-        chave: "visitas", rotulo: "Visitas realizadas", legenda: "Visitas na agenda, já cumpridas",
-        cor: "#A78BFA", precisa: ["eventos"],
-        calcular: ({ eventos, baldes }) => {
-          const agora = new Date();
-          const valores = baldes.map(b => eventos.filter(ev => {
-            if (ev.tipo !== "visita") return false;
-            const d = dataLocal(ev.data);
-            return noBalde(d, b) && !!d && d <= agora;   // agendada no futuro ainda não é "realizada"
-          }).length);
-          return { valores, stats: statsPorMes(valores, false, "#A78BFA") };
-        },
-      },
-      {
-        chave: "orcamentos", rotulo: "Orçamentos criados", legenda: "Orçamentos abertos por mês",
-        cor: "#F0A05A", precisa: ["orcamentos"],
-        calcular: ({ orcamentos, baldes }) => {
-          const valores = baldes.map(b => orcamentos.filter(o => noBalde(dataLocal(o.criado_em), b)).length);
-          return { valores, stats: statsPorMes(valores, false, "#F0A05A") };
-        },
-      },
-      {
-        chave: "propostas", rotulo: "Propostas enviadas", legenda: "Orçamentos que saíram para o cliente",
-        cor: "#56A4F5", precisa: ["orcamentos"],
-        calcular: ({ orcamentos, baldes }) => {
-          const valores = baldes.map(b => orcamentos.filter(o => noBalde(dataLocal(o.data_envio), b)).length);
-          return { valores, stats: statsPorMes(valores, false, "#56A4F5") };
+          const stats = statsPadrao({
+            rotuloPrincipal: "Perdidos no mês", valores,
+            rotuloPerda: "Fechados no mês", perdas: fechados,
+            cor: "#F87171",
+          });
+          // Único indicador onde subir é ruim: as cores da variação invertem, e a
+          // terceira caixa é o contraponto positivo, não uma perda.
+          stats[1].cor = stats[1].valor.startsWith("+") ? "#F87171"
+                       : stats[1].valor.startsWith("−") ? "#2CCD93" : "#B6CFE4";
+          stats[2].cor = (fechados[fechados.length - 1] ?? 0) > 0 ? "#2CCD93" : "#B6CFE4";
+          return { valores, stats };
         },
       },
       {
@@ -265,15 +370,14 @@ import FundoAzul from "../../components/FundoAzul";
           const valores = baldes.map(b => aprovados
             .filter(o => noBalde(dataLocal(o.data_decisao || o.data_envio || o.criado_em), b))
             .reduce((s, o) => s + (Number(o.total) || 0), 0));
-          const stats = statsPorMes(valores, true, "#2CCD93");
-          // No lugar da média crua, o ticket médio diz mais sobre valor aprovado.
-          const total = valores.reduce((s, v) => s + v, 0);
-          const qtd = aprovados.filter(o => {
-            const d = dataLocal(o.data_decisao || o.data_envio || o.criado_em);
-            return baldes.some(b => noBalde(d, b));
-          }).length;
-          stats[3] = { rotulo: "Ticket médio", valor: qtd ? brlCompacto(total / qtd) : "—" };
-          return { valores, stats };
+          const perdido = baldes.map(b => orcamentos
+            .filter(o => o.status === "recusado" && noBalde(dataLocal(o.data_decisao), b))
+            .reduce((s, o) => s + (Number(o.total) || 0), 0));
+          return { valores, stats: statsPadrao({
+            rotuloPrincipal: "Aprovado no mês", valores,
+            rotuloPerda: "Valor perdido", perdas: perdido,
+            moeda: true, cor: "#2CCD93",
+          }) };
         },
       },
     ];
@@ -303,6 +407,7 @@ import FundoAzul from "../../components/FundoAzul";
       const [eventos, setEventos] = useState<EventoLite[] | null>(null);
       const [buscando, setBuscando] = useState(false);
       const [falhou, setFalhou] = useState(false);
+      const [ativo, setAtivo] = useState<number | null>(null);   // mês sob o cursor
 
       const indicador = INDICADORES.find(i => i.chave === chave) || INDICADORES[0];
 
@@ -331,6 +436,10 @@ import FundoAzul from "../../components/FundoAzul";
         })();
         return () => { vivo = false; };
       }, [indicador, orcamentos, eventos]);
+
+      // Sem isto, trocar de 12 para 3 meses deixaria `ativo` apontando para um
+      // índice que não existe mais e o tooltip apareceria fora do gráfico.
+      useEffect(() => { setAtivo(null); }, [chave, meses]);
 
       const baldes = useMemo<Balde[]>(() => {
         const hoje = new Date();
@@ -364,6 +473,7 @@ import FundoAzul from "../../components/FundoAzul";
       const topo = marcas[marcas.length - 1] || 1;
       const x = (i: number) => L + (i * pw) / Math.max(valores.length - 1, 1);
       const y = (v: number) => T + (1 - v / topo) * ph;
+      const faixa = pw / Math.max(valores.length - 1, 1);
 
       const linha = valores.map((v, i) => `${x(i)},${y(v)}`).join(" ");
       const area = `${linha} ${x(valores.length - 1)},${T + ph} ${x(0)},${T + ph}`;
@@ -411,7 +521,8 @@ import FundoAzul from "../../components/FundoAzul";
             {buscando ? (
               <div className="skeleton" style={{height:250,borderRadius:12}}/>
             ) : (
-              <>
+              // position:relative ancora o tooltip, que é posicionado em % do viewBox
+              <div style={{position:"relative"}}>
                 <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto",display:"block"}}
                      role="img" aria-label={`${indicador.rotulo} por mês: ${baldes.map((b,i)=>`${b.rotulo}, ${fmtValor(valores[i]??0)}`).join("; ")}`}>
                   <defs>
@@ -438,27 +549,65 @@ import FundoAzul from "../../components/FundoAzul";
 
                   {valores.map((v,i)=>{
                     const fim = i === valores.length - 1;
+                    const on = ativo === i;
                     return (
                       <g key={i}>
-                        <circle cx={x(i)} cy={y(v)} r={fim?5:4}
-                                fill={fim?indicador.cor:"#143354"} stroke={indicador.cor} strokeWidth="2">
-                          <title>{`${baldes[i]?.rotulo}: ${fmtValor(v)}`}</title>
-                        </circle>
+                        {on && <line x1={x(i)} x2={x(i)} y1={T} y2={T+ph} stroke={indicador.cor} strokeWidth="1" strokeDasharray="3 3" opacity="0.5"/>}
+                        <circle cx={x(i)} cy={y(v)} r={fim||on?5:4}
+                                fill={fim||on?indicador.cor:"#143354"} stroke={indicador.cor} strokeWidth="2"/>
                         <text x={x(i)} y={H-B+18} textAnchor="middle" fontSize="11"
-                              fontWeight={fim?800:600} fill={fim?"#FFFFFF":"#B6CFE4"}>
+                              fontWeight={fim||on?800:600} fill={fim||on?"#FFFFFF":"#B6CFE4"}>
                           {baldes[i]?.rotulo}
                         </text>
                       </g>
                     );
                   })}
+
+                  {/* Faixas de captura: o alvo do mouse é a coluna inteira, não o
+                      ponto — acertar um círculo de 4px de raio é sofrimento. */}
+                  {valores.map((_,i)=>(
+                    <rect key={`h${i}`} x={x(i)-faixa/2} y={T} width={faixa} height={ph}
+                          fill="transparent" tabIndex={0} role="button"
+                          aria-label={`${baldes[i]?.rotulo}: ${fmtValor(valores[i]??0)}`}
+                          onMouseEnter={()=>setAtivo(i)} onMouseLeave={()=>setAtivo(null)}
+                          onFocus={()=>setAtivo(i)} onBlur={()=>setAtivo(null)}/>
+                  ))}
                 </svg>
+
+                {/* Tooltip com a variação contra o mês anterior — o mesmo número
+                    da caixa "Variação no mês", mas ponto a ponto. */}
+                {ativo !== null && (()=>{
+                  const v = valores[ativo] ?? 0;
+                  const delta = ativo > 0 ? v - (valores[ativo-1] ?? 0) : null;
+                  return (
+                    <div style={{
+                      position:"absolute", left:`${(x(ativo)/W)*100}%`, top:`${(y(v)/H)*100}%`,
+                      transform:"translate(-50%,-125%)", pointerEvents:"none", zIndex:5,
+                      background:"#0A1F33", border:"1px solid rgba(126,176,219,0.30)", borderRadius:8,
+                      padding:"7px 10px", fontSize:12, whiteSpace:"nowrap", color:"#FFFFFF",
+                      boxShadow:"0 8px 24px rgba(3,14,26,0.55)",
+                    }}>
+                      <span style={{color:"#B6CFE4"}}>{baldes[ativo]?.rotulo}</span>
+                      {"  "}
+                      <span style={{fontWeight:800}}>{fmtValor(v)}</span>
+                      {delta !== null && (
+                        <>
+                          {"  "}
+                          <span style={{fontWeight:700,color:delta>0?"#2CCD93":delta<0?"#F87171":"#B6CFE4"}}>
+                            {variacaoFmt(delta, !!indicador.moeda)}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {vazio && (
                   <div style={{textAlign:"center",fontSize:12,color:"#B6CFE4",marginTop:-10}}>
                     Nenhum registro de “{indicador.rotulo.toLowerCase()}” neste período.
                   </div>
                 )}
-              </>
+              </div>
             )}
 
             {falhou && indicador.precisa.length > 0 && (
