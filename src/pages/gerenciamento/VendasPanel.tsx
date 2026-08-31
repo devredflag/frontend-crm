@@ -6,17 +6,22 @@ import { openEmail, openWhatsApp } from "../../utils/commPrefs";
 import {
   Plus, Send, Trash2, X, FileText, Package, Check, AlertCircle, Loader2,
   DollarSign, Wallet, Target, CalendarCheck, ArrowRight, Filter,
-  ChevronDown, Download, Upload, FileSpreadsheet, AlertTriangle, Hash,
-  Building2,
+  ChevronDown, ChevronLeft, ChevronRight, Download, Upload, FileSpreadsheet,
+  AlertTriangle, Hash, Building2, TrendingUp,
 } from "lucide-react";
 import Dropdown from "../../components/Dropdown";
-import { dataLocal, formatarData } from "../../utils/data";
+import { dataLocal, diasDesde, formatarData } from "../../utils/data";
 import { brl, brlCurto } from "../../utils/moeda";
 import { STATUS_ORCAMENTO as STATUS_INFO, STATUS_ORDEM, numeroOrcamento } from "../../utils/orcamento";
-import GraficoAprovadoMensal, { DonutConversao, serieAprovadaPorMes } from "../../components/GraficoAprovadoMensal";
+import GraficoAprovadoMensal, { DonutConversao, serieAprovadaPorMes, somaSerie } from "../../components/GraficoAprovadoMensal";
 import { notificarOrcamentos, aoMudarOrcamentos } from "../../hooks/useValoresOrcamento";
 
 const API = (process.env.REACT_APP_API_URL || "https://backend-crm-production-157b.up.railway.app");
+
+// Linhas por pagina da lista de orcamentos. A carteira inteira numa pagina so
+// funcionava com dez orcamentos; nao funciona mais quando a conta cresce, e a
+// rolagem infinita esconde o rodape com a soma.
+const POR_PAGINA = 10;
 
 
 const css = `
@@ -60,6 +65,10 @@ const css = `
   .vp-catalogo-item:last-child { border-bottom:0; }
   .vp-avulso:focus-visible { outline:2px solid rgba(159,211,234,0.30); outline-offset:2px; }
   .vp-import-row:nth-child(even) { background:rgba(46,111,149,0.035); }
+  .vp-pag { width:27px; height:27px; border-radius:8px; border:1px solid rgba(159,211,234,0.18); background:rgba(18,59,94,0.55); color:#9FD3EA; cursor:pointer; font-family:inherit; font-size:11.5px; font-weight:700; display:inline-flex; align-items:center; justify-content:center; transition:all 0.15s; }
+  .vp-pag:hover:not(:disabled) { color:#EAF6FB; border-color:rgba(159,211,234,0.30); }
+  .vp-pag:disabled { opacity:0.35; cursor:default; }
+  .vp-pag.on { background:rgba(46,111,149,0.30); border-color:rgba(159,211,234,0.45); color:#EAF6FB; }
 `;
 
 interface Equipamento {
@@ -90,6 +99,12 @@ interface Orcamento {
   criado_em: string | null;
   motivo_recusa: string | null;
   itens?: Item[];
+  // Vem resolvido do GET /orcamentos. Opcionais de proposito: se o backend for
+  // atras do front num deploy, a coluna mostra "—" em vez de quebrar a lista.
+  vendedor_nome?: string | null;
+  qtd_itens?: number | null;
+  qtd_pecas?: number | null;
+  item_principal?: string | null;
 }
 interface Insights {
   por_status: Record<string, { total: number; valor: number }>;
@@ -120,6 +135,7 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
   const [insights, setInsights] = useState<Insights | null>(null);
   const [loading, setLoading] = useState(true);
   const [filtroStatus, setFiltroStatus] = useState("todos");
+  const [pagina, setPagina] = useState(1);
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const [editando, setEditando] = useState<Orcamento | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -183,18 +199,49 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
   }), [fetchTudo]);
 
   // Valor aprovado por mes, dos ultimos 6 meses. A conta mora no componente
-  // do grafico: a ficha da empresa faz a mesma leitura com outro recorte.
+  // do grafico, junto com o desenho.
   const serieMensal = useMemo(() => serieAprovadaPorMes(orcamentos), [orcamentos]);
+  // O semestre anterior existe so para a variacao do KPI — e a leitura de
+  // "estamos melhores ou piores", que o numero sozinho nao da.
+  const serieAnterior = useMemo(() => serieAprovadaPorMes(orcamentos, 6, 6), [orcamentos]);
+  const totalSemestre = somaSerie(serieMensal);
+  const totalSemestreAnterior = somaSerie(serieAnterior);
+  // Sem semestre anterior nao ha comparacao: qualquer numero daria "+100%" e
+  // nao diria nada. Nesse caso o KPI fica sem selo.
+  const variacaoSemestre = totalSemestreAnterior > 0
+    ? ((totalSemestre - totalSemestreAnterior) / totalSemestreAnterior) * 100
+    : null;
+
   const aprovados = orcamentos.filter(o => o.status === "aprovado");
   const ticketMedio = aprovados.length ? (insights?.valor_aprovado || 0) / aprovados.length : 0;
   const ultimaVenda = aprovados
     .map(o => o.data_decisao || o.data_envio)
     .filter(Boolean)
     .sort((a, b) => (dataLocal(b)?.getTime() ?? 0) - (dataLocal(a)?.getTime() ?? 0))[0] || null;
+  // "ha 7 dias" responde antes da data: o que se quer saber e se esfriou.
+  const diasUltima = ultimaVenda ? diasDesde(ultimaVenda) : null;
+  const textoUltima = diasUltima === null || !Number.isFinite(diasUltima)
+    ? "nada fechado ainda"
+    : diasUltima === 0 ? "hoje"
+    : diasUltima === 1 ? "ontem"
+    : `há ${diasUltima} dias`;
 
   const visiveis = filtroStatus === "todos"
     ? orcamentos
     : orcamentos.filter(o => o.status === filtroStatus);
+
+  // Paginacao. `paginaAtual` e derivada, nao o estado cru: excluir a ultima
+  // linha de uma pagina nao pode deixar a lista vazia numa pagina que sumiu.
+  const totalPaginas = Math.max(1, Math.ceil(visiveis.length / POR_PAGINA));
+  const paginaAtual = Math.min(pagina, totalPaginas);
+  const primeiroDaPagina = (paginaAtual - 1) * POR_PAGINA;
+  const naPagina = visiveis.slice(primeiroDaPagina, primeiroDaPagina + POR_PAGINA);
+  const paginasVisiveis = (() => {
+    const largura = 5;
+    const fim = Math.min(totalPaginas, Math.max(1, paginaAtual - 2) + largura - 1);
+    const ini = Math.max(1, fim - largura + 1);
+    return Array.from({ length: fim - ini + 1 }, (_, i) => ini + i);
+  })();
 
   const aplicarStatus = async (id: string, status: string, motivo_recusa: string | null) => {
     try {
@@ -280,10 +327,17 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
   });
 
   const kpis = [
-    { lab: "Valor aprovado", val: brlCurto(insights?.valor_aprovado), sub: `${aprovados.length} orçamento${aprovados.length === 1 ? "" : "s"} fechado${aprovados.length === 1 ? "" : "s"}`, icon: DollarSign, cor: "#83DDA8" },
-    { lab: "Em aberto",      val: brlCurto(insights?.valor_em_aberto), sub: "enviados e em negociação",  icon: Wallet,        cor: "#C9B6E4" },
-    { lab: "Ticket médio",   val: brlCurto(ticketMedio),               sub: "por orçamento aprovado",    icon: Target,        cor: "#F2C879" },
-    { lab: "Último fechamento", val: formatDate(ultimaVenda),          sub: ultimaVenda ? "última aprovação" : "nada fechado ainda", icon: CalendarCheck, cor: "#9FD3EA" },
+    { lab: "Valor aprovado", val: brlCurto(insights?.valor_aprovado), sub: `${aprovados.length} orçamento${aprovados.length === 1 ? "" : "s"} fechado${aprovados.length === 1 ? "" : "s"}`, icon: DollarSign, cor: "#83DDA8",
+      badge: variacaoSemestre,
+      title: variacaoSemestre !== null
+        ? `${brl(totalSemestre)} nos últimos 6 meses contra ${brl(totalSemestreAnterior)} nos 6 anteriores`
+        : "Soma de tudo que a carteira já aprovou." },
+    { lab: "Em aberto",      val: brlCurto(insights?.valor_em_aberto), sub: "enviados e em negociação",  icon: Wallet,        cor: "#C9B6E4",
+      badge: null, title: "Rascunho não entra: enquanto não foi ao cliente, não é dinheiro em jogo." },
+    { lab: "Ticket médio",   val: brlCurto(ticketMedio),               sub: "por orçamento aprovado",    icon: Target,        cor: "#F2C879",
+      badge: null, title: "Valor aprovado dividido pela quantidade de orçamentos aprovados." },
+    { lab: "Último fechamento", val: formatDate(ultimaVenda),          sub: textoUltima, icon: CalendarCheck, cor: "#9FD3EA",
+      badge: null, title: "Data da última aprovação da carteira." },
   ];
 
   return (
@@ -310,13 +364,24 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 12 }}>
           {kpis.map(k => (
-            <div key={k.lab} className="vp-inner" style={{ padding: 14, display: "flex", gap: 12, alignItems: "flex-start" }}>
+            <div key={k.lab} className="vp-inner" title={k.title} style={{ padding: 14, display: "flex", gap: 12, alignItems: "flex-start" }}>
               <div style={{ width: 36, height: 36, borderRadius: 10, display: "grid", placeItems: "center", flexShrink: 0, background:`${k.cor}1f` }}>
                 <k.icon style={{ width: 18, height: 18, color:k.cor }} />
               </div>
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: 10, letterSpacing: "0.07em", textTransform: "uppercase", color:"#9FD3EA", fontWeight: 800, marginBottom: 3 }}>{k.lab}</div>
-                <div className="vp-num" style={{ fontSize: 18, fontWeight: 900, color:"#EAF6FB", letterSpacing: "-0.02em" }}>{k.val}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                  <span className="vp-num" style={{ fontSize: 18, fontWeight: 900, color:"#EAF6FB", letterSpacing: "-0.02em" }}>{k.val}</span>
+                  {k.badge !== null && (
+                    <span title="Últimos 6 meses contra os 6 anteriores"
+                      style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 7px", borderRadius: 20, fontSize: 10, fontWeight: 800,
+                        background: k.badge >= 0 ? "rgba(44,205,147,0.14)" : "rgba(248,113,113,0.14)",
+                        color: k.badge >= 0 ? "#2CCD93" : "#F87171" }}>
+                      <TrendingUp style={{ width: 10, height: 10, transform: k.badge >= 0 ? "none" : "scaleY(-1)" }} />
+                      {k.badge >= 0 ? "+" : ""}{Math.round(k.badge)}%
+                    </span>
+                  )}
+                </div>
                 <div style={{ fontSize: 11, color:"#9FD3EA", marginTop: 2 }}>{k.sub}</div>
               </div>
             </div>
@@ -394,7 +459,7 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
                   const on = filtroStatus === s;
                   const qtd = s === "todos" ? orcamentos.length : orcamentos.filter(o => o.status === s).length;
                   return (
-                    <button key={s} onClick={() => setFiltroStatus(s)} className="vp-chip"
+                    <button key={s} onClick={() => { setFiltroStatus(s); setPagina(1); }} className="vp-chip"
                       style={on ? { borderColor: info ? info.color:"#9FD3EA", background: info ? info.bg : "rgba(159,211,234,0.55)", color: info ? info.color:"#9FD3EA" } : undefined}>
                       {info ? info.label : "Todos"} ({qtd})
                     </button>
@@ -418,7 +483,9 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
                         <th style={{ width: 28 }}>#</th>
                         <th>Nº</th>
                         <th>Empresa</th>
-                        <th>Título</th>
+                        <th>Título / item</th>
+                        <th className="r">Itens</th>
+                        <th>Vendedor</th>
                         <th>Enviado</th>
                         <th className="r">Valor</th>
                         <th className="c">Status</th>
@@ -426,11 +493,11 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {visiveis.map((o, i) => {
+                      {naPagina.map((o, i) => {
                         const info = STATUS_INFO[o.status] || STATUS_INFO.rascunho;
                         return (
                           <tr key={o.orcamento_id}>
-                            <td className="vp-num" style={{ color:"#9FD3EA" }}>{i + 1}</td>
+                            <td className="vp-num" style={{ color:"#9FD3EA" }}>{primeiroDaPagina + i + 1}</td>
                             <td className="vp-num vp-row-link" onClick={() => abrirExistente(o.orcamento_id)} style={{ color:"#EAF6FB", whiteSpace: "nowrap" }}>
                               {numeroOrcamento(o)}
                             </td>
@@ -439,12 +506,25 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
                             </td>
                             <td className="vp-row-link" onClick={() => abrirExistente(o.orcamento_id)} style={{ color:"#EAF6FB" }}>
                               {o.titulo || "Orçamento"}
+                              {/* Item de maior valor do orçamento: diz do que a
+                                  proposta trata sem obrigar a abri-la. */}
+                              {o.item_principal && (
+                                <span style={{ display: "block", fontSize: 10.5, color:"#9FD3EA", marginTop: 1 }}>
+                                  {o.item_principal}
+                                  {(o.qtd_itens || 0) > 1 ? ` +${(o.qtd_itens || 1) - 1}` : ""}
+                                </span>
+                              )}
                               {o.motivo_recusa && (
                                 <span style={{ display: "block", fontSize: 10.5, color:"#F7B8B1", marginTop: 1, fontWeight: 600 }}>
                                   Recusa: {o.motivo_recusa}
                                 </span>
                               )}
                             </td>
+                            <td className="vp-num r" style={{ color:"#EAF6FB" }}
+                              title={o.qtd_pecas != null ? `${o.qtd_pecas} peça(s) em ${o.qtd_itens} linha(s)` : undefined}>
+                              {o.qtd_itens != null ? o.qtd_itens : "—"}
+                            </td>
+                            <td style={{ color: o.vendedor_nome ? "#EAF6FB" : "#9FD3EA", whiteSpace: "nowrap" }}>{o.vendedor_nome || "—"}</td>
                             <td className="vp-num" style={{ color:"#EAF6FB", whiteSpace: "nowrap" }}>{formatDate(o.data_envio)}</td>
                             <td className="vp-num r" style={{ fontWeight: 800, whiteSpace: "nowrap" }}>{brl(o.total)}</td>
                             <td className="c">
@@ -486,11 +566,39 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
                     </tbody>
                   </table>
                 </div>
-                <div style={{ padding: "12px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, color:"#9FD3EA", borderTop:"1px solid rgba(159,211,234,0.18)" }}>
-                  <span>Mostrando {visiveis.length} de {orcamentos.length} orçamento{orcamentos.length === 1 ? "" : "s"}</span>
-                  <span className="vp-num" style={{ fontWeight: 800, color:"#EAF6FB" }}>
-                    {brl(visiveis.reduce((s, o) => s + Number(o.total || 0), 0))}
+                <div style={{ padding: "12px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", fontSize: 12, color:"#9FD3EA", borderTop:"1px solid rgba(159,211,234,0.18)" }}>
+                  <span>
+                    Mostrando {primeiroDaPagina + 1} a {primeiroDaPagina + naPagina.length} de {visiveis.length} orçamento{visiveis.length === 1 ? "" : "s"}
+                    {filtroStatus !== "todos" ? ` (${orcamentos.length} no total)` : ""}
                   </span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                    {/* A soma e do filtro inteiro, nao da pagina: o que interessa
+                        e quanto vale o recorte, nao quanto coube na tela. */}
+                    <span className="vp-num" style={{ fontWeight: 800, color:"#EAF6FB" }}
+                      title="Soma de todos os orçamentos do filtro atual">
+                      {brl(visiveis.reduce((s, o) => s + Number(o.total || 0), 0))}
+                    </span>
+                    {totalPaginas > 1 && (
+                      <div style={{ display: "flex", gap: 5 }}>
+                        <button className="vp-pag" onClick={() => setPagina(paginaAtual - 1)}
+                          disabled={paginaAtual === 1} aria-label="Página anterior">
+                          <ChevronLeft style={{ width: 13, height: 13 }} />
+                        </button>
+                        {paginasVisiveis.map(n => (
+                          <button key={n} onClick={() => setPagina(n)}
+                            className={`vp-pag${n === paginaAtual ? " on" : ""}`}
+                            aria-current={n === paginaAtual ? "page" : undefined}
+                            aria-label={`Página ${n}`}>
+                            {n}
+                          </button>
+                        ))}
+                        <button className="vp-pag" onClick={() => setPagina(paginaAtual + 1)}
+                          disabled={paginaAtual === totalPaginas} aria-label="Próxima página">
+                          <ChevronRight style={{ width: 13, height: 13 }} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </>
             )}
