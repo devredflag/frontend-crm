@@ -1058,7 +1058,7 @@ import FundoAzul from "../../components/FundoAzul";
             <div style={{padding:isMobile?"16px 14px 32px":"22px 28px 32px",display:"flex",flexDirection:"column",gap:18}}>
 
               {/* Abas: visao de clientes x visao de vendas */}
-              <AbasGerenciamento aba={abaDash} onChange={setAbaDash} compacto />
+              <AbasGerenciamento aba={abaDash} onChange={setAbaDash} variante="dashboard" />
 
               {abaDash==="vendas" ? <VendasInsights /> : (
               <>

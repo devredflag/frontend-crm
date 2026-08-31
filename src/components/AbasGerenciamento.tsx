@@ -19,6 +19,7 @@ const ABAS = [
   {
     key: "clientes" as const,
     label: "Gerenciamento de clientes",
+    labelDash: "Visão de clientes",
     curto: "Clientes",
     descricao: "Carteira, funil e prospecção",
     icon: Users,
@@ -26,6 +27,7 @@ const ABAS = [
   {
     key: "vendas" as const,
     label: "Gerenciamento de vendas",
+    labelDash: "Visão de vendas",
     curto: "Vendas",
     descricao: "Orçamentos, catálogo e fechamento",
     icon: FileText,
@@ -35,19 +37,25 @@ const ABAS = [
 export default function AbasGerenciamento({
   aba,
   onChange,
-  /** Versão de uma linha só, sem a descrição — usada no Dashboard. */
-  compacto = false,
+  /**
+   * Onde as abas estão sendo usadas. No Dashboard elas não gerenciam nada —
+   * só trocam a visão dos indicadores —, então o rótulo vira "Visão de ..." e
+   * o cartão fica de uma linha só, sem a descrição.
+   */
+  variante = "gerenciamento",
 }: {
   aba: AbaGerenciamento;
   onChange: (a: AbaGerenciamento) => void;
-  compacto?: boolean;
+  variante?: "gerenciamento" | "dashboard";
 }) {
   const isMobile = useIsMobile();
+  const noDashboard = variante === "dashboard";
+  const compacto = noDashboard;
 
   return (
     <div
       role="tablist"
-      aria-label="Áreas do gerenciamento"
+      aria-label={noDashboard ? "Visões do dashboard" : "Áreas do gerenciamento"}
       style={{
         display: "grid",
         // Em telas estreitas as duas opções empilham em largura total, para o
@@ -135,7 +143,7 @@ export default function AbasGerenciamento({
                   textOverflow: "ellipsis",
                 }}
               >
-                {isMobile ? t.curto : t.label}
+                {isMobile ? t.curto : noDashboard ? t.labelDash : t.label}
               </span>
               {!compacto && (
                 <span
