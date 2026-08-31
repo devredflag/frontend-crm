@@ -9,6 +9,7 @@ import {
   Star, AlertTriangle, X, FileText, Map as MapIcon, List, Menu, UserRoundCog,
 } from "lucide-react";
 import MapaProximidade from "../../components/MapaProximidade";
+import { diasDesde } from "../../utils/data";
 import useIsMobile from "../../hooks/useIsMobile";
 import CardUsuario from "../../components/CardUsuario";
 
@@ -77,7 +78,7 @@ function calcScore(emp: Empresa): number {
   const t = emp.ticket_medio_estimado||0;
   if(t>=20000) s+=15; else if(t>=5000) s+=10; else if(t>0) s+=5;
   if(emp.ultima_interacao) {
-    const d = (Date.now()-new Date(emp.ultima_interacao).getTime())/86400000;
+    const d = diasDesde(emp.ultima_interacao);
     if(d<=7) s+=10; else if(d<=30) s+=6; else s+=2;
   }
   return Math.min(s,100);

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import CardUsuario from "../../components/CardUsuario";
 import FundoAzul from "../../components/FundoAzul";
+import { diasDesde } from "../../utils/data";
 import {
   LayoutDashboard, Search, Building2, Users, ClipboardList,
   Calendar, BarChart3, ChevronDown, Plus, Filter,
@@ -88,7 +89,7 @@ function calcScore(emp: Empresa): number {
   else if (t > 0) score += 5;
   // Interação recente (10pts)
   if (emp.ultima_interacao) {
-    const days = (Date.now() - new Date(emp.ultima_interacao).getTime()) / 86400000;
+    const days = diasDesde(emp.ultima_interacao);
     if (days <= 7) score += 10;
     else if (days <= 30) score += 6;
     else score += 2;

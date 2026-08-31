@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { openEmail, openWhatsApp } from "../../../utils/commPrefs";
+import { formatarData } from "../../../utils/data";
 import {
   BarChart3, LayoutDashboard, Search, Building2, Users,
   ClipboardList, Calendar, ArrowLeft, Edit3,
@@ -117,10 +118,7 @@ function avatarColor(name: string) {
   const colors = ["#9FD3EA", "#83DDA8", "#C9B6E4", "#F2C879", "#83DDA8", "#F7B8B1"];
   return colors[(name?.charCodeAt(0) || 0) % colors.length];
 }
-function formatDate(d: string | null) {
-  if (!d) return "—";
-  return new Date(d).toLocaleDateString("pt-BR");
-}
+const formatDate = (d: string | null) => formatarData(d);
 
 // Mesmo vocabulário e mesmas cores do VendasPanel, para o orçamento não trocar
 // de cara quando o usuário vem de lá para cá.

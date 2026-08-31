@@ -52,6 +52,18 @@ export function diasDesde(valor?: string | null): number {
   return Math.floor((inicioDoDia().getTime() - inicioDoDia(d).getTime()) / 86_400_000);
 }
 
+/**
+ * Data no formato brasileiro (dd/mm/aaaa).
+ *
+ * Não serve para "tempo atrás" de notificação: ali o que importa é o instante
+ * (minutos, horas), não o dia de calendário — esses pontos seguem usando
+ * `new Date` direto, de propósito.
+ */
+export function formatarData(valor?: string | null, vazio = "—"): string {
+  const d = dataLocal(valor);
+  return d ? d.toLocaleDateString("pt-BR") : vazio;
+}
+
 /** Dias até o valor: negativo quando já passou, 0 quando é hoje. */
 export function diasAte(valor?: string | null): number | null {
   const d = dataLocal(valor);

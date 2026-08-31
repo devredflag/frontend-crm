@@ -10,6 +10,7 @@ import {
   CalendarClock, Clock, Filter, AlertCircle, Menu, UserRoundCog, FileText,
 } from "lucide-react";
 import useIsMobile from "../../hooks/useIsMobile";
+import { dataLocal, formatarData, diasDesde, diasAte } from "../../utils/data";
 import VendasPanel from "./VendasPanel";
 import CardUsuario from "../../components/CardUsuario";
 import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGerenciamento";
@@ -255,7 +256,7 @@ function calcScore(e: Empresa) {
   if(e.status==="Fechado")s+=25;else if(e.status==="Proposta"||e.status==="Negociação")s+=20;else if(e.status==="Visita agendada")s+=17;else if(e.status==="Em contato")s+=14;else if(e.status==="Perdido")s-=20;else s+=5;
   if(e.porte==="Grande")s+=20;else if(e.porte==="Médio")s+=13;else s+=6;
   const t=e.ticket_medio_estimado||0;if(t>=20000)s+=15;else if(t>=5000)s+=10;else if(t>0)s+=5;
-  if(e.ultima_interacao){const d=(Date.now()-new Date(e.ultima_interacao).getTime())/86400000;if(d<=7)s+=10;else if(d<=30)s+=6;else s+=2;}
+  if(e.ultima_interacao){const d=diasDesde(e.ultima_interacao);if(d<=7)s+=10;else if(d<=30)s+=6;else s+=2;}
   const action=nextActionInfo(e);
   if(action.status==="atrasada")s-=8;else if(action.status==="hoje")s+=6;else if(action.status==="proxima")s+=4;
   return Math.max(0, Math.min(s,100));
@@ -265,16 +266,20 @@ function scoreColor(s: number) {
   if(s>=40) return { color:"#F2C879", bg:"rgba(217,119,6,0.12)" };
   return { color:"#F7B8B1", bg:"rgba(220,38,38,0.1)" };
 }
+// Continua existindo só para ordenar e para preencher <input type="date">, onde
+// o que se quer é a STRING "YYYY-MM-DD", não um Date.
 function dateOnly(value?: string | null) {
   return value ? value.slice(0, 10) : "";
 }
+// A leitura de data agora vem de utils/data. O jeito antigo — recortar a string
+// e colar "T12:00:00" — acertava a data pura, mas num timestamp real perto da
+// meia-noite UTC pegava o dia UTC no lugar do dia local.
 function formatDate(value?: string | null) {
-  if(!value) return "Sem data";
-  return new Date(`${dateOnly(value)}T12:00:00`).toLocaleDateString("pt-BR");
+  return formatarData(value, "Sem data");
 }
 function daysBetween(value?: string | null) {
-  if(!value) return 0;
-  return Math.floor((Date.now() - new Date(value).getTime()) / 86400000);
+  const d = diasDesde(value);
+  return Number.isFinite(d) ? d : 0;
 }
 function daysInStage(e: Empresa) {
   return Math.max(0, daysBetween(e.status_atualizado_em || e.ultima_interacao));
@@ -287,11 +292,8 @@ function daysLabel(d: number) {
 }
 
 function nextActionInfo(e: Empresa) {
-  const date = dateOnly(e.data_proxima_acao);
-  if(!date) return { label:"Sem data", status:"sem-data", color:"#9FD3EA", bg:"#9FD3EA" };
-  const today = new Date(); today.setHours(0,0,0,0);
-  const target = new Date(`${date}T00:00:00`);
-  const diff = Math.round((target.getTime() - today.getTime()) / 86400000);
+  const diff = diasAte(e.data_proxima_acao);
+  if(diff === null) return { label:"Sem data", status:"sem-data", color:"#9FD3EA", bg:"#9FD3EA" };
   if(diff < 0) return { label:`Atrasada ${Math.abs(diff)}d`, status:"atrasada", color:"#F7B8B1", bg:"rgba(220,38,38,0.1)" };
   if(diff === 0) return { label:"Hoje", status:"hoje", color:"#F2C879", bg:"rgba(217,119,6,0.12)" };
   return { label:`Em ${diff}d`, status:"proxima", color:"#9FD3EA", bg:"rgba(159,211,234,0.55)" };
@@ -428,7 +430,8 @@ export default function Gerenciamento() {
     .sort((a,b)=>{
       if(sortBy==="nome") return a.nome.localeCompare(b.nome,"pt-BR");
       if(sortBy==="valor") return (b.ticket_medio_estimado||0)-(a.ticket_medio_estimado||0);
-      if(sortBy==="proxima") return (new Date(dateOnly(a.data_proxima_acao)||"2999-12-31").getTime())-(new Date(dateOnly(b.data_proxima_acao)||"2999-12-31").getTime());
+      // Sem data vai para o fim da fila, não para o começo.
+      if(sortBy==="proxima") return (dataLocal(a.data_proxima_acao)?.getTime() ?? Infinity)-(dataLocal(b.data_proxima_acao)?.getTime() ?? Infinity);
       if(sortBy==="parado") return daysInStage(b)-daysInStage(a);
       return calcScore(b)-calcScore(a);
     });
@@ -969,9 +972,7 @@ export default function Gerenciamento() {
                   </div>
                 ):overdueEmpresas.map((emp,idx)=>{
                   const si=PIPELINE.find(p=>p.key===emp.status)||PIPELINE[0];
-                  const daysLate = dateOnly(emp.data_proxima_acao)
-                    ? Math.abs(Math.round((new Date(`${dateOnly(emp.data_proxima_acao)}T00:00:00`).getTime()-Date.now())/86400000))
-                    : 0;
+                  const daysLate = Math.abs(diasAte(emp.data_proxima_acao) ?? 0);
                   return(
                     <motion.div
                       key={emp.empresa_id}

@@ -10,6 +10,7 @@ import {
   Building2, TrendingUp,
 } from "lucide-react";
 import Dropdown from "../../components/Dropdown";
+import { dataLocal, formatarData } from "../../utils/data";
 
 const API = (process.env.REACT_APP_API_URL || "https://backend-crm-production-157b.up.railway.app");
 
@@ -123,12 +124,10 @@ function brlCurto(v?: number | null) {
   if (n >= 1_000) return `R$ ${(n / 1_000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mil`;
   return brl(n);
 }
-function formatDate(v?: string | null) {
-  return v ? new Date(v).toLocaleDateString("pt-BR") : "—";
-}
+const formatDate = (v?: string | null) => formatarData(v);
 /** Nº legível do orçamento a partir do UUID — ORC-2026-A3F1 */
 function numeroOrcamento(o: Orcamento) {
-  const ano = o.criado_em ? new Date(o.criado_em).getFullYear() : new Date().getFullYear();
+  const ano = dataLocal(o.criado_em)?.getFullYear() ?? new Date().getFullYear();
   return `ORC-${ano}-${o.orcamento_id.slice(0, 4).toUpperCase()}`;
 }
 
@@ -189,9 +188,8 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
       });
     }
     orcamentos.filter(o => o.status === "aprovado").forEach(o => {
-      const ref = o.data_decisao || o.data_envio || o.criado_em;
-      if (!ref) return;
-      const d = new Date(ref);
+      const d = dataLocal(o.data_decisao || o.data_envio || o.criado_em);
+      if (!d) return;
       const diff = (hoje.getFullYear() - d.getFullYear()) * 12 + (hoje.getMonth() - d.getMonth());
       if (diff >= 0 && diff <= 5) {
         meses[5 - diff].valor += Number(o.total || 0);
@@ -206,7 +204,7 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
   const ultimaVenda = aprovados
     .map(o => o.data_decisao || o.data_envio)
     .filter(Boolean)
-    .sort((a, b) => new Date(b!).getTime() - new Date(a!).getTime())[0] || null;
+    .sort((a, b) => (dataLocal(b)?.getTime() ?? 0) - (dataLocal(a)?.getTime() ?? 0))[0] || null;
 
   const visiveis = filtroStatus === "todos"
     ? orcamentos
