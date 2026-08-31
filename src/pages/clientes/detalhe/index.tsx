@@ -1,16 +1,18 @@
 import { getToken } from "../../../services/auth";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { openEmail, openWhatsApp } from "../../../utils/commPrefs";
-import { formatarData } from "../../../utils/data";
+import { dataLocal, diasDesde, inicioDoDia, formatarData } from "../../../utils/data";
+import { brl, brlCurto } from "../../../utils/moeda";
+import { STATUS_ORCAMENTO, STATUS_ORDEM, numeroOrcamento } from "../../../utils/orcamento";
 import {
   BarChart3, LayoutDashboard, Search, Building2, Users,
   ClipboardList, Calendar, ArrowLeft, Edit3,
   MapPin, Tag, Thermometer, TrendingUp, DollarSign,
   Phone, Mail, User, Clock, ChevronRight, MessageCircle, Link2,
-  ChevronDown,
   FileText, Hash, Globe, Percent, NotebookPen,
+  Wallet, Target, CalendarCheck, ShoppingCart, Package, Filter, Timer,
 } from "lucide-react";
 
 import SelectRecipientsModal, {
@@ -21,6 +23,13 @@ import SelectRecipientsModal, {
 import EmpresaNotificationBell from "../../../components/EmpresaNotificationBell";
 import CardUsuario from "../../../components/CardUsuario";
 import EmpresasProximasDaEmpresa from "../../../components/EmpresasProximasDaEmpresa";
+import GraficoAprovadoMensal, { DonutConversao, serieAprovadaPorMes, somaSerie } from "../../../components/GraficoAprovadoMensal";
+import useValoresOrcamento, { aoMudarOrcamentos } from "../../../hooks/useValoresOrcamento";
+import {
+  OrcamentoDet, PainelVendas, PainelProdutos, PainelTimeline, PainelObservacoes,
+  FunilOrcamentos, Colunas, Caixa, Facts, Rank, Cabecalho, Th, Chip, Vazio,
+  CARD, TD, TD_NUM, num,
+} from "./paineis";
 
 import FundoAzul from "../../../components/FundoAzul";
 const API = (process.env.REACT_APP_API_URL || "https://backend-crm-production-157b.up.railway.app");
@@ -92,17 +101,13 @@ interface Empresa {
   // usados pela aba "Próximas" — a busca parte da coordenada desta empresa
   latitude?: number | null;
   longitude?: number | null;
+  // "Cliente desde" do card de informacoes rapidas.
+  criado_em?: string | null;
 }
 
-interface Orcamento {
-  orcamento_id: string;
-  titulo?: string | null;
-  status: string;
-  total: number | string | null;
-  criado_em?: string | null;
-  data_envio?: string | null;
-  data_decisao?: string | null;
-}
+// O tipo mora no arquivo dos paineis: sao eles que consomem os campos novos
+// (vendedor, itens, item principal) que o GET /orcamentos passou a devolver.
+type Orcamento = OrcamentoDet;
 
 function statusColor(s: string) {
   if (s === "Fechado")    return { bg:"rgba(39,174,96,0.12)",   text:"#83DDA8",  border:"rgba(39,174,96,0.25)"   };
@@ -119,22 +124,10 @@ function avatarColor(name: string) {
 }
 const formatDate = (d: string | null) => formatarData(d);
 
-// Mesmo vocabulário e mesmas cores do VendasPanel, para o orçamento não trocar
-// de cara quando o usuário vem de lá para cá.
-const STATUS_ORCAMENTO: Record<string, { label: string; color:string; bg: string }> = {
-  rascunho:      { label: "Rascunho",      color:"#9FD3EA", bg: "rgba(86,101,115,0.12)" },
-  enviado:       { label: "Enviado",       color:"#9FD3EA", bg: "rgba(159,211,234,0.55)" },
-  em_negociacao: { label: "Em negociação", color:"#F2C879", bg: "rgba(214,137,16,0.13)" },
-  aprovado:      { label: "Aprovado",      color:"#83DDA8", bg: "rgba(39,174,96,0.13)"  },
-  recusado:      { label: "Recusado",      color:"#F7B8B1", bg: "rgba(220,38,38,0.1)"   },
-};
-
-function brl(v: number) {
-  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
-}
-
 const TABS = [
   { key: "resumo",      label: "Resumo",      icon: FileText },
+  { key: "vendas",      label: "Vendas",      icon: ShoppingCart },
+  { key: "produtos",    label: "Produtos",    icon: Package },
   { key: "orcamentos",  label: "Orçamentos",  icon: DollarSign },
   { key: "contatos",    label: "Contatos",    icon: Users },
   { key: "proximas",    label: "Próximas",    icon: MapPin },
@@ -173,7 +166,7 @@ export default function EmpresaDetalhe() {
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>([]);
   const [orcamentosErro, setOrcamentosErro] = useState(false);
   const [loading, setLoading]     = useState(true);
-  const [expandedContato, setExpandedContato] = useState<string | null>(null);
+  const [filtroStatus, setFiltroStatus] = useState("todos");
 
   // Aba ativa espelhada na URL (?tab=), para dar link direto de fora — o sino de
   // notificações e a tela de vendas apontam para abas específicas.
@@ -189,6 +182,21 @@ export default function EmpresaDetalhe() {
   const [sendChannel, setSendChannel] = useState<SendChannel | null>(null);
   // provider escolhido na sessão (persiste entre aberturas do modal)
   const [lastProvider, setLastProvider] = useState<EmailProvider>("outlook");
+
+  // Orçamento virou o dado que manda nesta tela — KPIs, gráfico, funil, vendas,
+  // produtos e timeline saem dele. Por isso a busca sai do useEffect: o store
+  // avisa quando alguém mexe num orçamento e a ficha se refaz sem F5.
+  const carregarOrcamentos = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/orcamentos?empresa_id=${id}`, {
+        headers: { Authorization: `Bearer ${getToken() || ""}` },
+      });
+      if (res.ok) { setOrcamentos(await res.json()); setOrcamentosErro(false); }
+      else setOrcamentosErro(true);
+    } catch { setOrcamentosErro(true); }
+  }, [id]);
+
+  useEffect(() => aoMudarOrcamentos(carregarOrcamentos), [carregarOrcamentos]);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -206,11 +214,7 @@ export default function EmpresaDetalhe() {
           const aRes = await fetch(`${API}/empresas/${id}/atividades`, { headers });
           if (aRes.ok) setAtividades(await aRes.json());
         } catch {}
-        try {
-          const oRes = await fetch(`${API}/orcamentos?empresa_id=${id}`, { headers });
-          if (oRes.ok) { setOrcamentos(await oRes.json()); setOrcamentosErro(false); }
-          else setOrcamentosErro(true);
-        } catch { setOrcamentosErro(true); }
+        await carregarOrcamentos();
       } catch {}
       setLoading(false);
     };
@@ -228,7 +232,7 @@ export default function EmpresaDetalhe() {
     };
     const iv = setInterval(refreshAtividades, 20_000);
     return () => clearInterval(iv);
-  }, [id]);
+  }, [id, carregarOrcamentos]);
 
   const buildRecipients = (channel: SendChannel): Recipient[] =>
     contatos.map((c, i) => {
@@ -302,20 +306,99 @@ export default function EmpresaDetalhe() {
   // Mesmo critério do LATERAL join do backend em GET /empresas/{id}: decisor primeiro.
   const contatoPrincipal = contatos.find(c => c.decisor) || contatos[0] || null;
 
-  const num = (v: number | string | null | undefined) => Number(v ?? 0) || 0;
   const aprovados  = orcamentos.filter(o => o.status === "aprovado");
   const recusados  = orcamentos.filter(o => o.status === "recusado");
   const emAberto   = orcamentos.filter(o => o.status === "enviado" || o.status === "em_negociacao");
   const decididos  = aprovados.length + recusados.length;
   const conversao  = decididos ? Math.round((aprovados.length / decididos) * 100) : null;
-  const valorAprovado = aprovados.reduce((s, o) => s + num(o.total), 0);
-  const valorEmAberto = emAberto.reduce((s, o) => s + num(o.total), 0);
 
-  // Ticket médio: média dos orçamentos que o cliente aprovou, e só isso. O
-  // campo estimado do cadastro foi removido do sistema — era chute digitado uma
-  // vez e nunca revisado. Sem nada aprovado, o número não existe e mostramos
-  // "—" em vez de inventar.
-  const ticketMedio = aprovados.length ? valorAprovado / aprovados.length : null;
+  // O dinheiro desta empresa sai do store ao vivo — a mesma fonte da lista de
+  // clientes e do dashboard, para o mesmo cliente não aparecer com dois valores
+  // em duas telas. Assinar o store é também o que mantém o relógio de 5s
+  // ligado: sem isso, `aoMudarOrcamentos` nunca dispararia aqui.
+  //
+  // Ticket médio é a média do que o cliente aprovou, e só isso — o campo
+  // estimado do cadastro foi removido do sistema. Sem nada aprovado, o número
+  // não existe e mostramos "—" em vez de inventar.
+  const valoresEmpresa = useValoresOrcamento().valorDe(id || "");
+  const valorAprovado = valoresEmpresa.aprovado;
+  const valorEmAberto = valoresEmpresa.emAberto;
+  const ticketMedio = valoresEmpresa.ticketMedio;
+
+  // Aprovado mês a mês desta empresa; o semestre anterior existe só para a
+  // variação do KPI — sem base de comparação, qualquer número daria "+100%".
+  const serieMensal   = useMemo(() => serieAprovadaPorMes(orcamentos), [orcamentos]);
+  const serieAnterior = useMemo(() => serieAprovadaPorMes(orcamentos, 6, 6), [orcamentos]);
+  const totalSemestre = somaSerie(serieMensal);
+  const totalSemestreAnterior = somaSerie(serieAnterior);
+  const variacaoSemestre = totalSemestreAnterior > 0
+    ? ((totalSemestre - totalSemestreAnterior) / totalSemestreAnterior) * 100
+    : null;
+
+  // Ciclo médio: dias entre o envio e a decisão dos orçamentos aprovados. É a
+  // resposta para "quanto tempo esse cliente demora para decidir".
+  const cicloMedio = useMemo(() => {
+    const dias = orcamentos
+      .filter(o => o.status === "aprovado")
+      .map(o => {
+        const env = dataLocal(o.data_envio), dec = dataLocal(o.data_decisao);
+        return env && dec ? Math.max(0, Math.round((dec.getTime() - env.getTime()) / 86_400_000)) : null;
+      })
+      .filter((d): d is number => d !== null);
+    return dias.length ? Math.round(dias.reduce((a, b) => a + b, 0) / dias.length) : null;
+  }, [orcamentos]);
+
+  const ultimoFechamento = aprovados
+    .map(o => o.data_decisao || o.data_envio || o.criado_em || null)
+    .filter(Boolean)
+    .sort((a, b) => (dataLocal(b)?.getTime() ?? 0) - (dataLocal(a)?.getTime() ?? 0))[0] || null;
+  const diasDoUltimo = ultimoFechamento ? diasDesde(ultimoFechamento) : null;
+  const textoUltimo = diasDoUltimo === null || !Number.isFinite(diasDoUltimo)
+    ? "nada fechado ainda"
+    : diasDoUltimo === 0 ? "hoje"
+    : diasDoUltimo === 1 ? "ontem"
+    : `há ${diasDoUltimo} dias`;
+
+  const kpis = [
+    { lab: "Valor aprovado", icon: DollarSign, cor: "#83DDA8",
+      val: valorAprovado ? brlCurto(valorAprovado) : "—",
+      sub: `${aprovados.length} orçamento${aprovados.length === 1 ? "" : "s"} fechado${aprovados.length === 1 ? "" : "s"}`,
+      badge: variacaoSemestre,
+      title: variacaoSemestre !== null
+        ? `${brl(totalSemestre)} nos últimos 6 meses contra ${brl(totalSemestreAnterior)} nos 6 anteriores`
+        : "Soma dos orçamentos que esta empresa aprovou." },
+    { lab: "Em aberto", icon: Wallet, cor: "#C9B6E4", badge: null,
+      val: valorEmAberto ? brlCurto(valorEmAberto) : "—",
+      sub: `${emAberto.length} enviado${emAberto.length === 1 ? "" : "s"} ou em negociação`,
+      title: "Rascunho não entra: enquanto não foi ao cliente, não é dinheiro em jogo." },
+    { lab: "Ticket médio", icon: Target, cor: "#F2C879", badge: null,
+      val: ticketMedio !== null ? brlCurto(ticketMedio) : "—",
+      sub: "por orçamento aprovado",
+      title: ticketMedio !== null
+        ? `Média de ${aprovados.length} aprovado${aprovados.length === 1 ? "" : "s"} — ${brl(valorAprovado)} no total`
+        : "Aparece quando o primeiro orçamento desta empresa for aprovado." },
+    { lab: "Último fechamento", icon: CalendarCheck, cor: "#9FD3EA", badge: null,
+      val: formatDate(ultimoFechamento), sub: textoUltimo,
+      title: "Data da última aprovação desta empresa." },
+  ];
+
+  // Compromissos daqui para a frente, do mais próximo ao mais distante.
+  const proximasAcoes = useMemo(() => {
+    const hoje = inicioDoDia().getTime();
+    return atividades
+      .map((a: any) => ({ a, d: dataLocal(a.data_hora || a.data) }))
+      .filter(x => x.d && x.d.getTime() >= hoje)
+      .sort((x, y) => (x.d!.getTime()) - (y.d!.getTime()))
+      .slice(0, 4);
+  }, [atividades]);
+
+  // Chips de filtro: só os status que esta empresa tem. Cinco chips zerados
+  // numa carteira de dois orçamentos é ruído, não filtro.
+  const statusPresentes = STATUS_ORDEM.filter(st => orcamentos.some(o => o.status === st));
+  const orcamentosVisiveis = filtroStatus === "todos"
+    ? orcamentos
+    : orcamentos.filter(o => o.status === filtroStatus);
+  const totalVisivel = orcamentosVisiveis.reduce((acc, o) => acc + num(o.total), 0);
 
   const sc = empresa ? statusColor(empresa.status)      : statusColor("");
 
@@ -427,6 +510,9 @@ export default function EmpresaDetalhe() {
                     <h2 style={{ fontSize:22, fontWeight:800, color:"#EAF6FB", letterSpacing:"-0.02em" }}>{empresa.nome}</h2>
                     <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:6, flexWrap:"wrap" }}>
                       <span className="chip" style={{ background:sc.bg, color:sc.text, border:`1px solid ${sc.border}` }}>{empresa.status}</span>
+                      {empresa.porte && (
+                        <span className="chip" style={{ background:"rgba(142,68,173,0.16)", color:"#C9B6E4" }}>{empresa.porte}</span>
+                      )}
                       {/* Temperatura interativa. Os emojis saíram: renderizavam
                           em tamanhos diferentes por sistema e desalinhavam a
                           linha. A cor sólida do estado ativo já diz qual é. */}
@@ -461,33 +547,6 @@ export default function EmpresaDetalhe() {
                       </span>
                     </div>
                   </div>
-                  <div style={{ display:"flex", gap:16, flexShrink:0 }}>
-                    {/* Ticket médio — calculado, não digitado. Sai da média dos
-                        orçamentos aprovados desta empresa e se atualiza sozinho
-                        a cada aprovação. */}
-                    <div style={{ textAlign:"center" }}
-                      title={ticketMedio !== null
-                        ? `Média de ${aprovados.length} orçamento${aprovados.length === 1 ? "" : "s"} aprovado${aprovados.length === 1 ? "" : "s"} — ${brl(valorAprovado)} no total`
-                        : "Aparece assim que o primeiro orçamento desta empresa for aprovado."}>
-                      <div style={{ fontSize:20, fontWeight:800, color:ticketMedio !== null ? "#83DDA8" : "#9FD3EA", display:"flex", alignItems:"center", gap:4, justifyContent:"center" }}>
-                        {ticketMedio
-                          ? `R$ ${(ticketMedio/1000).toFixed(ticketMedio >= 10000 ? 0 : 1)}k`
-                          : "—"}
-                      </div>
-                      <div style={{ fontSize:10, color:"#9FD3EA", fontWeight:600 }}>
-                        Ticket médio
-                        {ticketMedio !== null && (
-                          <span style={{ color:"#83DDA8", fontWeight:700 }}>
-                            {` · ${aprovados.length} aprov.`}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div style={{ textAlign:"center" }}>
-                      <div style={{ fontSize:20, fontWeight:800, color:"#9FD3EA" }}>{contatos.length || "—"}</div>
-                      <div style={{ fontSize:10, color:"#9FD3EA", fontWeight:600 }}>Contatos</div>
-                    </div>
-                  </div>
                 </div>
 
                 {/* Identificação — CNPJ, site e contato principal */}
@@ -507,6 +566,34 @@ export default function EmpresaDetalhe() {
                       ) : (
                         <span style={{ fontSize:12, color:value ? "#EAF6FB" : "#9FD3EA", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{value || "—"}</span>
                       )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Faixa de indicadores — o resumo de carteira do painel de
+                    vendas, com o recorte de um cliente só. */}
+                <div style={{ marginTop:16, display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))", gap:12 }}>
+                  {kpis.map(k => (
+                    <div key={k.lab} title={k.title} style={{ background:"rgba(18,59,94,0.55)", border:"1px solid rgba(159,211,234,0.18)", borderRadius:12, padding:14, display:"flex", gap:12, alignItems:"flex-start" }}>
+                      <div style={{ width:36, height:36, borderRadius:10, display:"grid", placeItems:"center", flexShrink:0, background:`${k.cor}1f` }}>
+                        <k.icon style={{ width:18, height:18, color:k.cor }} />
+                      </div>
+                      <div style={{ minWidth:0 }}>
+                        <div style={{ fontSize:10, letterSpacing:"0.07em", textTransform:"uppercase", color:"#9FD3EA", fontWeight:800, marginBottom:3 }}>{k.lab}</div>
+                        <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+                          <span style={{ fontSize:18, fontWeight:900, color:"#EAF6FB", letterSpacing:"-0.02em", fontVariantNumeric:"tabular-nums" }}>{k.val}</span>
+                          {k.badge !== null && (
+                            <span title="Últimos 6 meses contra os 6 anteriores"
+                              style={{ display:"inline-flex", alignItems:"center", gap:3, padding:"2px 7px", borderRadius:20, fontSize:10, fontWeight:800,
+                                background:k.badge >= 0 ? "rgba(44,205,147,0.14)" : "rgba(248,113,113,0.14)",
+                                color:k.badge >= 0 ? "#2CCD93" : "#F87171" }}>
+                              <TrendingUp style={{ width:10, height:10, transform:k.badge >= 0 ? "none" : "scaleY(-1)" }} />
+                              {k.badge >= 0 ? "+" : ""}{Math.round(k.badge)}%
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize:11, color:"#9FD3EA", marginTop:2 }}>{k.sub}</div>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -533,7 +620,111 @@ export default function EmpresaDetalhe() {
               </div>
 
               {tab === "resumo" && (
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))", gap:18, alignItems:"start" }}>
+              <div style={{ display:"flex", flexDirection:"column", gap:18 }}>
+
+                {/* Visão geral: os quatro números que respondem "como está esta
+                    conta" sem obrigar a abrir aba nenhuma. */}
+                <motion.div style={CARD} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.05 }}>
+                  <Cabecalho titulo="Visão geral da conta" sub="Consolidado do que o sistema tem registrado desta empresa" />
+                  <div style={{ padding:16, display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))", gap:12 }}>
+                    {[
+                      { lab:"Vendas fechadas", icon:ShoppingCart, cor:"#83DDA8",
+                        val:String(aprovados.length),
+                        sub:totalSemestre ? `${brlCurto(totalSemestre)} nos últimos 6 meses` : "nada nos últimos 6 meses" },
+                      { lab:"Orçamentos abertos", icon:FileText, cor:"#F2C879",
+                        val:String(emAberto.length),
+                        sub:valorEmAberto ? `${brlCurto(valorEmAberto)} em jogo` : "nada em negociação" },
+                      { lab:"Conversão", icon:Percent, cor:"#9FD3EA",
+                        val:conversao !== null ? `${conversao}%` : "—",
+                        sub:decididos ? `${aprovados.length} de ${decididos} decidido${decididos === 1 ? "" : "s"}` : "nenhum orçamento decidido" },
+                      { lab:"Ciclo médio", icon:Timer, cor:"#C9B6E4",
+                        val:cicloMedio !== null ? `${cicloMedio} dia${cicloMedio === 1 ? "" : "s"}` : "—",
+                        sub:"do envio à decisão" },
+                    ].map(k => (
+                      <div key={k.lab} style={{ background:"rgba(18,59,94,0.55)", border:"1px solid rgba(159,211,234,0.18)", borderRadius:10, padding:14, display:"flex", gap:12, alignItems:"flex-start" }}>
+                        <div style={{ width:36, height:36, borderRadius:9, display:"grid", placeItems:"center", flexShrink:0, background:`${k.cor}1f` }}>
+                          <k.icon style={{ width:18, height:18, color:k.cor }} />
+                        </div>
+                        <div style={{ minWidth:0 }}>
+                          <div style={{ fontSize:10.5, letterSpacing:"0.07em", textTransform:"uppercase", color:"#9FD3EA", fontWeight:800, marginBottom:3 }}>{k.lab}</div>
+                          <div style={{ fontSize:19, fontWeight:900, color:"#EAF6FB", letterSpacing:"-0.02em", fontVariantNumeric:"tabular-nums" }}>{k.val}</div>
+                          <div style={{ fontSize:11.5, color:"#9FD3EA", marginTop:2 }}>{k.sub}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+
+                <Colunas rail={<>
+                  <Caixa titulo="Taxa de conversão">
+                    <DonutConversao pct={conversao ?? 0} />
+                    <div style={{ textAlign:"center", marginTop:10 }}>
+                      <div style={{ fontSize:13, fontWeight:800, color:"#EAF6FB", fontVariantNumeric:"tabular-nums" }}>
+                        {aprovados.length} aprovado{aprovados.length === 1 ? "" : "s"}
+                      </div>
+                      <div style={{ fontSize:11, color:"#9FD3EA" }}>
+                        {decididos ? `de ${decididos} decidido${decididos === 1 ? "" : "s"}` : "nenhum decidido ainda"}
+                      </div>
+                    </div>
+                  </Caixa>
+                  <Caixa titulo="Informações rápidas">
+                    <Facts itens={[
+                      { rot:"Cliente desde",    val: formatDate(empresa.criado_em || null) },
+                      { rot:"Total aprovado",   val: valorAprovado ? brl(valorAprovado, 0) : "—" },
+                      { rot:"Orçamentos",       val: orcamentos.length || "—" },
+                      { rot:"Vendas fechadas",  val: aprovados.length || "—", cor:"#83DDA8" },
+                      { rot:"Responsável",      val: empresa.responsavel_principal || "—" },
+                      { rot:"Próximo contato",  val: formatDate(empresa.data_proxima_acao || null) },
+                    ]} />
+                  </Caixa>
+                </>}>
+                  <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+                    <GraficoAprovadoMensal
+                      serie={serieMensal}
+                      subtitulo="Últimos 6 meses desta empresa"
+                      vazioTexto="Esta empresa não fechou nada no período."
+                    />
+
+                    {/* Próximas ações — sai da agenda, que é onde as datas
+                        futuras desta empresa realmente moram. */}
+                    <section style={{ ...CARD, overflow:"hidden" }}>
+                      <Cabecalho titulo="Próximas ações" sub="Compromissos agendados com esta empresa">
+                        <button onClick={() => navigate("/calendario")}
+                          style={{ display:"flex", alignItems:"center", gap:5, height:30, padding:"0 12px", borderRadius:8, border:"1px solid rgba(159,211,234,0.30)", background:"rgba(46,111,149,0.06)", color:"#9FD3EA", fontSize:11.5, fontWeight:700, cursor:"pointer", fontFamily:"'Plus Jakarta Sans',sans-serif" }}>
+                          Abrir calendário <ChevronRight style={{ width:12, height:12 }} />
+                        </button>
+                      </Cabecalho>
+                      {proximasAcoes.length === 0 ? (
+                        <Vazio icon={Calendar} titulo="Nada agendado daqui para a frente"
+                          dica={empresa.proxima_acao ? `Próxima ação combinada: ${empresa.proxima_acao}` : "Agende pelo calendário e o compromisso aparece aqui."} />
+                      ) : (
+                        <div style={{ padding:"12px 18px 16px", display:"flex", flexDirection:"column", gap:8 }}>
+                          {proximasAcoes.map(({ a, d }: any) => (
+                            <div key={a.evento_id || a.id} style={{ display:"flex", alignItems:"center", gap:11, padding:"10px 12px", borderRadius:10, background:"rgba(18,59,94,0.55)", border:"1px solid rgba(159,211,234,0.18)" }}>
+                              <div style={{ width:30, height:30, borderRadius:9, display:"grid", placeItems:"center", flexShrink:0, background:"rgba(142,68,173,0.16)" }}>
+                                <Calendar style={{ width:15, height:15, color:"#C9B6E4" }} />
+                              </div>
+                              <div style={{ flex:1, minWidth:0 }}>
+                                <div style={{ fontSize:12.5, fontWeight:700, color:"#EAF6FB", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                                  {a.titulo || a.nome || "Compromisso"}
+                                </div>
+                                <div style={{ fontSize:11, color:"#9FD3EA", marginTop:1, fontVariantNumeric:"tabular-nums" }}>
+                                  {d.toLocaleDateString("pt-BR")} · {d.toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" })}
+                                </div>
+                              </div>
+                              <span style={{ fontSize:11, color:"#9FD3EA", flexShrink:0 }}>
+                                {(() => { const faltam = Math.round((d.getTime() - Date.now()) / 86_400_000);
+                                  return faltam <= 0 ? "hoje" : faltam === 1 ? "amanhã" : `em ${faltam} dias`; })()}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </section>
+                  </div>
+                </Colunas>
+
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))", gap:18, alignItems:"start" }}>
                 {/* Informações */}
                 <motion.div className="glass-card" style={{ padding:"22px 24px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.07 }}>
                   <div style={{ fontSize:13, fontWeight:700, color:"#EAF6FB", marginBottom:16, display:"flex", alignItems:"center", gap:7 }}>
@@ -575,209 +766,246 @@ export default function EmpresaDetalhe() {
                   ))}
                 </motion.div>
 
-                {/* Informações rápidas — só o que tem fonte hoje. Faturamento, budget e
-                    nº de vendas do mock dependem de vendas faturadas (fase 2). */}
-                <motion.div className="glass-card" style={{ padding:"22px 24px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.16 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:"#EAF6FB", marginBottom:16, display:"flex", alignItems:"center", gap:7 }}>
-                    <Percent style={{ width:15, height:15, color:"#9FD3EA" }} /> Informações rápidas
-                  </div>
-                  {[
-                    { label:"Orçamentos",       value: orcamentos.length ? String(orcamentos.length) : "—" },
-                    { label:"Valor aprovado",   value: valorAprovado ? brl(valorAprovado) : "—" },
-                    { label:"Valor em aberto",  value: valorEmAberto ? brl(valorEmAberto) : "—" },
-                    { label:"Taxa de conversão", value: conversao !== null ? `${conversao}%` : "—",
-                      hint: conversao !== null ? `${aprovados.length} de ${decididos} decidido${decididos === 1 ? "" : "s"}` : "nenhum orçamento decidido" },
-                    { label:"Próximo contato",  value: formatDate(empresa.data_proxima_acao || null) },
-                  ].map(({ label, value, hint }: any) => (
-                    <div key={label} className="info-row" style={{ justifyContent:"space-between" }}>
-                      <span style={{ fontSize:12, color:"#9FD3EA", fontWeight:600 }}>{label}</span>
-                      <span style={{ textAlign:"right" }}>
-                        <span style={{ fontSize:12, color:"#EAF6FB", fontWeight:700, fontVariantNumeric:"tabular-nums" }}>{value}</span>
-                        {hint && <span style={{ display:"block", fontSize:10, color:"#9FD3EA" }}>{hint}</span>}
-                      </span>
-                    </div>
-                  ))}
-                </motion.div>
+                </div>
               </div>
               )}
 
-              {/* Observações */}
-              {tab === "observacoes" && (
-                <motion.div className="glass-card" style={{ padding:"22px 24px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.3 }}>
-                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
-                    <div style={{ fontSize:13, fontWeight:700, color:"#EAF6FB", display:"flex", alignItems:"center", gap:7 }}>
-                      <NotebookPen style={{ width:15, height:15, color:"#9FD3EA" }} /> Observações
-                    </div>
-                    <button onClick={() => navigate(`/clientes/${id}/editar`)} style={{ height:30, padding:"0 12px", borderRadius:8, border:"1px solid rgba(159,211,234,0.30)", background:"rgba(46,111,149,0.06)", color:"#9FD3EA", fontSize:11.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"'Plus Jakarta Sans',sans-serif" }}>
-                      <Edit3 style={{ width:12, height:12 }} /> Editar
-                    </button>
-                  </div>
-                  {empresa.observacoes ? (
-                    <p style={{ fontSize:13, color:"#EAF6FB", lineHeight:1.7, whiteSpace:"pre-wrap" }}>{empresa.observacoes}</p>
-                  ) : (
-                    <div style={{ padding:"28px 0", textAlign:"center", fontSize:12, color:"#9FD3EA" }}>Nenhuma observação registrada</div>
-                  )}
+              {tab === "observacoes" && empresa && (
+                <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.3 }}>
+                  <PainelObservacoes
+                    empresaId={empresa.empresa_id}
+                    textoCadastro={empresa.observacoes}
+                    onEditarCadastro={() => navigate(`/clientes/${id}/editar`)}
+                  />
+                </motion.div>
+              )}
+
+              {/* Vendas — orçamentos aprovados */}
+              {tab === "vendas" && (
+                <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.3 }}>
+                  <PainelVendas orcamentos={orcamentos} />
+                </motion.div>
+              )}
+
+              {/* Produtos comprados */}
+              {tab === "produtos" && empresa && (
+                <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.3 }}>
+                  <PainelProdutos empresaId={empresa.empresa_id} />
                 </motion.div>
               )}
 
               {/* Orçamentos */}
               {tab === "orcamentos" && (
-                <motion.div className="glass-card" style={{ padding:"22px 24px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.3 }}>
-                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14, gap:12, flexWrap:"wrap" }}>
-                    <div style={{ fontSize:13, fontWeight:700, color:"#EAF6FB", display:"flex", alignItems:"center", gap:7 }}>
-                      <DollarSign style={{ width:15, height:15, color:"#83DDA8" }} /> Orçamentos ({orcamentos.length})
-                    </div>
-                    <button onClick={() => navigate("/gerenciamento?tab=vendas")} style={{ height:30, padding:"0 12px", borderRadius:8, border:"1px solid rgba(159,211,234,0.30)", background:"rgba(46,111,149,0.06)", color:"#9FD3EA", fontSize:11.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"'Plus Jakarta Sans',sans-serif" }}>
-                      Gerenciar vendas <ChevronRight style={{ width:12, height:12 }} />
-                    </button>
-                  </div>
+                <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.3 }}
+                  style={{ display:"flex", flexDirection:"column", gap:16 }}>
 
-                  {orcamentosErro ? (
-                    <div style={{ padding:"24px 0", textAlign:"center", fontSize:12, color:"rgba(192,57,43,0.75)", fontWeight:600 }}>
-                      Não foi possível carregar os orçamentos.
-                    </div>
-                  ) : orcamentos.length === 0 ? (
-                    <div style={{ padding:"28px 0", textAlign:"center" }}>
-                      <div style={{ width:44, height:44, borderRadius:"50%", background:"rgba(39,174,96,0.07)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 10px" }}>
-                        <DollarSign style={{ width:20, height:20, color:"rgba(39,174,96,0.35)" }} />
+                  <FunilOrcamentos orcamentos={orcamentos} />
+
+                  <Colunas rail={<>
+                    <Caixa titulo="Em aberto">
+                      <div style={{ marginBottom:12 }}>
+                        <div style={{ fontSize:10.5, letterSpacing:"0.07em", textTransform:"uppercase", color:"#9FD3EA", fontWeight:800 }}>Valor em negociação</div>
+                        <div style={{ fontSize:19, fontWeight:900, color:"#EAF6FB", letterSpacing:"-0.02em", fontVariantNumeric:"tabular-nums", marginTop:3 }}>
+                          {valorEmAberto ? brl(valorEmAberto, 0) : "—"}
+                        </div>
+                        <div style={{ fontSize:11.5, color:"#9FD3EA", marginTop:2 }}>
+                          {emAberto.length} orçamento{emAberto.length === 1 ? "" : "s"} ativo{emAberto.length === 1 ? "" : "s"}
+                        </div>
                       </div>
-                      <div style={{ fontSize:12, color:"#9FD3EA", fontWeight:600 }}>Nenhum orçamento para esta empresa</div>
-                      <div style={{ fontSize:11, color:"#9FD3EA", marginTop:3 }}>Crie o primeiro em Gerenciamento → Vendas</div>
-                    </div>
-                  ) : (
-                    <div style={{ overflowX:"auto" }}>
-                      <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12.5 }}>
-                        <thead>
-                          <tr>
-                            {["Título", "Criado em", "Enviado em", "Status", "Total"].map((h, i) => (
-                              <th key={h} style={{ textAlign: i === 4 ? "right" : "left", padding:"8px 12px", fontSize:10.5, letterSpacing:"0.06em", textTransform:"uppercase", color:"#9FD3EA", fontWeight:700, borderBottom:"1px solid rgba(159,211,234,0.18)", whiteSpace:"nowrap" }}>{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {orcamentos.map(o => {
-                            const info = STATUS_ORCAMENTO[o.status] || STATUS_ORCAMENTO.rascunho;
-                            return (
-                              <tr key={o.orcamento_id}>
-                                <td style={{ padding:"10px 12px", borderBottom:"1px solid rgba(159,211,234,0.18)", color:"#EAF6FB", fontWeight:600 }}>{o.titulo || "Sem título"}</td>
-                                <td style={{ padding:"10px 12px", borderBottom:"1px solid rgba(159,211,234,0.18)", color:"#EAF6FB", fontVariantNumeric:"tabular-nums", whiteSpace:"nowrap" }}>{formatDate(o.criado_em || null)}</td>
-                                <td style={{ padding:"10px 12px", borderBottom:"1px solid rgba(159,211,234,0.18)", color:"#EAF6FB", fontVariantNumeric:"tabular-nums", whiteSpace:"nowrap" }}>{formatDate(o.data_envio || null)}</td>
-                                <td style={{ padding:"10px 12px", borderBottom:"1px solid rgba(159,211,234,0.18)" }}>
-                                  <span className="chip" style={{ background:info.bg, color:info.color }}>{info.label}</span>
-                                </td>
-                                <td style={{ padding:"10px 12px", borderBottom:"1px solid rgba(159,211,234,0.18)", textAlign:"right", color:"#EAF6FB", fontWeight:700, fontVariantNumeric:"tabular-nums", whiteSpace:"nowrap" }}>{brl(num(o.total))}</td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
+                      <Facts itens={[
+                        { rot:"Enviados",       val: orcamentos.filter(o => o.status === "enviado").length },
+                        { rot:"Em negociação",  val: orcamentos.filter(o => o.status === "em_negociacao").length },
+                        { rot:"Rascunhos",      val: orcamentos.filter(o => o.status === "rascunho").length },
+                      ]} />
+                    </Caixa>
+                    <Caixa titulo="Status dos orçamentos">
+                      <Rank vazio="Nenhum orçamento para esta empresa."
+                        itens={STATUS_ORDEM
+                          .map(st => ({ st, qtd: orcamentos.filter(o => o.status === st).length }))
+                          .filter(x => x.qtd > 0)
+                          .map(x => ({
+                            rot: STATUS_ORCAMENTO[x.st].label, val: x.qtd, peso: x.qtd,
+                            cor: STATUS_ORCAMENTO[x.st].color,
+                          }))} />
+                    </Caixa>
+                  </>}>
+                    <section style={{ ...CARD, overflow:"hidden" }}>
+                      <Cabecalho titulo={`Orçamentos (${orcamentos.length})`} sub="Cadastro, envio e acompanhamento">
+                        <button onClick={() => navigate("/gerenciamento?tab=vendas")}
+                          style={{ height:30, padding:"0 12px", borderRadius:8, border:"1px solid rgba(159,211,234,0.30)", background:"rgba(46,111,149,0.06)", color:"#9FD3EA", fontSize:11.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"'Plus Jakarta Sans',sans-serif" }}>
+                          Gerenciar vendas <ChevronRight style={{ width:12, height:12 }} />
+                        </button>
+                      </Cabecalho>
+
+                      {orcamentosErro ? (
+                        <Vazio icon={DollarSign} titulo="Não foi possível carregar os orçamentos." />
+                      ) : orcamentos.length === 0 ? (
+                        <Vazio icon={DollarSign} titulo="Nenhum orçamento para esta empresa"
+                          dica="Crie o primeiro em Gerenciamento → Vendas" />
+                      ) : (
+                        <>
+                          {/* Filtro por status. Só aparece quando há mais de um
+                              status nesta carteira — chip zerado é ruído. */}
+                          {statusPresentes.length > 1 && (
+                            <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"center", padding:"12px 18px", borderBottom:"1px solid rgba(159,211,234,0.18)" }}>
+                              <Filter style={{ width:13, height:13, color:"#9FD3EA", marginRight:2 }} />
+                              {["todos", ...statusPresentes].map(st => {
+                                const info = STATUS_ORCAMENTO[st];
+                                const on = filtroStatus === st;
+                                const qtd = st === "todos" ? orcamentos.length : orcamentos.filter(o => o.status === st).length;
+                                return (
+                                  <button key={st} onClick={() => setFiltroStatus(st)}
+                                    style={{
+                                      padding:"5px 12px", borderRadius:20, fontSize:11, fontWeight:700, cursor:"pointer",
+                                      fontFamily:"'Plus Jakarta Sans',sans-serif",
+                                      border:`1.5px solid ${on ? (info ? info.color : "rgba(159,211,234,0.45)") : "rgba(159,211,234,0.18)"}`,
+                                      background:on ? (info ? info.bg : "rgba(159,211,234,0.12)") : "rgba(18,59,94,0.55)",
+                                      color:on ? (info ? info.color : "#EAF6FB") : "#9FD3EA",
+                                    }}>
+                                    {info ? info.label : "Todos"} ({qtd})
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {orcamentosVisiveis.length === 0 ? (
+                            <Vazio icon={DollarSign} titulo="Nenhum orçamento com esse status." />
+                          ) : (
+                            <div style={{ overflowX:"auto" }}>
+                              <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12.5 }}>
+                                <thead><tr>
+                                  <Th>#</Th><Th>Nº</Th><Th>Título / item</Th><Th r>Itens</Th>
+                                  <Th>Responsável</Th><Th>Enviado em</Th><Th>Status</Th><Th r>Valor</Th>
+                                </tr></thead>
+                                <tbody>
+                                  {orcamentosVisiveis.map((o, i) => (
+                                    <tr key={o.orcamento_id}>
+                                      <td style={{ ...TD_NUM, color:"#9FD3EA", width:26 }}>{i + 1}</td>
+                                      <td style={TD_NUM} title="Número do orçamento">
+                                        {numeroOrcamento({ orcamento_id:o.orcamento_id, criado_em:o.criado_em })}
+                                      </td>
+                                      <td style={{ ...TD, fontWeight:600 }}>
+                                        {o.titulo || "Sem título"}
+                                        {o.item_principal && (
+                                          <span style={{ display:"block", fontSize:10.5, color:"#9FD3EA", fontWeight:500, marginTop:1 }}>
+                                            {o.item_principal}{(o.qtd_itens || 0) > 1 ? ` +${(o.qtd_itens || 1) - 1}` : ""}
+                                          </span>
+                                        )}
+                                        {o.motivo_recusa && (
+                                          <span style={{ display:"block", fontSize:10.5, color:"#F7B8B1", fontWeight:600, marginTop:1 }}>
+                                            Recusa: {o.motivo_recusa}
+                                          </span>
+                                        )}
+                                      </td>
+                                      <td style={{ ...TD_NUM, textAlign:"right" }}
+                                        title={o.qtd_pecas != null ? `${o.qtd_pecas} peça(s) em ${o.qtd_itens} linha(s)` : undefined}>
+                                        {o.qtd_itens ?? "—"}
+                                      </td>
+                                      <td style={{ ...TD, color:o.vendedor_nome ? "#EAF6FB" : "#9FD3EA", whiteSpace:"nowrap" }}>{o.vendedor_nome || "—"}</td>
+                                      <td style={TD_NUM} title={o.criado_em ? `Criado em ${formatDate(o.criado_em)}` : undefined}>
+                                        {formatDate(o.data_envio || null)}
+                                      </td>
+                                      <td style={TD}><Chip status={o.status} /></td>
+                                      <td style={{ ...TD_NUM, textAlign:"right", fontWeight:700 }}>{brl(o.total, 0)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+
+                          <div style={{ padding:"12px 18px", display:"flex", justifyContent:"space-between", alignItems:"center", gap:12, flexWrap:"wrap", fontSize:12, color:"#9FD3EA", borderTop:"1px solid rgba(159,211,234,0.18)" }}>
+                            <span>Mostrando {orcamentosVisiveis.length} de {orcamentos.length} orçamento{orcamentos.length === 1 ? "" : "s"}</span>
+                            <span style={{ fontWeight:800, color:"#EAF6FB", fontVariantNumeric:"tabular-nums" }}>{brl(totalVisivel, 0)}</span>
+                          </div>
+                        </>
+                      )}
+                    </section>
+                  </Colunas>
                 </motion.div>
               )}
 
-              {/* Contatos + Timeline */}
-              <div style={{ display:"grid", gridTemplateColumns:"1fr", gap:18 }}>
-
-                {/* Card único de contatos */}
-                {tab === "contatos" && (
-                <motion.div className="glass-card" style={{ padding:"22px 24px", display:"flex", flexDirection:"column", maxHeight:420 }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.18 }}>
-                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
-                    <div style={{ fontSize:13, fontWeight:700, color:"#EAF6FB", display:"flex", alignItems:"center", gap:7 }}>
-                      <Users style={{ width:15, height:15, color:"#9FD3EA" }} /> Contatos ({contatos.length})
-                    </div>
-                    <div style={{ display:"flex", gap:5 }}>
+              {/* Contatos — um cartão por pessoa, tudo à vista. O sanfonado
+                  economizava altura escondendo justamente o telefone e o e-mail,
+                  que é o que se vem buscar aqui. */}
+              {tab === "contatos" && (
+                <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.3 }}>
+                  <section style={{ ...CARD, overflow:"hidden" }}>
+                    <Cabecalho titulo={`Contatos (${contatos.length})`} sub="Pessoas cadastradas nesta conta">
                       <SendButton color="#9FD3EA" bg="rgba(41,128,185,0.08)" border="rgba(41,128,185,0.25)" icon={Mail}          label="E-mail"   onClick={() => setSendChannel("email")} />
                       <SendButton color="#83DDA8" bg="rgba(39,174,96,0.08)"  border="rgba(39,174,96,0.25)"  icon={MessageCircle} label="WhatsApp" onClick={() => setSendChannel("whatsapp")} />
-                    </div>
-                  </div>
+                      <SendButton color="#F2C879" bg="rgba(230,126,34,0.08)" border="rgba(230,126,34,0.25)" icon={Phone}         label="Ligar"    onClick={() => setSendChannel("telefone")} />
+                    </Cabecalho>
 
-                  {contatos.length === 0 ? (
-                    <div style={{ padding:"24px 0", textAlign:"center", fontSize:12, color:"#9FD3EA" }}>Nenhum contato cadastrado</div>
-                  ) : (
-                    <div style={{ display:"flex", flexDirection:"column", gap:6, overflowY:"auto", flex:1 }}>
-                      <AnimatePresence>
+                    {contatos.length === 0 ? (
+                      <Vazio icon={Users} titulo="Nenhum contato cadastrado"
+                        dica="Sem uma pessoa com nome e telefone, a conta não tem por onde ser trabalhada." />
+                    ) : (
+                      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(268px,1fr))", gap:12, padding:16 }}>
                         {contatos.map((c, i) => {
-                          const expanded = expandedContato === c.contato_id;
-                          const cor = ["#9FD3EA","#83DDA8","#F2C879","#C9B6E4","#83DDA8"][i % 5];
+                          const cor = ["#9FD3EA","#83DDA8","#F2C879","#C9B6E4","#F7B8B1"][i % 5];
+                          const telefone = c.celular || c.telefone;
+                          const zap = c.whatsapp || c.celular;
                           return (
-                            <motion.div key={c.contato_id} initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.18 }} style={{ borderRadius:10, overflow:"hidden" }}>
-                              {/* Linha compacta */}
-                              <div
-                                onClick={() => setExpandedContato(expanded ? null : c.contato_id)}
-                                style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 12px", background:"rgba(18,59,94,0.55)", border:`1.5px solid ${expanded ? "rgba(159,211,234,0.30)" : "rgba(159,211,234,0.18)"}`, borderBottom: expanded ? "1px solid rgba(200,225,240,0.4)" : undefined, borderRadius: expanded ? "10px 10px 0 0" : "10px", cursor:"pointer", transition:"all 0.15s" }}
-                              >
-                                <div style={{ width:32, height:32, borderRadius:"50%", background:cor, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:"#EAF6FB", flexShrink:0 }}>{initials(c.nome)}</div>
-                                <div style={{ flex:1, minWidth:0 }}>
-                                  <div style={{ fontSize:12, fontWeight:700, color:"#EAF6FB", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{c.nome}</div>
-                                  <div style={{ fontSize:10, color:"#9FD3EA" }}>{c.funcao || c.cargo || "—"}</div>
+                            <div key={c.contato_id} style={{ background:"rgba(18,59,94,0.55)", border:"1px solid rgba(159,211,234,0.18)", borderRadius:12, padding:14 }}>
+                              <div style={{ display:"flex", gap:11, alignItems:"center", marginBottom:11 }}>
+                                <div style={{ width:40, height:40, borderRadius:"50%", background:cor, display:"grid", placeItems:"center", fontSize:13, fontWeight:800, color:"#0F2E4B", flexShrink:0 }}>
+                                  {initials(c.nome)}
                                 </div>
-                                {c.decisor && <span style={{ fontSize:9, fontWeight:700, padding:"2px 6px", borderRadius:4, background:"rgba(39,174,96,0.1)", color:"#83DDA8", border:"1px solid rgba(39,174,96,0.2)", flexShrink:0 }}>Decisor</span>}
-                                <ChevronDown style={{ width:13, height:13, color:"#9FD3EA", transform: expanded ? "rotate(180deg)" : "none", transition:"transform 0.2s", flexShrink:0 }} />
+                                <div style={{ minWidth:0 }}>
+                                  <div style={{ display:"flex", alignItems:"center", gap:7, flexWrap:"wrap" }}>
+                                    <span style={{ fontSize:13.5, fontWeight:700, color:"#EAF6FB" }}>{c.nome}</span>
+                                    {c.decisor && <span className="chip" style={{ background:"rgba(39,174,96,0.16)", color:"#83DDA8" }}>Decisor</span>}
+                                  </div>
+                                  <div style={{ fontSize:11.5, color:"#9FD3EA", marginTop:1 }}>{c.funcao || c.cargo || "—"}</div>
+                                </div>
                               </div>
 
-                              {/* Expandido */}
-                              <AnimatePresence>
-                                {expanded && (
-                                  <motion.div initial={{ opacity:0, height:0 }} animate={{ opacity:1, height:"auto" }} exit={{ opacity:0, height:0 }} transition={{ duration:0.2 }} style={{ overflow:"hidden" }}>
-                                    <div style={{ background:"#0F2E4B", border:"1.5px solid rgba(159,211,234,0.30)", borderTop:"none", borderRadius:"0 0 10px 10px", padding:"12px 14px", display:"flex", flexDirection:"column", gap:6 }}>
-                                      {c.email && (
-                                        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                                          <Mail style={{ width:11, height:11, color:"#9FD3EA", flexShrink:0 }} />
-                                          <span style={{ fontSize:11, color:"#EAF6FB", flex:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{c.email}</span>
-                                        </div>
-                                      )}
-                                      {(c.celular || c.telefone) && (
-                                        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                                          <Phone style={{ width:11, height:11, color:"#9FD3EA", flexShrink:0 }} />
-                                          <span style={{ fontSize:11, color:"#EAF6FB" }}>{c.celular || c.telefone}</span>
-                                        </div>
-                                      )}
-                                      {c.whatsapp && (
-                                        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                                          <MessageCircle style={{ width:11, height:11, color:"#83DDA8", flexShrink:0 }} />
-                                          <span style={{ fontSize:11, color:"#EAF6FB" }}>{c.whatsapp}</span>
-                                        </div>
-                                      )}
-                                      {c.linkedin && (
-                                        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                                          <Link2 style={{ width:11, height:11, color:"#0077b5", flexShrink:0 }} />
-                                          <span style={{ fontSize:11, color:"#EAF6FB", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{c.linkedin}</span>
-                                        </div>
-                                      )}
-                                      <div style={{ display:"flex", gap:5, marginTop:4 }}>
-                                        {c.email && (
-                                          <button onClick={() => openContactEmail(c.email!)} style={{ flex:1, height:26, borderRadius:6, border:"1px solid rgba(159,211,234,0.30)", background:"rgba(46,111,149,0.06)", color:"#9FD3EA", fontSize:10, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:3 }}>
-                                            <Mail style={{ width:9, height:9 }} /> Email
-                                          </button>
-                                        )}
-                                        {(c.whatsapp || c.celular) && (
-                                          <button onClick={() => openWhatsApp(c.whatsapp || c.celular || "")} style={{ flex:1, height:26, borderRadius:6, border:"1px solid rgba(39,174,96,0.25)", background:"rgba(39,174,96,0.06)", color:"#83DDA8", fontSize:10, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:3 }}>
-                                            <MessageCircle style={{ width:9, height:9 }} /> WhatsApp
-                                          </button>
-                                        )}
-                                        {(c.celular || c.telefone) && (
-                                          <button onClick={() => window.open(`tel:${c.celular || c.telefone}`, "_self")} style={{ flex:1, height:26, borderRadius:6, border:"1px solid rgba(230,126,34,0.25)", background:"rgba(230,126,34,0.06)", color:"#F2C879", fontSize:10, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:3 }}>
-                                            <Phone style={{ width:9, height:9 }} /> Ligar
-                                          </button>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </motion.div>
+                              {[
+                                { icon: Mail,          val: c.email },
+                                { icon: Phone,         val: telefone },
+                                { icon: MessageCircle, val: c.whatsapp },
+                                { icon: Link2,         val: c.linkedin },
+                              ].filter(l => l.val).map(({ icon: Icon, val }) => (
+                                <div key={val as string} style={{ display:"flex", alignItems:"center", gap:7, fontSize:12, color:"#EAF6FB", padding:"3px 0", minWidth:0 }}>
+                                  <Icon style={{ width:14, height:14, color:"#9FD3EA", flexShrink:0 }} />
+                                  <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{val}</span>
+                                </div>
+                              ))}
+
+                              <div style={{ marginTop:11, paddingTop:10, borderTop:"1px solid rgba(159,211,234,0.18)", display:"flex", gap:5 }}>
+                                {c.email && (
+                                  <button onClick={() => openContactEmail(c.email!)}
+                                    style={{ flex:1, height:28, borderRadius:7, border:"1px solid rgba(159,211,234,0.30)", background:"rgba(46,111,149,0.08)", color:"#9FD3EA", fontSize:10.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:4, fontFamily:"inherit" }}>
+                                    <Mail style={{ width:10, height:10 }} /> E-mail
+                                  </button>
                                 )}
-                              </AnimatePresence>
-                            </motion.div>
+                                {zap && (
+                                  <button onClick={() => openWhatsApp(zap)}
+                                    style={{ flex:1, height:28, borderRadius:7, border:"1px solid rgba(39,174,96,0.25)", background:"rgba(39,174,96,0.08)", color:"#83DDA8", fontSize:10.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:4, fontFamily:"inherit" }}>
+                                    <MessageCircle style={{ width:10, height:10 }} /> WhatsApp
+                                  </button>
+                                )}
+                                {telefone && (
+                                  <button onClick={() => window.open(`tel:${telefone}`, "_self")}
+                                    style={{ flex:1, height:28, borderRadius:7, border:"1px solid rgba(230,126,34,0.25)", background:"rgba(230,126,34,0.08)", color:"#F2C879", fontSize:10.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:4, fontFamily:"inherit" }}>
+                                    <Phone style={{ width:10, height:10 }} /> Ligar
+                                  </button>
+                                )}
+                              </div>
+                            </div>
                           );
                         })}
-                      </AnimatePresence>
-                    </div>
-                  )}
+                      </div>
+                    )}
+                  </section>
                 </motion.div>
-                )}
+              )}
 
-                {/* Empresas próximas desta empresa — parte da coordenada dela,
-                    sem obrigar o usuário a voltar para a busca e redigitar cidade */}
-                {tab === "proximas" && (
+              {/* Empresas próximas desta empresa — parte da coordenada dela,
+                  sem obrigar o usuário a voltar para a busca e redigitar cidade */}
+              {tab === "proximas" && (
                 <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.1 }}>
                   <EmpresasProximasDaEmpresa
                     empresaId={empresa.empresa_id}
@@ -788,68 +1016,14 @@ export default function EmpresaDetalhe() {
                     segmento={empresa.segmento}
                   />
                 </motion.div>
-                )}
+              )}
 
-                {/* Card de atividades */}
-                {tab === "timeline" && (
-                <motion.div className="glass-card" style={{ padding:"22px 24px", display:"flex", flexDirection:"column", maxHeight:420 }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.22 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:"#EAF6FB", marginBottom:14, display:"flex", alignItems:"center", gap:7 }}>
-                    <Calendar style={{ width:15, height:15, color:"#9FD3EA" }} /> Atividades & Eventos
-                  </div>
-
-                  {/* Legenda */}
-                  <div style={{ display:"flex", gap:10, marginBottom:12, flexWrap:"wrap" }}>
-                    {[
-                      { label:"Aceito",       color:"#83DDA8", icon:<svg width="9" height="9" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9.5 10,2.5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg> },
-                      { label:"Negado",       color:"#F7B8B1", icon:<svg width="9" height="9" viewBox="0 0 12 12" fill="none"><line x1="2" y1="2" x2="10" y2="10" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"/></svg> },
-                      { label:"Talvez",       color:"#F2C879", icon:<span style={{ color:"#fff", fontSize:11, fontWeight:900, lineHeight:1 }}>?</span> },
-                      { label:"Novo horário", color:"#9FD3EA", icon:<Clock style={{ width:9, height:9, color:"#fff" }}/> },
-                    ].map(s => (
-                      <div key={s.label} style={{ display:"flex", alignItems:"center", gap:4 }}>
-                        <div style={{ width:14, height:14, borderRadius:"50%", background:s.color, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>{s.icon}</div>
-                        <span style={{ fontSize:9, fontWeight:600, color:"#9FD3EA" }}>{s.label}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {atividades.length === 0 ? (
-                    <div style={{ padding:"28px 0", textAlign:"center" }}>
-                      <div style={{ width:44, height:44, borderRadius:"50%", background:"rgba(142,68,173,0.07)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 10px" }}>
-                        <Calendar style={{ width:20, height:20, color:"rgba(142,68,173,0.3)" }} />
-                      </div>
-                      <div style={{ fontSize:12, color:"#9FD3EA", fontWeight:600 }}>Nenhuma atividade agendada</div>
-                      <div style={{ fontSize:11, color:"#9FD3EA", marginTop:3 }}>Agende pelo calendário e as respostas aparecerão aqui</div>
-                    </div>
-                  ) : (
-                    <div style={{ display:"flex", flexDirection:"column", gap:7, overflowY:"auto", flex:1 }}>
-                      {atividades.map((a: any) => {
-                        const STATUS: Record<string, { color:string; bg: string; border:string; label: string; icon: React.ReactNode }> = {
-                          aceito:       { color:"#83DDA8", bg:"rgba(39,174,96,0.08)",  border:"rgba(39,174,96,0.28)",  label:"Aceito",       icon:<svg width="9" height="9" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9.5 10,2.5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg> },
-                          negado:       { color:"#F7B8B1", bg:"rgba(231,76,60,0.08)",  border:"rgba(231,76,60,0.28)",  label:"Negado",       icon:<svg width="9" height="9" viewBox="0 0 12 12" fill="none"><line x1="2" y1="2" x2="10" y2="10" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"/></svg> },
-                          talvez:       { color:"#F2C879", bg:"rgba(243,156,18,0.08)", border:"rgba(243,156,18,0.28)", label:"Talvez",       icon:<span style={{ color:"#fff", fontSize:11, fontWeight:900, lineHeight:1 }}>?</span> },
-                          novo_horario: { color:"#9FD3EA", bg:"rgba(159,211,234,0.55)", border:"rgba(159,211,234,0.30)", label:"Novo horário", icon:<Clock style={{ width:9, height:9, color:"#fff" }}/> },
-                        };
-                        const cfg = STATUS[a.status_resposta] || { color:"rgba(100,120,140,0.5)", bg:"rgba(149,165,166,0.07)", border:"rgba(149,165,166,0.2)", label:"Pendente", icon:<span style={{ color:"#fff", fontSize:9 }}>–</span> };
-                        const dt = a.data_hora || a.data;
-                        const fmtDt = dt ? (() => { try { const d = new Date(dt); return d.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"}) + " às " + d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}); } catch { return dt; } })() : "—";
-                        return (
-                          <div key={a.evento_id || a.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", borderRadius:9, background:cfg.bg, border:`1.5px solid ${cfg.border}` }}>
-                            <div style={{ width:26, height:26, borderRadius:"50%", background:cfg.color, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, boxShadow:`0 2px 6px ${cfg.color}55` }}>
-                              {cfg.icon}
-                            </div>
-                            <div style={{ flex:1, minWidth:0 }}>
-                              <div style={{ fontSize:12, fontWeight:700, color:"#EAF6FB", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{a.titulo || a.nome || "Atividade"}</div>
-                              <div style={{ fontSize:10, color:"#9FD3EA", marginTop:1 }}>{fmtDt}</div>
-                            </div>
-                            <span style={{ fontSize:9, fontWeight:700, padding:"2px 8px", borderRadius:20, background:cfg.color, color:"#EAF6FB", flexShrink:0 }}>{cfg.label}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+              {/* Timeline montada dos orçamentos e da agenda */}
+              {tab === "timeline" && (
+                <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.3 }}>
+                  <PainelTimeline orcamentos={orcamentos} atividades={atividades} />
                 </motion.div>
-                )}
-              </div>
+              )}
             </>
           ) : (
             <div style={{ textAlign:"center", padding:48 }}>
