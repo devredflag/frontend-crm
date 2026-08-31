@@ -18,6 +18,7 @@ import FundoAzul from "../../components/FundoAzul";
   // o componente Dropdown compartilhado.
   import VendasInsights from "../../components/VendasInsights";
   import Dropdown from "../../components/Dropdown";
+  import { dataLocal, inicioDoDia, mesmoDia, diasDesde } from "../../utils/data";
   import useIsMobile from "../../hooks/useIsMobile";
 
     const css = `
@@ -119,22 +120,6 @@ import FundoAzul from "../../components/FundoAzul";
       return new Date(base.getFullYear(), base.getMonth() - atras + 1, 0, 23, 59, 59, 999);
     }
 
-    /**
-     * Converte a data da API para Date LOCAL.
-     *
-     * `new Date("2026-08-01")` é interpretado como meia-noite UTC, que no
-     * horário de Brasília cai em 31/07 21:00 — o evento do dia 1º ia parar no
-     * mês anterior. Datas puras (YYYY-MM-DD) são montadas no meio-dia local,
-     * que também escapa de qualquer virada de horário de verão.
-     */
-    function paraData(v?: string | null): Date | null {
-      if (!v) return null;
-      const soData = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
-      if (soData) return new Date(+soData[1], +soData[2] - 1, +soData[3], 12, 0, 0, 0);
-      const d = new Date(v);
-      return isNaN(d.getTime()) ? null : d;
-    }
-
     interface Balde { rotulo: string; mes: number; inicio: Date; fim: Date }
     const noBalde = (d: Date | null, b: Balde) => !!d && d >= b.inicio && d <= b.fim;
 
@@ -194,14 +179,14 @@ import FundoAzul from "../../components/FundoAzul";
           const reais = empresas.filter(e => e.status !== "Rascunho");
           // Cumulativo: entrou quem nasceu até o corte, saiu quem virou Perdido até lá.
           const valores = baldes.map(b => reais.filter(e => {
-            const nasceu = paraData(e.criado_em);
+            const nasceu = dataLocal(e.criado_em);
             if (!nasceu || nasceu > b.fim) return false;
-            const saiu = e.status === "Perdido" ? paraData(e.status_atualizado_em) : null;
+            const saiu = e.status === "Perdido" ? dataLocal(e.status_atualizado_em) : null;
             return !(saiu && saiu <= b.fim);
           }).length);
           const ultimo = baldes[baldes.length - 1];
-          const novos = reais.filter(e => noBalde(paraData(e.criado_em), ultimo)).length;
-          const perdidos = reais.filter(e => e.status === "Perdido" && noBalde(paraData(e.status_atualizado_em), ultimo)).length;
+          const novos = reais.filter(e => noBalde(dataLocal(e.criado_em), ultimo)).length;
+          const perdidos = reais.filter(e => e.status === "Perdido" && noBalde(dataLocal(e.status_atualizado_em), ultimo)).length;
           return {
             valores,
             stats: [
@@ -218,7 +203,7 @@ import FundoAzul from "../../components/FundoAzul";
         cor: "#2CCD93", precisa: [], avisaSemData: true,
         calcular: ({ empresas, baldes }) => {
           const reais = empresas.filter(e => e.status !== "Rascunho");
-          const valores = baldes.map(b => reais.filter(e => noBalde(paraData(e.criado_em), b)).length);
+          const valores = baldes.map(b => reais.filter(e => noBalde(dataLocal(e.criado_em), b)).length);
           return { valores, stats: statsPorMes(valores, false, "#2CCD93") };
         },
       },
@@ -228,7 +213,7 @@ import FundoAzul from "../../components/FundoAzul";
         calcular: ({ empresas, baldes }) => {
           // "Fechado" é estado terminal: a última mudança de status É o fechamento.
           const valores = baldes.map(b => empresas.filter(e =>
-            e.status === "Fechado" && noBalde(paraData(e.status_atualizado_em), b)
+            e.status === "Fechado" && noBalde(dataLocal(e.status_atualizado_em), b)
           ).length);
           return { valores, stats: statsPorMes(valores, false, "#2CCD93") };
         },
@@ -238,7 +223,7 @@ import FundoAzul from "../../components/FundoAzul";
         cor: "#F87171", precisa: [],
         calcular: ({ empresas, baldes }) => {
           const valores = baldes.map(b => empresas.filter(e =>
-            e.status === "Perdido" && noBalde(paraData(e.status_atualizado_em), b)
+            e.status === "Perdido" && noBalde(dataLocal(e.status_atualizado_em), b)
           ).length);
           return { valores, stats: statsPorMes(valores, false, "#F87171") };
         },
@@ -250,7 +235,7 @@ import FundoAzul from "../../components/FundoAzul";
           const agora = new Date();
           const valores = baldes.map(b => eventos.filter(ev => {
             if (ev.tipo !== "visita") return false;
-            const d = paraData(ev.data);
+            const d = dataLocal(ev.data);
             return noBalde(d, b) && !!d && d <= agora;   // agendada no futuro ainda não é "realizada"
           }).length);
           return { valores, stats: statsPorMes(valores, false, "#A78BFA") };
@@ -260,7 +245,7 @@ import FundoAzul from "../../components/FundoAzul";
         chave: "orcamentos", rotulo: "Orçamentos criados", legenda: "Orçamentos abertos por mês",
         cor: "#F0A05A", precisa: ["orcamentos"],
         calcular: ({ orcamentos, baldes }) => {
-          const valores = baldes.map(b => orcamentos.filter(o => noBalde(paraData(o.criado_em), b)).length);
+          const valores = baldes.map(b => orcamentos.filter(o => noBalde(dataLocal(o.criado_em), b)).length);
           return { valores, stats: statsPorMes(valores, false, "#F0A05A") };
         },
       },
@@ -268,7 +253,7 @@ import FundoAzul from "../../components/FundoAzul";
         chave: "propostas", rotulo: "Propostas enviadas", legenda: "Orçamentos que saíram para o cliente",
         cor: "#56A4F5", precisa: ["orcamentos"],
         calcular: ({ orcamentos, baldes }) => {
-          const valores = baldes.map(b => orcamentos.filter(o => noBalde(paraData(o.data_envio), b)).length);
+          const valores = baldes.map(b => orcamentos.filter(o => noBalde(dataLocal(o.data_envio), b)).length);
           return { valores, stats: statsPorMes(valores, false, "#56A4F5") };
         },
       },
@@ -278,13 +263,13 @@ import FundoAzul from "../../components/FundoAzul";
         calcular: ({ orcamentos, baldes }) => {
           const aprovados = orcamentos.filter(o => o.status === "aprovado");
           const valores = baldes.map(b => aprovados
-            .filter(o => noBalde(paraData(o.data_decisao || o.data_envio || o.criado_em), b))
+            .filter(o => noBalde(dataLocal(o.data_decisao || o.data_envio || o.criado_em), b))
             .reduce((s, o) => s + (Number(o.total) || 0), 0));
           const stats = statsPorMes(valores, true, "#2CCD93");
           // No lugar da média crua, o ticket médio diz mais sobre valor aprovado.
           const total = valores.reduce((s, v) => s + v, 0);
           const qtd = aprovados.filter(o => {
-            const d = paraData(o.data_decisao || o.data_envio || o.criado_em);
+            const d = dataLocal(o.data_decisao || o.data_envio || o.criado_em);
             return baldes.some(b => noBalde(d, b));
           }).length;
           stats[3] = { rotulo: "Ticket médio", valor: qtd ? brlCompacto(total / qtd) : "—" };
@@ -497,25 +482,15 @@ import FundoAzul from "../../components/FundoAzul";
     // Quatro contagens de coisa parada. Tudo sai da lista que o dashboard ja
     // carregou -- nenhuma chamada nova. Rascunhos, fechados e perdidos ficam de
     // fora: não ha o que cobrar de quem ja saiu do funil.
-    function diasDesde(iso: string | null) {
-      if (!iso) return Infinity;                 // nunca houve contato conta como o pior caso
-      const dia = 24 * 60 * 60 * 1000;
-      return Math.floor((Date.now() - new Date(iso).getTime()) / dia);
-    }
-
+    // `diasDesde` e `mesmoDia` agora vêm de utils/data: as datas destes campos
+    // saem de <input type="date"> e chegam como "YYYY-MM-DD", que o JS lê como
+    // meia-noite UTC. Em Brasília isso virava 21h do dia anterior — um retorno
+    // marcado para HOJE caía como vencido e sumia da contagem de hoje.
     function PrecisamDeAtencao({ empresas }: { empresas: Empresa[] }) {
       const alertas = useMemo(() => {
         const ativas = empresas.filter(e =>
           e.status !== "Rascunho" && e.status !== "Fechado" && e.status !== "Perdido"
         );
-        const hoje = new Date();
-        const mesmoDia = (iso: string | null) => {
-          if (!iso) return false;
-          const d = new Date(iso);
-          return d.getFullYear() === hoje.getFullYear()
-            && d.getMonth() === hoje.getMonth()
-            && d.getDate() === hoje.getDate();
-        };
 
         return [
           {
@@ -539,9 +514,8 @@ import FundoAzul from "../../components/FundoAzul";
             titulo: "Retorno vencido",
             sub: "Follow-up passou da data",
             valor: ativas.filter(e => {
-              if (!e.data_proxima_acao) return false;
-              const inicioHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
-              return new Date(e.data_proxima_acao).getTime() < inicioHoje.getTime();
+              const d = dataLocal(e.data_proxima_acao);
+              return !!d && inicioDoDia(d).getTime() < inicioDoDia().getTime();
             }).length,
             cor: "#F87171",
             destaca: true,
