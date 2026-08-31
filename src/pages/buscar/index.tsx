@@ -67,6 +67,19 @@ interface PlaceResult {
   ja_cadastrada: boolean;
 }
 
+// Espelha o GET /places/cota. `restantes` vem null quando o teto está
+// desligado — sem teto não existe "quantas faltam".
+interface Cota {
+  usadas: number;
+  limite: number;
+  restantes: number | null;
+  bloqueado: boolean;
+  teto_ligado: boolean;
+  pode_alternar: boolean;
+  reset_em: string;
+  mensagem: string | null;
+}
+
 function initials(n: string) { return n?.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase()||"?"; }
 function avatarColor(n: string) { const c=["#B6CFE4","#2CCD93","#A78BFA","#F0A05A","#2CCD93","#F87171"]; return c[(n?.charCodeAt(0)||0)%c.length]; }
 
@@ -174,6 +187,11 @@ export default function BuscarEmpresas() {
   const [myLocation, setMyLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [quotaExcedida, setQuotaExcedida] = useState(false);
   const [quotaResetTime, setQuotaResetTime] = useState<Date | null>(null);
+  // A explicação do bloqueio vem do backend: só ele sabe se quem barrou foi o
+  // nosso teto diário (com hora certa de liberar) ou o próprio Google.
+  const [quotaMsg, setQuotaMsg] = useState<string | null>(null);
+  const [cota, setCota] = useState<Cota | null>(null);
+  const [alternandoTeto, setAlternandoTeto] = useState(false);
 
   const hdrs = () => ({ "Content-Type":"application/json", Authorization:`Bearer ${getToken()||""}` });
 
@@ -187,17 +205,23 @@ export default function BuscarEmpresas() {
       if (!origem) setMapCenter(loc);
       setMyLocation(loc);
     });
-    // Verifica quota travada
-    const until = localStorage.getItem("places_quota_until");
-    if (until) {
-      const resetDate = new Date(until);
-      if (resetDate > new Date()) {
-        setQuotaExcedida(true);
-        setQuotaResetTime(resetDate);
-      } else {
-        localStorage.removeItem("places_quota_until");
-      }
-    }
+    // Estado do teto de buscas pagas do mês. Antes isso saía do localStorage —
+    // era por navegador, então limpar o storage "destravava" a tela sem
+    // destravar nada de verdade, e a hora de reset era chutada como meia-noite
+    // UTC do dia seguinte. Agora responde o servidor, que é quem barra a
+    // chamada paga.
+    fetch(`${API}/places/cota`, { headers: hdrs() })
+      .then(r => (r.ok ? r.json() : null))
+      .then((d: Cota | null) => {
+        if (!d) return;
+        setCota(d);
+        if (d.bloqueado) {
+          setQuotaExcedida(true);
+          setQuotaResetTime(d.reset_em ? new Date(d.reset_em) : null);
+          setQuotaMsg(d.mensagem ?? null);
+        }
+      })
+      .catch(() => {});
     // Só na montagem: `origem` vem do state da rota e não muda enquanto a tela vive.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -214,11 +238,15 @@ export default function BuscarEmpresas() {
         body: JSON.stringify({ query: q, lat: mapCenter.lat, lng: mapCenter.lng, radius: 20000 }),
       });
       if (res.status === 429) {
-        const reset = new Date();
-        reset.setUTCHours(24, 0, 0, 0);
-        localStorage.setItem("places_quota_until", reset.toISOString());
+        // `detail` é o objeto que o backend monta — seu teto mensal (reset na
+        // virada do mês) ou recusa do Google (nova tentativa em minutos).
+        const corpo = await res.json().catch(() => null);
+        const d = corpo?.detail;
         setQuotaExcedida(true);
-        setQuotaResetTime(reset);
+        setQuotaResetTime(d?.reset_em ? new Date(d.reset_em) : null);
+        setQuotaMsg(
+          typeof d === "string" ? d : d?.mensagem ?? "Busca nova indisponível no momento."
+        );
         setLoading(false);
         return;
       }
@@ -227,11 +255,49 @@ export default function BuscarEmpresas() {
       setResults(data);
       const primeiro = data.find((p: PlaceResult) => p.lat && p.lng);
       if (primeiro) { setMapCenter({ lat: primeiro.lat!, lng: primeiro.lng! }); setMapZoom(13); }
+      // Só cache miss consome cota, e daqui não dá para saber se consumiu —
+      // quem sabe é o servidor. Relê para o contador não mentir.
+      fetch(`${API}/places/cota`, { headers: hdrs() })
+        .then(r => (r.ok ? r.json() : null))
+        .then((d: Cota | null) => d && setCota(d))
+        .catch(() => {});
     } catch {
       setError("Não foi possível conectar ao Google Places. Verifique a chave de API.");
     }
     setLoading(false);
   }, [mapCenter, quotaExcedida]);
+
+  // Reabilita o campo na hora que o servidor informou, sem exigir recarregar a
+  // página — e sem inventar a hora, como fazia o "meia-noite UTC" de antes.
+  useEffect(() => {
+    if (!quotaExcedida || !quotaResetTime) return;
+    const liberar = () => { setQuotaExcedida(false); setQuotaResetTime(null); setQuotaMsg(null); };
+    const ms = quotaResetTime.getTime() - Date.now();
+    if (ms <= 0) { liberar(); return; }
+    const t = setTimeout(liberar, ms + 1000);
+    return () => clearTimeout(t);
+  }, [quotaExcedida, quotaResetTime]);
+
+  // Botão de teste do gerente. Quem desliga de verdade é o servidor: mexer só
+  // no front seria a mesma ilusão do localStorage que acabamos de tirar daqui.
+  const alternarTeto = async (ligado: boolean) => {
+    setAlternandoTeto(true);
+    try {
+      const r = await fetch(`${API}/places/cota/teto`, {
+        method: "POST",
+        headers: hdrs(),
+        body: JSON.stringify({ ligado }),
+      });
+      if (r.ok) {
+        const d: Cota = await r.json();
+        setCota(d);
+        if (!d.bloqueado) { setQuotaExcedida(false); setQuotaMsg(null); setQuotaResetTime(null); }
+      }
+    } catch {
+      /* silencioso: o painel continua mostrando o estado anterior */
+    }
+    setAlternandoTeto(false);
+  };
 
   const handleInput = (v: string) => {
     setQuery(v);
@@ -365,6 +431,32 @@ export default function BuscarEmpresas() {
                 )}
               </div>
 
+              {/* Consumo do mês + interruptor do teto (só o gerente alterna) */}
+              {cota && (
+                <div style={{ marginTop:10, display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, flexWrap:"wrap" }}>
+                  <span style={{ fontSize:11, fontWeight:700, color: cota.teto_ligado ? "#B6CFE4" : "#F0A05A" }}>
+                    {cota.teto_ligado
+                      ? `${cota.usadas}/${cota.limite} buscas novas este mês`
+                      : `Limite desligado · ${cota.usadas} buscas novas este mês`}
+                  </span>
+                  {cota.pode_alternar && (
+                    <button
+                      onClick={() => alternarTeto(!cota.teto_ligado)}
+                      disabled={alternandoTeto}
+                      title={cota.teto_ligado
+                        ? "Modo teste: nenhuma busca é barrada por nós — só o limite do Google Cloud continua valendo"
+                        : `Volta a barrar em ${cota.limite} buscas novas por mês, por usuário`}
+                      style={{ fontSize:10, fontWeight:700, padding:"5px 10px", borderRadius:8, cursor: alternandoTeto ? "wait" : "pointer",
+                        border:`1px solid ${cota.teto_ligado ? "rgba(240,160,90,0.35)" : "rgba(44,205,147,0.35)"}`,
+                        background: cota.teto_ligado ? "rgba(240,160,90,0.10)" : "rgba(44,205,147,0.10)",
+                        color: cota.teto_ligado ? "#F0A05A" : "#2CCD93", opacity: alternandoTeto ? 0.6 : 1 }}
+                    >
+                      {cota.teto_ligado ? "Desligar limite (teste)" : `Religar limite de ${cota.limite}`}
+                    </button>
+                  )}
+                </div>
+              )}
+
             </div>
 
             {/* Lista */}
@@ -375,14 +467,14 @@ export default function BuscarEmpresas() {
                 <div style={{ marginTop:8, padding:"16px 14px", borderRadius:14, background:"rgba(248,113,113,0.06)", border:"1.5px solid rgba(248,113,113,0.25)", display:"flex", flexDirection:"column", gap:8 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                     <AlertCircle style={{ width:18, height:18, color:"#F87171", flexShrink:0 }} />
-                    <span style={{ fontSize:13, fontWeight:700, color:"#F87171" }}>Limite gratuito atingido</span>
+                    <span style={{ fontSize:13, fontWeight:700, color:"#F87171" }}>Busca nova pausada</span>
                   </div>
                   <p style={{ fontSize:12, color:"#FFFFFF", lineHeight:1.5 }}>
-                    O limite da API do Google Places foi atingido. Uma notificação será enviada quando a busca estiver disponível novamente.
+                    {quotaMsg ?? "Busca nova indisponível no momento."}
                   </p>
                   {quotaResetTime && (
                     <div style={{ fontSize:11, fontWeight:600, color:"#B6CFE4", padding:"6px 10px", borderRadius:8, background:"rgba(0,0,0,0.04)" }}>
-                      Previsão de reset: {quotaResetTime.toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" })}
+                      Libera em {quotaResetTime.toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" })}
                     </div>
                   )}
                 </div>
