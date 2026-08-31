@@ -78,7 +78,6 @@ interface Empresa {
   estado?: string;
   status: string;
   temperatura: string;
-  ticket_medio_estimado: number | null;
   responsavel_principal: string;
   origem_lead: string;
   ultima_interacao: string | null;
@@ -312,14 +311,11 @@ export default function EmpresaDetalhe() {
   const valorAprovado = aprovados.reduce((s, o) => s + num(o.total), 0);
   const valorEmAberto = emAberto.reduce((s, o) => s + num(o.total), 0);
 
-  // Ticket médio REAL: média dos orçamentos que o cliente aprovou. Deixou de ser
-  // um número digitado à mão no card — o vendedor não tinha como saber o valor
-  // certo antes de fechar, e o campo virava chute que ninguém revisava depois.
-  // Enquanto não há nada aprovado, cai no valor estimado do cadastro (usado pelo
-  // score da carteira e pelo funil), sinalizado como estimativa.
-  const ticketReal   = aprovados.length ? valorAprovado / aprovados.length : null;
-  const ticketMedio  = ticketReal ?? empresa?.ticket_medio_estimado ?? null;
-  const ticketEhReal = ticketReal !== null;
+  // Ticket médio: média dos orçamentos que o cliente aprovou, e só isso. O
+  // campo estimado do cadastro foi removido do sistema — era chute digitado uma
+  // vez e nunca revisado. Sem nada aprovado, o número não existe e mostramos
+  // "—" em vez de inventar.
+  const ticketMedio = aprovados.length ? valorAprovado / aprovados.length : null;
 
   const sc = empresa ? statusColor(empresa.status)      : statusColor("");
 
@@ -470,10 +466,10 @@ export default function EmpresaDetalhe() {
                         orçamentos aprovados desta empresa e se atualiza sozinho
                         a cada aprovação. */}
                     <div style={{ textAlign:"center" }}
-                      title={ticketEhReal
+                      title={ticketMedio !== null
                         ? `Média de ${aprovados.length} orçamento${aprovados.length === 1 ? "" : "s"} aprovado${aprovados.length === 1 ? "" : "s"} — ${brl(valorAprovado)} no total`
-                        : "Estimativa do cadastro. Vira média real assim que o primeiro orçamento for aprovado."}>
-                      <div style={{ fontSize:20, fontWeight:800, color:ticketEhReal ? "#83DDA8" : "#9FD3EA", display:"flex", alignItems:"center", gap:4, justifyContent:"center" }}>
+                        : "Aparece assim que o primeiro orçamento desta empresa for aprovado."}>
+                      <div style={{ fontSize:20, fontWeight:800, color:ticketMedio !== null ? "#83DDA8" : "#9FD3EA", display:"flex", alignItems:"center", gap:4, justifyContent:"center" }}>
                         {ticketMedio
                           ? `R$ ${(ticketMedio/1000).toFixed(ticketMedio >= 10000 ? 0 : 1)}k`
                           : "—"}
@@ -481,8 +477,8 @@ export default function EmpresaDetalhe() {
                       <div style={{ fontSize:10, color:"#9FD3EA", fontWeight:600 }}>
                         Ticket médio
                         {ticketMedio !== null && (
-                          <span style={{ color:ticketEhReal ? "#83DDA8" : "#9FD3EA", fontWeight:700 }}>
-                            {ticketEhReal ? ` · ${aprovados.length} aprov.` : " · estimado"}
+                          <span style={{ color:"#83DDA8", fontWeight:700 }}>
+                            {` · ${aprovados.length} aprov.`}
                           </span>
                         )}
                       </div>
@@ -549,7 +545,7 @@ export default function EmpresaDetalhe() {
                     { icon: MapPin,      label:"Cidade",         value:`${empresa.cidade}${empresa.estado ? ` / ${empresa.estado}` : ""}` },
                     { icon: TrendingUp,  label:"Origem do lead", value:empresa.origem_lead },
                     { icon: DollarSign,  label:"Ticket médio",   value:ticketMedio
-                        ? `R$ ${ticketMedio.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}${ticketEhReal ? "" : " (estimado)"}`
+                        ? `R$ ${ticketMedio.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}`
                         : "Sem orçamento aprovado" },
                     { icon: Thermometer, label:"Temperatura",    value:empresa.temperatura },
                   ].map(({ icon: Icon, label, value }) => (

@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import CardUsuario from "../../components/CardUsuario";
 import FundoAzul from "../../components/FundoAzul";
 import { diasDesde } from "../../utils/data";
+import useValoresOrcamento from "../../hooks/useValoresOrcamento";
 import {
   LayoutDashboard, Search, Building2, Users, ClipboardList,
   Calendar, BarChart3, ChevronDown, Plus, Filter,
@@ -44,7 +45,6 @@ interface Empresa {
   cidade: string;
   status: string;
   temperatura: string;
-  ticket_medio_estimado: number | null;
   responsavel_principal: string;
   origem_lead: string;
   ultima_interacao: string | null;
@@ -67,7 +67,9 @@ const navItems = [
 
 const PORTE_OPTS = ["Todos","Pequeno","Médio","Grande"];
 
-function calcScore(emp: Empresa): number {
+// `valor` = orcamentos em aberto + aprovados da empresa. Antes eram os 15
+// pontos do ticket estimado, digitado no cadastro e nunca revisado.
+function calcScore(emp: Empresa, valor: number): number {
   let score = 0;
   // Temperatura (30pts)
   if (emp.temperatura === "Quente") score += 30;
@@ -82,11 +84,10 @@ function calcScore(emp: Empresa): number {
   if (emp.porte === "Grande") score += 20;
   else if (emp.porte === "Médio") score += 13;
   else score += 6;
-  // Ticket (15pts)
-  const t = emp.ticket_medio_estimado || 0;
-  if (t >= 20000) score += 15;
-  else if (t >= 5000) score += 10;
-  else if (t > 0) score += 5;
+  // Valor em orçamentos (15pts)
+  if (valor >= 20000) score += 15;
+  else if (valor >= 5000) score += 10;
+  else if (valor > 0) score += 5;
   // Interação recente (10pts)
   if (emp.ultima_interacao) {
     const days = diasDesde(emp.ultima_interacao);
@@ -136,7 +137,8 @@ export default function TodosClientes() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterPorte, setFilterPorte] = useState("Todos");
-  const [sortField, setSortField] = useState<"nome"|"score"|"ticket_medio_estimado"|"porte">("score");
+  const [sortField, setSortField] = useState<"nome"|"score"|"porte">("score");
+  const valores = useValoresOrcamento();
   const [sortDir, setSortDir] = useState<"asc"|"desc">("desc");
   const [deleteConfirm, setDeleteConfirm] = useState<string|null>(null);
 
@@ -176,7 +178,7 @@ export default function TodosClientes() {
     else { setSortField(field); setSortDir("desc"); }
   };
 
-  const empresasComScore = empresas.map(e => ({ ...e, score: calcScore(e) }));
+  const empresasComScore = empresas.map(e => ({ ...e, score: calcScore(e, valores.valorDe(e.empresa_id).total) }));
 
   const filtered = empresasComScore
     .filter(e => {
@@ -188,7 +190,6 @@ export default function TodosClientes() {
     .sort((a, b) => {
       let va: any, vb: any;
       if (sortField === "score") { va = a.score; vb = b.score; }
-      else if (sortField === "ticket_medio_estimado") { va = a.ticket_medio_estimado||0; vb = b.ticket_medio_estimado||0; }
       else { va = String(a[sortField]||""); vb = String(b[sortField]||""); }
       if (typeof va === "number") return sortDir==="asc" ? va-vb : vb-va;
       return sortDir==="asc" ? va.localeCompare(vb) : vb.localeCompare(va);

@@ -11,6 +11,7 @@ import {
 import MapaProximidade from "../../components/MapaProximidade";
 import { diasDesde } from "../../utils/data";
 import useIsMobile from "../../hooks/useIsMobile";
+import useValoresOrcamento from "../../hooks/useValoresOrcamento";
 import CardUsuario from "../../components/CardUsuario";
 
 import FundoAzul from "../../components/FundoAzul";
@@ -51,7 +52,7 @@ const API = (process.env.REACT_APP_API_URL || "https://backend-crm-production-15
 interface Empresa {
   empresa_id: string; nome: string; segmento: string; porte: string;
   cidade: string; status: string; temperatura: string;
-  ticket_medio_estimado: number | null; responsavel_principal: string;
+  responsavel_principal: string;
   origem_lead: string; ultima_interacao: string | null; proxima_acao: string;
   endereco?: string | null; endereco_completo?: string | null;
   latitude?: number | null; longitude?: number | null;
@@ -70,13 +71,14 @@ const navItems = [
 
 const PORTE_OPTS = ["Todos","Pequeno","Médio","Grande"];
 
-function calcScore(emp: Empresa): number {
+// `valor` = orcamentos em aberto + aprovados da empresa. Antes eram os 15
+// pontos do ticket estimado, digitado no cadastro e nunca revisado.
+function calcScore(emp: Empresa, valor: number): number {
   let s = 0;
   if(emp.temperatura==="Quente") s+=30; else if(emp.temperatura==="Morno") s+=18; else s+=5;
   if(emp.status==="Fechado") s+=25; else if(emp.status==="Proposta") s+=20; else if(emp.status==="Em contato") s+=14; else s+=5;
   if(emp.porte==="Grande") s+=20; else if(emp.porte==="Médio") s+=13; else s+=6;
-  const t = emp.ticket_medio_estimado||0;
-  if(t>=20000) s+=15; else if(t>=5000) s+=10; else if(t>0) s+=5;
+  if(valor>=20000) s+=15; else if(valor>=5000) s+=10; else if(valor>0) s+=5;
   if(emp.ultima_interacao) {
     const d = diasDesde(emp.ultima_interacao);
     if(d<=7) s+=10; else if(d<=30) s+=6; else s+=2;
@@ -153,7 +155,8 @@ export default function TodosClientes() {
   const [search, setSearch] = useState("");
   const [filterPorte, setFilterPorte] = useState("Todos");
   const [filterRascunho, setFilterRascunho] = useState(false);
-  const [sortField, setSortField] = useState<"nome"|"score"|"ticket_medio_estimado"|"porte">("score");
+  const [sortField, setSortField] = useState<"nome"|"score"|"porte">("score");
+  const valores = useValoresOrcamento();
   const [sortDir, setSortDir] = useState<"asc"|"desc">("desc");
   const [view, setView] = useState<"lista"|"mapa">("lista");
   const [geocode, setGeocode] = useState<{rodando:boolean; feitas:number; restantes:number|null}|null>(null);
@@ -219,7 +222,7 @@ export default function TodosClientes() {
     else { setSortField(field); setSortDir("desc"); }
   };
 
-  const empresasComScore = empresas.map(e=>({...e, score:calcScore(e)}));
+  const empresasComScore = empresas.map(e=>({...e, score:calcScore(e,valores.valorDe(e.empresa_id).total)}));
   const totalRascunhos = empresas.filter(e=>e.status==="Rascunho").length;
 
   const filtered = empresasComScore
@@ -233,7 +236,6 @@ export default function TodosClientes() {
     .sort((a,b) => {
       let va: any, vb: any;
       if(sortField==="score") { va=a.score; vb=b.score; }
-      else if(sortField==="ticket_medio_estimado") { va=a.ticket_medio_estimado||0; vb=b.ticket_medio_estimado||0; }
       else { va=String(a[sortField]||""); vb=String(b[sortField]||""); }
       if(typeof va==="number") return sortDir==="asc"?va-vb:vb-va;
       return sortDir==="asc"?va.localeCompare(vb):vb.localeCompare(va);

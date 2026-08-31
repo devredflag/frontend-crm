@@ -297,7 +297,7 @@ import { FUNDO_AZUL } from "../../../../components/FundoAzul";
       nome:"", segmento:"", porte:"", cidade:"", endereco:"", numero:"",
       cep:"", bairro:"", regiao:"", observacoes:"", cnpj:"",
       site:"", linkedin_empresa:"", responsavel_principal:"",
-      ticket_medio_estimado:"", status:"", origem_lead:"",
+      status:"", origem_lead:"",
       proxima_acao:"", temperatura:"", ultima_interacao:"",
       data_proxima_acao:"",
     });
@@ -334,7 +334,6 @@ import { FUNDO_AZUL } from "../../../../components/FundoAzul";
             bairro: emp.bairro||"", regiao: emp.regiao||"", observacoes: emp.observacoes||"",
             cnpj: emp.cnpj||"", site: emp.site||"", linkedin_empresa: emp.linkedin_empresa||"",
             responsavel_principal: emp.responsavel_principal||"",
-            ticket_medio_estimado: emp.ticket_medio_estimado?.toString()||"",
             status: emp.status||"", origem_lead: emp.origem_lead||"",
             proxima_acao: emp.proxima_acao||"", temperatura: emp.temperatura||"",
             ultima_interacao: dateOnly(emp.ultima_interacao),
@@ -405,7 +404,6 @@ import { FUNDO_AZUL } from "../../../../components/FundoAzul";
           bairro: form.bairro, regiao: form.regiao, observacoes: form.observacoes,
           cnpj: form.cnpj, site: form.site, linkedin_empresa: form.linkedin_empresa,
           responsavel_principal: form.responsavel_principal,
-          ticket_medio_estimado: form.ticket_medio_estimado ? parseFloat(form.ticket_medio_estimado) : null,
           status: form.status, origem_lead: form.origem_lead,
           proxima_acao: form.proxima_acao, temperatura: form.temperatura,
         };
@@ -573,9 +571,6 @@ import { FUNDO_AZUL } from "../../../../components/FundoAzul";
                     </Field>
                     <Field label="Responsável Principal">
                       <IconInput icon={User} placeholder="Nome do responsável" value={form.responsavel_principal} onChange={(e:any)=>setF("responsavel_principal",e.target.value)}/>
-                    </Field>
-                    <Field label="Ticket Médio (R$)">
-                      <input className="field-input" type="number" placeholder="0,00" value={form.ticket_medio_estimado} onChange={e=>setF("ticket_medio_estimado",e.target.value)}/>
                     </Field>
                     <Field label="Site">
                       <IconInput icon={Globe} type="url" placeholder="https://empresa.com.br" value={form.site} onChange={(e:any)=>setF("site",e.target.value)}/>

@@ -10,6 +10,7 @@ import {
   CalendarClock, Clock, Filter, AlertCircle, Menu, UserRoundCog, FileText,
 } from "lucide-react";
 import useIsMobile from "../../hooks/useIsMobile";
+import useValoresOrcamento from "../../hooks/useValoresOrcamento";
 import { dataLocal, formatarData, diasDesde, diasAte } from "../../utils/data";
 import VendasPanel from "./VendasPanel";
 import CardUsuario from "../../components/CardUsuario";
@@ -110,7 +111,6 @@ interface Empresa {
   cidade: string;
   status: string;
   temperatura: string;
-  ticket_medio_estimado: number | null;
   responsavel_principal: string;
   proxima_acao: string;
   data_proxima_acao?: string | null;
@@ -250,16 +250,26 @@ function porteInfo(p: string) {
   if(p==="Médio") return { color:"#9FD3EA", bg:"rgba(159,211,234,0.55)" };
   return { color:"#83DDA8", bg:"rgba(22,163,74,0.1)" };
 }
-function calcScore(e: Empresa) {
+// `valor` vem dos orcamentos da empresa (em aberto + aprovado). Eram os 15
+// pontos do ticket estimado, digitado no cadastro: qualquer numero chutado ali
+// empurrava a empresa para o topo da lista. Agora so pontua quem tem proposta
+// de verdade na mesa.
+function calcScore(e: Empresa, valor: number) {
   let s=0;
   if(e.temperatura==="Quente")s+=30;else if(e.temperatura==="Morno")s+=18;else s+=5;
   if(e.status==="Fechado")s+=25;else if(e.status==="Proposta"||e.status==="Negociação")s+=20;else if(e.status==="Visita agendada")s+=17;else if(e.status==="Em contato")s+=14;else if(e.status==="Perdido")s-=20;else s+=5;
   if(e.porte==="Grande")s+=20;else if(e.porte==="Médio")s+=13;else s+=6;
-  const t=e.ticket_medio_estimado||0;if(t>=20000)s+=15;else if(t>=5000)s+=10;else if(t>0)s+=5;
+  if(valor>=20000)s+=15;else if(valor>=5000)s+=10;else if(valor>0)s+=5;
   if(e.ultima_interacao){const d=diasDesde(e.ultima_interacao);if(d<=7)s+=10;else if(d<=30)s+=6;else s+=2;}
   const action=nextActionInfo(e);
   if(action.status==="atrasada")s-=8;else if(action.status==="hoje")s+=6;else if(action.status==="proxima")s+=4;
   return Math.max(0, Math.min(s,100));
+}
+/** R$ 1,2 mil / R$ 3,45 mi — rodape e cabecalho de coluna sao apertados. */
+function brlCurto(v: number) {
+  if(v>=1000000) return `R$ ${(v/1000000).toLocaleString("pt-BR",{maximumFractionDigits:2})} mi`;
+  if(v>=1000) return `R$ ${(v/1000).toLocaleString("pt-BR",{maximumFractionDigits:1})} mil`;
+  return `R$ ${v.toLocaleString("pt-BR",{maximumFractionDigits:0})}`;
 }
 function scoreColor(s: number) {
   if(s>=70) return { color:"#83DDA8", bg:"rgba(22,163,74,0.12)" };
@@ -307,6 +317,8 @@ export default function Gerenciamento() {
   const isMobile = useIsMobile();
   const [menuOpen, setMenuOpen] = useState(false);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  // Todo o dinheiro desta tela sai daqui — dos orcamentos, nao do cadastro.
+  const valores = useValoresOrcamento();
   const [usuario, setUsuario] = useState<Usuario|null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -429,16 +441,19 @@ export default function Gerenciamento() {
     })
     .sort((a,b)=>{
       if(sortBy==="nome") return a.nome.localeCompare(b.nome,"pt-BR");
-      if(sortBy==="valor") return (b.ticket_medio_estimado||0)-(a.ticket_medio_estimado||0);
+      if(sortBy==="valor") return valores.valorDe(b.empresa_id).total-valores.valorDe(a.empresa_id).total;
       // Sem data vai para o fim da fila, não para o começo.
       if(sortBy==="proxima") return (dataLocal(a.data_proxima_acao)?.getTime() ?? Infinity)-(dataLocal(b.data_proxima_acao)?.getTime() ?? Infinity);
       if(sortBy==="parado") return daysInStage(b)-daysInStage(a);
-      return calcScore(b)-calcScore(a);
+      return calcScore(b,valores.valorDe(b.empresa_id).total)-calcScore(a,valores.valorDe(a.empresa_id).total);
     });
 
   const byStatus=(s:string)=>filtered.filter(e=>e.status===s);
-  const totalTicket=filtered.reduce((a,e)=>a+(e.ticket_medio_estimado||0),0);
-  const avgTicket=filtered.length>0?Math.round(totalTicket/filtered.length):0;
+  // Dinheiro do funil, ja respeitando os filtros da tela: "em negociacao" e o
+  // que foi enviado ao cliente e ainda nao teve decisao, e o ticket medio e por
+  // ORCAMENTO aprovado — dividir por empresa dava um numero que nao existe em
+  // lugar nenhum do processo de venda.
+  const valorFiltrado=valores.somar(filtered.map(e=>e.empresa_id));
   const totalFechado=empresas.filter(e=>e.status==="Fechado").length;
   const totalPerdido=empresas.filter(e=>e.status==="Perdido").length;
   const conversao=empresas.length>0?((totalFechado/empresas.length)*100).toFixed(1):"0";
@@ -701,7 +716,12 @@ export default function Gerenciamento() {
             <div style={{display:"flex",gap:14,minWidth:"max-content",alignItems:"flex-start"}}>
               {PIPELINE.map(col=>{
                 const cards=byStatus(col.key);
-                const colTicket=cards.reduce((a,e)=>a+(e.ticket_medio_estimado||0),0);
+                // Cada etapa mostra o dinheiro que faz sentido para ela: Fechado
+                // exibe o aprovado, Perdido o recusado, e o resto o que esta em
+                // aberto com o cliente.
+                const colVal=valores.somar(cards.map(e=>e.empresa_id));
+                const colValor=col.key==="Fechado"?colVal.aprovado:col.key==="Perdido"?colVal.recusado:colVal.emAberto;
+                const colLegenda=col.key==="Fechado"?"aprovado":col.key==="Perdido"?"recusado":"em aberto";
                 const avgStageDays=cards.length?Math.round(cards.reduce((a,e)=>a+daysInStage(e),0)/cards.length):0;
                 return(
                   <div
@@ -720,7 +740,9 @@ export default function Gerenciamento() {
                         <span style={{marginLeft:"auto",fontSize:11,fontWeight:800,color:col.color,background:`${col.color}18`,padding:"1px 7px",borderRadius:8}}>{cards.length}</span>
                       </div>
                       <div style={{display:"flex",justifyContent:"space-between",gap:8,fontSize:10,color:"#9FD3EA",fontWeight:600}}>
-                        <span>{colTicket>0?`R$ ${colTicket.toLocaleString("pt-BR")}`:"Sem valor"}</span>
+                        <span title={`Soma dos orçamentos ${colLegenda} das empresas nesta etapa`}>
+                          {valores.carregando?"—":colValor>0?`${brlCurto(colValor)} ${colLegenda}`:"Sem orçamento"}
+                        </span>
                         <span>{avgStageDays}d médios</span>
                       </div>
                     </div>
@@ -735,7 +757,7 @@ export default function Gerenciamento() {
                           <button onClick={()=>navigate("/empresas/nova")} style={{marginTop:8,padding:"4px 10px",borderRadius:6,border:"none",background:col.color,color:"#062033",fontSize:9,fontWeight:800,cursor:"pointer"}}>+ Adicionar</button>
                         </div>
                       ):cards.map((emp,idx)=>{
-                        const score=calcScore(emp);
+                        const score=calcScore(emp,valores.valorDe(emp.empresa_id).total);
                         const sc=scoreColor(score);
                         const pi=porteInfo(emp.porte);
                         const next=nextActionInfo(emp);
@@ -787,6 +809,22 @@ export default function Gerenciamento() {
                                   <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:"#EAF6FB",flex:1}}>{emp.proxima_acao||"Sem próxima ação"}</span>
                                   <span style={{flexShrink:0,padding:"1px 6px",borderRadius:5,background:next.bg,color:next.color,fontWeight:700,fontSize:9}}>{next.label}</span>
                                 </div>
+                                {/* Quanto esta em jogo neste cartao. Sem orcamento
+                                    nao aparece linha nenhuma — antes o cartao herdava
+                                    o ticket estimado e todo mundo tinha um valor. */}
+                                {(()=>{
+                                  const v=valores.valorDe(emp.empresa_id);
+                                  const aberto=v.emAberto>0;
+                                  const valor=aberto?v.emAberto:v.aprovado;
+                                  if(valor<=0) return null;
+                                  return (
+                                    <div title={aberto?`${v.qtdAbertos} orçamento(s) enviado(s) e sem decisão`:`${v.qtdAprovados} orçamento(s) aprovado(s)`}
+                                      style={{display:"flex",alignItems:"center",gap:4,fontSize:10,fontWeight:700,color:aberto?"#F2C879":"#83DDA8"}}>
+                                      <FileText style={{width:9,height:9,flexShrink:0}}/>
+                                      <span>{brlCurto(valor)} {aberto?"em aberto":"fechado"}</span>
+                                    </div>
+                                  );
+                                })()}
                                 {emp.status==="Perdido"&&emp.motivo_perdido&&(
                                   <div style={{fontSize:9,color:"#F7B8B1",fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>Motivo: {emp.motivo_perdido}</div>
                                 )}
@@ -843,7 +881,7 @@ export default function Gerenciamento() {
                   <p style={{fontSize:14,fontWeight:600}}>Nenhuma empresa encontrada</p>
                 </div>
               ):filtered.map((emp,idx)=>{
-                const score=calcScore(emp);
+                const score=calcScore(emp,valores.valorDe(emp.empresa_id).total);
                 const sc=scoreColor(score);
                 const si=PIPELINE.find(p=>p.key===emp.status)||PIPELINE[0];
                 const next=nextActionInfo(emp);
@@ -888,18 +926,24 @@ export default function Gerenciamento() {
         <div style={{padding:"9px 28px",background:"rgba(15,46,75,0.92)",backdropFilter:"blur(20px)",borderTop:"1px solid rgba(126,176,219,0.16)",display:"flex",alignItems:"center",gap:22,flexShrink:0}}>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <TrendingUp style={{width:15,height:15,color:"#2CCD93",flexShrink:0}}/>
-            <span style={{fontSize:11,color:"#B6CFE4",fontWeight:600}}>Total do pipeline</span>
-            <span style={{fontSize:15,fontWeight:800,color:"#FFFFFF",letterSpacing:"-0.01em"}}>R$ {totalTicket.toLocaleString("pt-BR")}</span>
+            <span style={{fontSize:11,color:"#B6CFE4",fontWeight:600}}>Em negociação</span>
+            <span title="Soma dos orçamentos enviados e em negociação das empresas visíveis" style={{fontSize:15,fontWeight:800,color:"#FFFFFF",letterSpacing:"-0.01em"}}>
+              {valores.carregando?"—":brlCurto(valorFiltrado.emAberto)}
+            </span>
           </div>
           {[
-            {label:"Oportunidades",value:String(filtered.length),color:"#FFFFFF"},
-            {label:"Ticket médio",value:`R$ ${avgTicket.toLocaleString("pt-BR")}`,color:"#FFFFFF"},
-            {label:"Taxa de fechamento",value:`${conversao}%`,color:"#2CCD93"},
-            {label:"Taxa de perda",value:`${perda}%`,color:"#F87171"},
+            {label:"Oportunidades",value:String(filtered.length),color:"#FFFFFF",
+             dica:`${valorFiltrado.qtdAbertos} orçamento(s) em aberto nas empresas visíveis`},
+            {label:"Fechado",value:valores.carregando?"—":brlCurto(valorFiltrado.aprovado),color:"#2CCD93",
+             dica:`${valorFiltrado.qtdAprovados} orçamento(s) aprovado(s)`},
+            {label:"Ticket médio",value:valorFiltrado.ticketMedio===null?"—":brlCurto(valorFiltrado.ticketMedio),color:"#FFFFFF",
+             dica:valorFiltrado.ticketMedio===null?"Nenhum orçamento aprovado ainda":"Média por orçamento aprovado"},
+            {label:"Taxa de fechamento",value:`${conversao}%`,color:"#2CCD93",dica:"Empresas fechadas sobre o total"},
+            {label:"Taxa de perda",value:`${perda}%`,color:"#F87171",dica:"Empresas perdidas sobre o total"},
           ].map(s=>(
             <div key={s.label} style={{display:"flex",alignItems:"center",gap:22}}>
               <div style={{width:1,height:20,background:"rgba(126,176,219,0.20)"}}/>
-              <div style={{display:"flex",alignItems:"baseline",gap:7}}>
+              <div title={s.dica} style={{display:"flex",alignItems:"baseline",gap:7}}>
                 <span style={{fontSize:11,color:"#B6CFE4",fontWeight:600,whiteSpace:"nowrap"}}>{s.label}</span>
                 <span style={{fontSize:15,fontWeight:800,color:s.color}}>{s.value}</span>
               </div>

@@ -20,6 +20,7 @@ import FundoAzul from "../../components/FundoAzul";
   import Dropdown from "../../components/Dropdown";
   import { dataLocal, inicioDoDia, mesmoDia, diasDesde } from "../../utils/data";
   import useIsMobile from "../../hooks/useIsMobile";
+  import useValoresOrcamento from "../../hooks/useValoresOrcamento";
 
     const css = `
       @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
@@ -63,7 +64,7 @@ import FundoAzul from "../../components/FundoAzul";
     interface Empresa {
       empresa_id: string; nome: string; segmento: string; porte: string;
       cidade: string; status: string; temperatura: string;
-      ticket_medio_estimado: number | null; responsavel_principal: string;
+      responsavel_principal: string;
       origem_lead: string; ultima_interacao: string | null; proxima_acao: string;
       criado_em: string | null; status_atualizado_em: string | null;
       data_proxima_acao: string | null; vendedor_id: string | null;
@@ -759,6 +760,8 @@ import FundoAzul from "../../components/FundoAzul";
       const [activeFilter, setActiveFilter] = useState<FilterKey>("total");
       // Dashboard dividido nas mesmas duas visões do Gerenciamento.
       const [abaDash, setAbaDash] = useState<"clientes"|"vendas">("clientes");
+      // Valor por empresa na tabela de prévia — dos orçamentos, não do cadastro.
+      const valores = useValoresOrcamento();
       const [searchValue, setSearchValue] = useState("");
       const [usuario, setUsuario] = useState<Usuario|null>(null);
 
@@ -1150,7 +1153,7 @@ import FundoAzul from "../../components/FundoAzul";
                     <div className="preview-th">
                       {activeFilter==="rascunho"
                         ? ["Empresa","Segmento","Cidade","Status","Completar"].map(h=><span key={h} style={{fontSize:10,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:"#B6CFE4"}}>{h}</span>)
-                        : ["Empresa","Status","Temperatura","Cidade","Ticket"].map(h=><span key={h} style={{fontSize:10,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:"#B6CFE4"}}>{h}</span>)
+                        : ["Empresa","Status","Temperatura","Cidade","Valor"].map(h=><span key={h} style={{fontSize:10,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:"#B6CFE4"}}>{h}</span>)
                       }
                     </div>
                     <div style={{maxHeight:220,overflowY:"auto"}}>
@@ -1192,7 +1195,19 @@ import FundoAzul from "../../components/FundoAzul";
                                     {emp.temperatura||"—"}
                                   </span>
                                   <span style={{fontSize:11,color:"#FFFFFF"}}>{emp.cidade||"—"}</span>
-                                  <span style={{fontSize:12,fontWeight:700,color:"#FFFFFF"}}>{emp.ticket_medio_estimado?`R$ ${emp.ticket_medio_estimado.toLocaleString("pt-BR")}`:"—"}</span>
+                                  {/* Em aberto e o que ainda pode fechar; sem nada
+                                      em aberto, mostra o que ja fechou. */}
+                                  {(()=>{
+                                    const v=valores.valorDe(emp.empresa_id);
+                                    const aberto=v.emAberto>0;
+                                    const valor=aberto?v.emAberto:v.aprovado;
+                                    return (
+                                      <span title={valor>0?(aberto?"Orçamentos enviados e em negociação":"Orçamentos aprovados"):"Nenhum orçamento"}
+                                        style={{fontSize:12,fontWeight:700,color:valor>0?(aberto?"#FFFFFF":"#83DDA8"):"#B6CFE4"}}>
+                                        {valor>0?brlCompacto(valor):"—"}
+                                      </span>
+                                    );
+                                  })()}
                                 </>
                               )}
                             </motion.div>

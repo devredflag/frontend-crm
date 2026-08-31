@@ -327,7 +327,9 @@ export default function Equipe() {
     { label: "Vendedores", value: dash.conta.total_vendedores, color:"#9FD3EA", icon: Users },
     { label: "Empresas", value: dash.conta.total_empresas, color:"#9FD3EA", icon: Building2 },
     { label: "Ganhos", value: dash.conta.ganhos, color:"#83DDA8", icon: TrendingUp },
-    { label: "Pipeline", value: money(dash.conta.ticket_total), color:"#F2C879", icon: BarChart3 },
+    // Mesmo vocabulario do funil: e a soma dos orcamentos enviados e em
+    // negociacao, nao mais o ticket estimado que ninguem preenchia.
+    { label: "Em negociação", value: money(dash.conta.ticket_total), color:"#F2C879", icon: BarChart3 },
   ] : [];
 
   return (
