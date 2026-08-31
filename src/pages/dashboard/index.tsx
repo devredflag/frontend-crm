@@ -8,14 +8,16 @@ import FundoAzul from "../../components/FundoAzul";
     import {
     Users, Building2, MessageCircle, Send, Handshake,
     LayoutDashboard, Search, Bell, Calendar, Plus,
-    ChevronRight,
     ClipboardList, BarChart3, RefreshCw,
     Mail, ArrowRight,
     X, CalendarCheck, Repeat, FileText, Edit3,
     Trash2, CheckCheck, AlertTriangle, Info,
     CheckCircle2, Menu, UserRoundCog
   } from "lucide-react";
+  // ChevronRight saiu junto com o dropdown de período feito à mão, que virou
+  // o componente Dropdown compartilhado.
   import VendasInsights from "../../components/VendasInsights";
+  import Dropdown from "../../components/Dropdown";
   import useIsMobile from "../../hooks/useIsMobile";
 
     const css = `
@@ -99,13 +101,16 @@ import FundoAzul from "../../components/FundoAzul";
     function tempColor(t: string) { if(t==="Quente")return"#F87171"; if(t==="Morno")return"#F0A05A"; return"#B6CFE4"; }
 
     // ── Evolução da base ────────────────────────────────────────
-    // Quantos clientes a base tinha no fim de cada mês. A conta é cumulativa:
-    // entrou quem foi criado até aquele mês, saiu quem virou Perdido até lá.
+    // Um gráfico só, com o indicador escolhido num dropdown. O período controla
+    // quantos meses entram na janela; o indicador controla o que é medido e,
+    // junto, quais quatro números aparecem no rodapé.
     //
-    // Depende de `criado_em`, coluna que passou a existir agora. Empresas antigas
-    // sem essa data ficam de fora do histórico (mas contam na base atual) — por
-    // isso o card avisa quando há empresas sem data em vez de desenhar uma curva
-    // que mente.
+    // Regra que vale para todos: só entra indicador que tem data real por trás.
+    // O backend guarda o status ATUAL da empresa e a data da última mudança
+    // (`status_atualizado_em`), não o histórico completo — então dá para saber
+    // em que mês algo virou Fechado ou Perdido (estados terminais), mas não
+    // reconstruir quantas empresas estavam "Em contato" em abril. Indicador que
+    // não pode ser calculado sem inventar não entra na lista.
     const MESES_CURTOS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
     const MESES_LONGOS = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
 
@@ -114,154 +119,374 @@ import FundoAzul from "../../components/FundoAzul";
       return new Date(base.getFullYear(), base.getMonth() - atras + 1, 0, 23, 59, 59, 999);
     }
 
+    /**
+     * Converte a data da API para Date LOCAL.
+     *
+     * `new Date("2026-08-01")` é interpretado como meia-noite UTC, que no
+     * horário de Brasília cai em 31/07 21:00 — o evento do dia 1º ia parar no
+     * mês anterior. Datas puras (YYYY-MM-DD) são montadas no meio-dia local,
+     * que também escapa de qualquer virada de horário de verão.
+     */
+    function paraData(v?: string | null): Date | null {
+      if (!v) return null;
+      const soData = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
+      if (soData) return new Date(+soData[1], +soData[2] - 1, +soData[3], 12, 0, 0, 0);
+      const d = new Date(v);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    interface Balde { rotulo: string; mes: number; inicio: Date; fim: Date }
+    const noBalde = (d: Date | null, b: Balde) => !!d && d >= b.inicio && d <= b.fim;
+
+    // Recortes de orçamento e evento — só os campos que o gráfico usa.
+    interface OrcamentoLite {
+      status: string; total: number | string | null;
+      criado_em: string | null; data_envio: string | null; data_decisao: string | null;
+    }
+    interface EventoLite { tipo: string; data: string }
+
+    type Fonte = "orcamentos" | "eventos";
+    interface Estatistica { rotulo: string; valor: string; cor?: string }
+    interface ContextoInd {
+      empresas: Empresa[]; orcamentos: OrcamentoLite[]; eventos: EventoLite[];
+      baldes: Balde[]; meses: number;
+    }
+
+    const brlCompacto = (n: number) => {
+      if (Math.abs(n) >= 1_000_000) return `R$ ${(n / 1_000_000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}mi`;
+      if (Math.abs(n) >= 1_000) return `R$ ${(n / 1_000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}k`;
+      return `R$ ${n.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
+    };
+
+    /** Rodapé padrão de todo indicador medido POR MÊS (não cumulativo). */
+    function statsPorMes(valores: number[], moeda: boolean, cor: string): Estatistica[] {
+      const fmt = (n: number) => moeda ? brlCompacto(n) : String(n);
+      const total = valores.reduce((s, v) => s + v, 0);
+      const atual = valores[valores.length - 1] ?? 0;
+      const anterior = valores[valores.length - 2] ?? 0;
+      const media = valores.length ? total / valores.length : 0;
+      return [
+        { rotulo: "Total no período", valor: fmt(total) },
+        { rotulo: "Este mês",         valor: fmt(atual), cor: atual > 0 ? cor : "#B6CFE4" },
+        { rotulo: "Mês anterior",     valor: fmt(anterior) },
+        { rotulo: "Média por mês",    valor: moeda ? brlCompacto(media) : media.toFixed(media % 1 === 0 ? 0 : 1) },
+      ];
+    }
+
+    interface Indicador {
+      chave: string;
+      rotulo: string;
+      legenda: string;
+      cor: string;
+      moeda?: boolean;
+      /** Dados extras que precisam ser buscados antes de calcular. */
+      precisa: Fonte[];
+      /** Avisa sobre empresas sem `criado_em` (só faz sentido em quem usa essa data). */
+      avisaSemData?: boolean;
+      calcular: (c: ContextoInd) => { valores: number[]; stats: Estatistica[] };
+    }
+
+    const INDICADORES: Indicador[] = [
+      {
+        chave: "base", rotulo: "Base de clientes", legenda: "Crescimento de clientes",
+        cor: "#56A4F5", precisa: [], avisaSemData: true,
+        calcular: ({ empresas, baldes, meses }) => {
+          const reais = empresas.filter(e => e.status !== "Rascunho");
+          // Cumulativo: entrou quem nasceu até o corte, saiu quem virou Perdido até lá.
+          const valores = baldes.map(b => reais.filter(e => {
+            const nasceu = paraData(e.criado_em);
+            if (!nasceu || nasceu > b.fim) return false;
+            const saiu = e.status === "Perdido" ? paraData(e.status_atualizado_em) : null;
+            return !(saiu && saiu <= b.fim);
+          }).length);
+          const ultimo = baldes[baldes.length - 1];
+          const novos = reais.filter(e => noBalde(paraData(e.criado_em), ultimo)).length;
+          const perdidos = reais.filter(e => e.status === "Perdido" && noBalde(paraData(e.status_atualizado_em), ultimo)).length;
+          return {
+            valores,
+            stats: [
+              { rotulo: "Base atual",        valor: String(reais.filter(e => e.status !== "Perdido").length) },
+              { rotulo: "Novos no mês",      valor: `+${novos}`, cor: novos ? "#2CCD93" : "#B6CFE4" },
+              { rotulo: "Perdidos no mês",   valor: perdidos ? `−${perdidos}` : "0", cor: perdidos ? "#F87171" : "#B6CFE4" },
+              { rotulo: `Há ${meses} meses`, valor: String(valores[0] ?? 0) },
+            ],
+          };
+        },
+      },
+      {
+        chave: "novos", rotulo: "Leads captados", legenda: "Empresas cadastradas por mês",
+        cor: "#2CCD93", precisa: [], avisaSemData: true,
+        calcular: ({ empresas, baldes }) => {
+          const reais = empresas.filter(e => e.status !== "Rascunho");
+          const valores = baldes.map(b => reais.filter(e => noBalde(paraData(e.criado_em), b)).length);
+          return { valores, stats: statsPorMes(valores, false, "#2CCD93") };
+        },
+      },
+      {
+        chave: "fechados", rotulo: "Negócios fechados", legenda: "Empresas que viraram cliente",
+        cor: "#2CCD93", precisa: [],
+        calcular: ({ empresas, baldes }) => {
+          // "Fechado" é estado terminal: a última mudança de status É o fechamento.
+          const valores = baldes.map(b => empresas.filter(e =>
+            e.status === "Fechado" && noBalde(paraData(e.status_atualizado_em), b)
+          ).length);
+          return { valores, stats: statsPorMes(valores, false, "#2CCD93") };
+        },
+      },
+      {
+        chave: "perdidos", rotulo: "Negócios perdidos", legenda: "Empresas marcadas como perdidas",
+        cor: "#F87171", precisa: [],
+        calcular: ({ empresas, baldes }) => {
+          const valores = baldes.map(b => empresas.filter(e =>
+            e.status === "Perdido" && noBalde(paraData(e.status_atualizado_em), b)
+          ).length);
+          return { valores, stats: statsPorMes(valores, false, "#F87171") };
+        },
+      },
+      {
+        chave: "visitas", rotulo: "Visitas realizadas", legenda: "Visitas na agenda, já cumpridas",
+        cor: "#A78BFA", precisa: ["eventos"],
+        calcular: ({ eventos, baldes }) => {
+          const agora = new Date();
+          const valores = baldes.map(b => eventos.filter(ev => {
+            if (ev.tipo !== "visita") return false;
+            const d = paraData(ev.data);
+            return noBalde(d, b) && !!d && d <= agora;   // agendada no futuro ainda não é "realizada"
+          }).length);
+          return { valores, stats: statsPorMes(valores, false, "#A78BFA") };
+        },
+      },
+      {
+        chave: "orcamentos", rotulo: "Orçamentos criados", legenda: "Orçamentos abertos por mês",
+        cor: "#F0A05A", precisa: ["orcamentos"],
+        calcular: ({ orcamentos, baldes }) => {
+          const valores = baldes.map(b => orcamentos.filter(o => noBalde(paraData(o.criado_em), b)).length);
+          return { valores, stats: statsPorMes(valores, false, "#F0A05A") };
+        },
+      },
+      {
+        chave: "propostas", rotulo: "Propostas enviadas", legenda: "Orçamentos que saíram para o cliente",
+        cor: "#56A4F5", precisa: ["orcamentos"],
+        calcular: ({ orcamentos, baldes }) => {
+          const valores = baldes.map(b => orcamentos.filter(o => noBalde(paraData(o.data_envio), b)).length);
+          return { valores, stats: statsPorMes(valores, false, "#56A4F5") };
+        },
+      },
+      {
+        chave: "valor", rotulo: "Valor aprovado", legenda: "Soma dos orçamentos aprovados",
+        cor: "#2CCD93", precisa: ["orcamentos"], moeda: true,
+        calcular: ({ orcamentos, baldes }) => {
+          const aprovados = orcamentos.filter(o => o.status === "aprovado");
+          const valores = baldes.map(b => aprovados
+            .filter(o => noBalde(paraData(o.data_decisao || o.data_envio || o.criado_em), b))
+            .reduce((s, o) => s + (Number(o.total) || 0), 0));
+          const stats = statsPorMes(valores, true, "#2CCD93");
+          // No lugar da média crua, o ticket médio diz mais sobre valor aprovado.
+          const total = valores.reduce((s, v) => s + v, 0);
+          const qtd = aprovados.filter(o => {
+            const d = paraData(o.data_decisao || o.data_envio || o.criado_em);
+            return baldes.some(b => noBalde(d, b));
+          }).length;
+          stats[3] = { rotulo: "Ticket médio", valor: qtd ? brlCompacto(total / qtd) : "—" };
+          return { valores, stats };
+        },
+      },
+    ];
+
+    /** Marcas do eixo Y em números redondos, ~4 divisões. */
+    function marcasEixo(maximo: number): number[] {
+      if (maximo <= 0) return [0, 1];
+      const bruto = maximo / 4;
+      const expo = Math.floor(Math.log10(bruto));
+      const base = Math.pow(10, expo);
+      const n = bruto / base;
+      const passo = (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * base;
+      const topo = Math.ceil(maximo / passo) * passo;
+      const marcas: number[] = [];
+      for (let v = 0; v <= topo + passo / 1000; v += passo) marcas.push(v);
+      return marcas;
+    }
+
     function EvolucaoDaBase({ empresas }: { empresas: Empresa[] }) {
       const isMobile = useIsMobile();
       const [meses, setMeses] = useState(6);
-      const [abrirPeriodo, setAbrirPeriodo] = useState(false);
-      const periodoRef = useRef<HTMLDivElement>(null);
+      const [chave, setChave] = useState("base");
+
+      // Orçamentos e eventos só são buscados quando um indicador precisa deles —
+      // quem só olha a base de clientes não paga duas requisições extras.
+      const [orcamentos, setOrcamentos] = useState<OrcamentoLite[] | null>(null);
+      const [eventos, setEventos] = useState<EventoLite[] | null>(null);
+      const [buscando, setBuscando] = useState(false);
+      const [falhou, setFalhou] = useState(false);
+
+      const indicador = INDICADORES.find(i => i.chave === chave) || INDICADORES[0];
 
       useEffect(() => {
-        const fora = (e: MouseEvent) => {
-          if (periodoRef.current && !periodoRef.current.contains(e.target as Node)) setAbrirPeriodo(false);
-        };
-        document.addEventListener("mousedown", fora);
-        return () => document.removeEventListener("mousedown", fora);
-      }, []);
+        const faltam = indicador.precisa.filter(f =>
+          (f === "orcamentos" ? orcamentos : eventos) === null
+        );
+        if (faltam.length === 0) return;
+        let vivo = true;
+        setBuscando(true);
+        (async () => {
+          const cab = { Authorization: `Bearer ${getToken() || ""}` };
+          await Promise.all(faltam.map(async fonte => {
+            let dados: any[] = [];
+            let ok = false;
+            try {
+              const r = await fetch(`${API}/${fonte}`, { headers: cab });
+              if (r.ok) { dados = await r.json(); ok = true; }
+            } catch { /* rede fora: cai no aviso abaixo */ }
+            if (!vivo) return;
+            if (!ok) setFalhou(true);
+            // Grava mesmo em falha (lista vazia) para não repetir a chamada em loop.
+            if (fonte === "orcamentos") setOrcamentos(dados); else setEventos(dados);
+          }));
+          if (vivo) setBuscando(false);
+        })();
+        return () => { vivo = false; };
+      }, [indicador, orcamentos, eventos]);
 
-      const dados = useMemo(() => {
-        const reais = empresas.filter(e => e.status !== "Rascunho");
-        const criadoEm = (e: Empresa) => e.criado_em ? new Date(e.criado_em) : null;
-        const perdidoEm = (e: Empresa) =>
-          e.status === "Perdido" && e.status_atualizado_em ? new Date(e.status_atualizado_em) : null;
-
+      const baldes = useMemo<Balde[]>(() => {
         const hoje = new Date();
-        const pontos = Array.from({ length: meses }, (_, i) => {
-          const corte = fimDoMes(hoje, meses - 1 - i);
-          const valor = reais.filter(e => {
-            const nasceu = criadoEm(e);
-            if (!nasceu || nasceu > corte) return false;
-            const saiu = perdidoEm(e);
-            return !(saiu && saiu <= corte);
-          }).length;
-          return { rotulo: MESES_CURTOS[corte.getMonth()], mes: corte.getMonth(), valor };
+        return Array.from({ length: meses }, (_, i) => {
+          const fim = fimDoMes(hoje, meses - 1 - i);
+          return {
+            rotulo: MESES_CURTOS[fim.getMonth()],
+            mes: fim.getMonth(),
+            inicio: new Date(fim.getFullYear(), fim.getMonth(), 1, 0, 0, 0, 0),
+            fim,
+          };
         });
+      }, [meses]);
 
-        const inicioDoMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-        const dentroDoMes = (d: Date | null) => !!d && d >= inicioDoMes;
+      const { valores, stats } = useMemo(
+        () => indicador.calcular({ empresas, orcamentos: orcamentos || [], eventos: eventos || [], baldes, meses }),
+        [indicador, empresas, orcamentos, eventos, baldes, meses]
+      );
 
-        return {
-          pontos,
-          semData: reais.filter(e => !criadoEm(e)).length,
-          baseAtual: reais.filter(e => e.status !== "Perdido").length,
-          novos: reais.filter(e => dentroDoMes(criadoEm(e))).length,
-          perdidos: reais.filter(e => dentroDoMes(perdidoEm(e))).length,
-          antes: pontos[0]?.valor ?? 0,
-        };
-      }, [empresas, meses]);
+      const semData = useMemo(
+        () => empresas.filter(e => e.status !== "Rascunho" && !e.criado_em).length,
+        [empresas]
+      );
 
-      const { pontos } = dados;
-      const maior = Math.max(...pontos.map(p => p.valor), 1);
-      const L = 6, R = 6, T = 14, B = 10, ALT = 190;  // viewBox 0..100 na horizontal
-      const x = (i: number) => L + (i * (100 - L - R)) / Math.max(pontos.length - 1, 1);
-      const y = (v: number) => T + (1 - v / maior) * (ALT - T - B);
-      const linha = pontos.map((p, i) => `${x(i)},${y(p.valor)}`).join(" ");
-      const area = `${linha} ${x(pontos.length - 1)},${ALT} ${x(0)},${ALT}`;
+      // ── Geometria do gráfico ──
+      // viewBox fixo (sem preserveAspectRatio="none", que esticava os traços e
+      // impediria rótulo no eixo Y) escalado por width:100%.
+      const W = 680, H = 250, L = 46, R = 14, T = 18, B = 34;
+      const pw = W - L - R, ph = H - T - B;
+      const marcas = marcasEixo(Math.max(...valores, 0));
+      const topo = marcas[marcas.length - 1] || 1;
+      const x = (i: number) => L + (i * pw) / Math.max(valores.length - 1, 1);
+      const y = (v: number) => T + (1 - v / topo) * ph;
 
-      const primeiro = pontos[0], ultimo = pontos[pontos.length - 1];
+      const linha = valores.map((v, i) => `${x(i)},${y(v)}`).join(" ");
+      const area = `${linha} ${x(valores.length - 1)},${T + ph} ${x(0)},${T + ph}`;
+      const fmtValor = (n: number) => indicador.moeda ? brlCompacto(n) : String(n);
+
+      const primeiro = baldes[0], ultimo = baldes[baldes.length - 1];
       const intervalo = primeiro && ultimo
         ? `${MESES_LONGOS[primeiro.mes]} a ${MESES_LONGOS[ultimo.mes]}`
         : "";
-
-      const rodape = [
-        { rotulo: "Base atual",      valor: String(dados.baseAtual),                     cor: "#FFFFFF" },
-        { rotulo: "Novos no mês",    valor: `+${dados.novos}`,                            cor: "#2CCD93" },
-        { rotulo: "Perdidos no mês", valor: dados.perdidos ? `−${dados.perdidos}` : "0", cor: dados.perdidos ? "#F87171" : "#B6CFE4" },
-        { rotulo: `Há ${meses} meses`, valor: String(dados.antes),                       cor: "#FFFFFF" },
-      ];
+      const vazio = valores.every(v => v === 0);
 
       return (
         <motion.div className="glass-card" style={{padding:"22px 24px"}} initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.4,delay:0.45}}>
 
-            <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,marginBottom:6}}>
-              <div>
-                <div style={{fontSize:16,fontWeight:800,color:"#FFFFFF",letterSpacing:"-0.01em"}}>Evolução da base</div>
-                <div style={{fontSize:12,color:"#B6CFE4",marginTop:3}}>Crescimento de clientes · {intervalo}</div>
+            <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,flexWrap:"wrap",marginBottom:16}}>
+              <div style={{minWidth:0}}>
+                <div style={{fontSize:16,fontWeight:800,color:"#FFFFFF",letterSpacing:"-0.01em"}}>{indicador.rotulo}</div>
+                <div style={{fontSize:12,color:"#B6CFE4",marginTop:3}}>{indicador.legenda} · {intervalo}</div>
               </div>
-              <div ref={periodoRef} style={{position:"relative",flexShrink:0}}>
-                <button
-                  onClick={()=>setAbrirPeriodo(o=>!o)}
-                  style={{display:"flex",alignItems:"center",gap:5,background:"none",border:"none",cursor:"pointer",fontSize:13,fontWeight:600,color:"#8FC4FA",fontFamily:"inherit",padding:"2px 4px"}}
-                >
-                  {meses} meses <ChevronRight style={{width:12,height:12,transform:abrirPeriodo?"rotate(-90deg)":"rotate(90deg)",transition:"transform 0.18s"}}/>
-                </button>
-                <AnimatePresence>
-                  {abrirPeriodo&&(
-                    <motion.div
-                      initial={{opacity:0,y:-6}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-6}} transition={{duration:0.15}}
-                      style={{position:"absolute",top:"calc(100% + 6px)",right:0,zIndex:40,background:"#16395E",border:"1px solid rgba(126,176,219,0.30)",borderRadius:10,overflow:"hidden",boxShadow:"0 16px 40px rgba(3,14,26,0.55)",minWidth:110}}
-                    >
-                      {[3,6,12].map(n=>(
-                        <div
-                          key={n}
-                          onMouseDown={e=>{e.preventDefault();setMeses(n);setAbrirPeriodo(false);}}
-                          style={{padding:"9px 14px",fontSize:12,cursor:"pointer",whiteSpace:"nowrap",fontWeight:n===meses?700:500,color:n===meses?"#8FC4FA":"#FFFFFF",background:n===meses?"rgba(86,164,245,0.16)":"transparent"}}
-                        >
-                          {n} meses
-                        </div>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+              <div style={{display:"flex",gap:8,flexShrink:0,flexWrap:"wrap"}}>
+                <Dropdown
+                  valor={chave} onChange={setChave} ariaLabel="Indicador do gráfico"
+                  largura={isMobile ? 170 : 196} altura={38} corAtiva={indicador.cor}
+                  opcoes={INDICADORES.map(i => ({ valor: i.chave, rotulo: i.rotulo, cor: i.cor }))}
+                />
+                <Dropdown
+                  valor={String(meses)} onChange={v => setMeses(Number(v))} ariaLabel="Período do gráfico"
+                  largura={isMobile ? 110 : 124} altura={38}
+                  opcoes={[3,6,12].map(n => ({ valor: String(n), rotulo: `${n} meses` }))}
+                />
               </div>
             </div>
 
-            <svg viewBox={`0 0 100 ${ALT}`} preserveAspectRatio="none" style={{width:"100%",height:250,display:"block",marginTop:16,overflow:"visible"}}>
-              <defs>
-                <linearGradient id="grad-base" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#56A4F5" stopOpacity="0.28"/>
-                  <stop offset="100%" stopColor="#56A4F5" stopOpacity="0"/>
-                </linearGradient>
-              </defs>
-              {[0,0.5,1].map(f=>(
-                <line key={f} x1={L} x2={100-R} y1={T+f*(ALT-T-B)} y2={T+f*(ALT-T-B)}
-                      stroke="rgba(126,176,219,0.14)" strokeWidth="0.35" vectorEffect="non-scaling-stroke"/>
-              ))}
-              <polygon points={area} fill="url(#grad-base)"/>
-              <polyline points={linha} fill="none" stroke="#56A4F5" strokeWidth="2"
-                        strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
-              {pontos.map((pt,i)=>{
-                const ultimoPonto = i === pontos.length - 1;
-                return (
-                  <circle key={i} cx={x(i)} cy={y(pt.valor)} r={ultimoPonto?4.5:3.5}
-                          fill={ultimoPonto?"#56A4F5":"#143354"} stroke="#56A4F5" strokeWidth="1.6"
-                          vectorEffect="non-scaling-stroke">
-                    <title>{`${pt.rotulo}: ${pt.valor} ${pt.valor===1?"cliente":"clientes"}`}</title>
-                  </circle>
-                );
-              })}
-            </svg>
-
-            <div style={{display:"flex",marginTop:6}}>
-              {pontos.map((pt,i)=>(
-                <div key={i} style={{flex:1,textAlign:"center",fontSize:12,fontWeight:i===pontos.length-1?700:500,color:i===pontos.length-1?"#FFFFFF":"#B6CFE4"}}>
-                  {pt.rotulo}
+            {/* Números primeiro: o gráfico mostra a forma, as caixas dão a conta.
+                Mudam junto com o indicador escolhido. */}
+            <div style={{display:"grid",gridTemplateColumns:`repeat(${isMobile?2:4},minmax(0,1fr))`,gap:10,marginBottom:18}}>
+              {stats.map(s=>(
+                <div key={s.rotulo} style={{background:"rgba(126,176,219,0.06)",border:"1px solid rgba(126,176,219,0.16)",borderRadius:12,padding:"12px 14px",minWidth:0}}>
+                  <div style={{fontSize:11.5,color:"#B6CFE4",marginBottom:4,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.rotulo}</div>
+                  <div style={{fontSize:21,fontWeight:800,color:s.cor||"#FFFFFF",letterSpacing:"-0.01em",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.valor}</div>
                 </div>
               ))}
             </div>
 
-            <div style={{display:"flex",gap:isMobile?18:36,flexWrap:"wrap",marginTop:20,paddingTop:18,borderTop:"1px solid rgba(126,176,219,0.16)"}}>
-              {rodape.map(item=>(
-                <div key={item.rotulo}>
-                  <div style={{fontSize:12,color:"#B6CFE4",marginBottom:5}}>{item.rotulo}</div>
-                  <div style={{fontSize:22,fontWeight:800,color:item.cor,letterSpacing:"-0.01em"}}>{item.valor}</div>
-                </div>
-              ))}
-            </div>
+            {buscando ? (
+              <div className="skeleton" style={{height:250,borderRadius:12}}/>
+            ) : (
+              <>
+                <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto",display:"block"}}
+                     role="img" aria-label={`${indicador.rotulo} por mês: ${baldes.map((b,i)=>`${b.rotulo}, ${fmtValor(valores[i]??0)}`).join("; ")}`}>
+                  <defs>
+                    <linearGradient id={`grad-${indicador.chave}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={indicador.cor} stopOpacity="0.30"/>
+                      <stop offset="100%" stopColor={indicador.cor} stopOpacity="0"/>
+                    </linearGradient>
+                  </defs>
 
-            {dados.semData>0&&(
+                  {/* Grade + escala. Sem os números do eixo, dava para ver que
+                      uma curva subia, não de quanto para quanto. */}
+                  {marcas.map(m=>(
+                    <g key={m}>
+                      <line x1={L} x2={W-R} y1={y(m)} y2={y(m)} stroke="rgba(126,176,219,0.14)" strokeWidth="1"/>
+                      <text x={L-8} y={y(m)+3.5} textAnchor="end" fontSize="10" fontWeight="600" fill="#8AA9C6">
+                        {indicador.moeda ? brlCompacto(m).replace("R$ ","") : m.toLocaleString("pt-BR")}
+                      </text>
+                    </g>
+                  ))}
+
+                  {!vazio && <polygon points={area} fill={`url(#grad-${indicador.chave})`}/>}
+                  <polyline points={linha} fill="none" stroke={indicador.cor} strokeWidth="2.5"
+                            strokeLinecap="round" strokeLinejoin="round"/>
+
+                  {valores.map((v,i)=>{
+                    const fim = i === valores.length - 1;
+                    return (
+                      <g key={i}>
+                        <circle cx={x(i)} cy={y(v)} r={fim?5:4}
+                                fill={fim?indicador.cor:"#143354"} stroke={indicador.cor} strokeWidth="2">
+                          <title>{`${baldes[i]?.rotulo}: ${fmtValor(v)}`}</title>
+                        </circle>
+                        <text x={x(i)} y={H-B+18} textAnchor="middle" fontSize="11"
+                              fontWeight={fim?800:600} fill={fim?"#FFFFFF":"#B6CFE4"}>
+                          {baldes[i]?.rotulo}
+                        </text>
+                      </g>
+                    );
+                  })}
+                </svg>
+
+                {vazio && (
+                  <div style={{textAlign:"center",fontSize:12,color:"#B6CFE4",marginTop:-10}}>
+                    Nenhum registro de “{indicador.rotulo.toLowerCase()}” neste período.
+                  </div>
+                )}
+              </>
+            )}
+
+            {falhou && indicador.precisa.length > 0 && (
               <div style={{marginTop:14,display:"flex",alignItems:"center",gap:7,fontSize:11,color:"#B6CFE4"}}>
                 <Info style={{width:12,height:12,flexShrink:0,color:"#F0A05A"}}/>
-                {dados.semData} {dados.semData===1?"empresa cadastrada antes":"empresas cadastradas antes"} do histórico existir — {dados.semData===1?"conta":"contam"} na base atual, mas {dados.semData===1?"não aparece":"não aparecem"} na curva.
+                Não foi possível carregar os dados deste indicador — o gráfico está mostrando zero, não um resultado real.
+              </div>
+            )}
+
+            {indicador.avisaSemData && semData>0&&(
+              <div style={{marginTop:14,display:"flex",alignItems:"center",gap:7,fontSize:11,color:"#B6CFE4"}}>
+                <Info style={{width:12,height:12,flexShrink:0,color:"#F0A05A"}}/>
+                {semData} {semData===1?"empresa cadastrada antes":"empresas cadastradas antes"} do histórico existir — {semData===1?"conta":"contam"} na base atual, mas {semData===1?"não aparece":"não aparecem"} na curva.
               </div>
             )}
         </motion.div>
