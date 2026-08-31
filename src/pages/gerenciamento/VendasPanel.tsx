@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import Dropdown from "../../components/Dropdown";
 import { dataLocal, formatarData } from "../../utils/data";
+import { notificarOrcamentos, aoMudarOrcamentos } from "../../hooks/useValoresOrcamento";
 
 const API = (process.env.REACT_APP_API_URL || "https://backend-crm-production-157b.up.railway.app");
 
@@ -153,7 +154,13 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
     Authorization: `Bearer ${getToken() || ""}`,
   });
 
+  // Quando este painel buscou por conta propria. Serve para ele nao repetir a
+  // busca quando o aviso de mudanca chegar logo depois — nesse caso quem mudou
+  // foi ele mesmo, e a lista ja esta vindo.
+  const ultimaBusca = useRef(0);
+
   const fetchTudo = useCallback(async () => {
+    ultimaBusca.current = Date.now();
     setLoading(true);
     try {
       const [oRes, eRes, iRes] = await Promise.all([
@@ -170,9 +177,27 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
     setLoading(false);
   }, []);
 
+  // Recarrega este painel E avisa as telas que mostram o mesmo dinheiro por
+  // outro angulo (o funil ao lado, o dashboard): mudar um orcamento para "em
+  // negociacao" tem que mexer no numero de la na hora, sem F5.
+  const recarregarTudo = useCallback(() => {
+    // Avisa antes de esperar a propria recarga: as duas buscas correm em
+    // paralelo e o numero de la nao fica atras do daqui.
+    notificarOrcamentos();
+    return fetchTudo();
+  }, [fetchTudo]);
+
   // Carga inicial só na montagem.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchTudo(); }, []);
+
+  // Orcamento mudou e nao foi aqui: outra pessoa mexeu, e o polling do store
+  // percebeu. A lista e os insights sao copia local deste painel, entao
+  // precisam ser rebuscados na mao — o store so cuida dos valores agregados.
+  useEffect(() => aoMudarOrcamentos(() => {
+    if (Date.now() - ultimaBusca.current < 2000) return;
+    fetchTudo();
+  }), [fetchTudo]);
 
   // Valor aprovado por mês, dos últimos 6 meses — calculado do que já temos.
   // `qtd` entra junto porque valor sozinho não distingue um mês de um contrato
@@ -221,7 +246,7 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
       const res = await fetch(`${API}/orcamentos/${id}/status`, {
         method: "PUT", headers: hdrs(), body: JSON.stringify({ status, motivo_recusa }),
       });
-      if (res.ok) fetchTudo(); else setErro("Não foi possível mudar o status.");
+      if (res.ok) recarregarTudo(); else setErro("Não foi possível mudar o status.");
     } catch { setErro("Erro de conexão ao mudar o status."); }
   };
 
@@ -229,7 +254,7 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
     setEnviandoId(id); setErro(null); setFalhaEnvio(null);
     try {
       const res = await fetch(`${API}/orcamentos/${id}/enviar`, { method: "POST", headers: hdrs() });
-      if (res.ok) { fetchTudo(); setEnviandoId(null); return; }
+      if (res.ok) { recarregarTudo(); setEnviandoId(null); return; }
       const d = await res.json().catch(() => ({}));
       const motivo = typeof d.detail === "string" ? d.detail : "Não foi possível enviar o orçamento.";
       // 502 = o email não saiu, mas o orçamento está íntegro. Oferecemos o
@@ -255,7 +280,7 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
       const res = await fetch(`${API}/orcamentos/${id}/status`, {
         method: "PUT", headers: hdrs(), body: JSON.stringify({ status: "enviado" }),
       });
-      if (res.ok) { setFalhaEnvio(null); fetchTudo(); }
+      if (res.ok) { setFalhaEnvio(null); recarregarTudo(); }
       else setErro("Não foi possível atualizar o status.");
     } catch { setErro("Erro de conexão ao atualizar o status."); }
   };
@@ -264,7 +289,7 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
     if (!window.confirm("Excluir este orçamento?")) return;
     try {
       const res = await fetch(`${API}/orcamentos/${id}`, { method: "DELETE", headers: hdrs() });
-      if (res.ok) fetchTudo();
+      if (res.ok) recarregarTudo();
     } catch { setErro("Erro ao excluir."); }
   };
 
@@ -531,7 +556,7 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
           equipamentos={equipamentos.filter(e => e.ativo)}
           hdrs={hdrs}
           onFechar={() => setEditando(null)}
-          onSalvo={() => { setEditando(null); fetchTudo(); }}
+          onSalvo={() => { setEditando(null); recarregarTudo(); }}
           onErro={setErro}
         />
       )}
