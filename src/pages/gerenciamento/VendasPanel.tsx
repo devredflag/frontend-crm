@@ -148,6 +148,9 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
   // cliente não recebeu). Guardamos o motivo e a prévia para o vendedor mandar
   // por conta própria.
   const [falhaEnvio, setFalhaEnvio] = useState<{ id: string; motivo: string; previa: PreviaEmail | null } | null>(null);
+  // Recusa pede um motivo antes de gravar — vira modal, nao window.prompt.
+  const [recusando, setRecusando] = useState<Orcamento | null>(null);
+  const [recusaEmCurso, setRecusaEmCurso] = useState(false);
 
   const hdrs = () => ({
     "Content-Type": "application/json",
@@ -235,19 +238,31 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
     ? orcamentos
     : orcamentos.filter(o => o.status === filtroStatus);
 
-  const mudarStatus = async (id: string, status: string) => {
-    let motivo_recusa: string | null = null;
-    if (status === "recusado") {
-      const m = window.prompt("Motivo da recusa (opcional)");
-      if (m === null) return;
-      motivo_recusa = m.trim() || null;
-    }
+  const aplicarStatus = async (id: string, status: string, motivo_recusa: string | null) => {
     try {
       const res = await fetch(`${API}/orcamentos/${id}/status`, {
         method: "PUT", headers: hdrs(), body: JSON.stringify({ status, motivo_recusa }),
       });
       if (res.ok) recarregarTudo(); else setErro("Não foi possível mudar o status.");
     } catch { setErro("Erro de conexão ao mudar o status."); }
+  };
+
+  const mudarStatus = (id: string, status: string) => {
+    // Recusar abre o modal; o status só é gravado quando ele for confirmado.
+    // Fechar sem confirmar não muda nada — o dropdown segue o dado, não o clique.
+    if (status === "recusado") {
+      setRecusando(orcamentos.find(o => o.orcamento_id === id) || null);
+      return;
+    }
+    aplicarStatus(id, status, null);
+  };
+
+  const confirmarRecusa = async (motivo: string) => {
+    if (!recusando) return;
+    setRecusaEmCurso(true);
+    await aplicarStatus(recusando.orcamento_id, "recusado", motivo.trim() || null);
+    setRecusaEmCurso(false);
+    setRecusando(null);
   };
 
   const enviar = async (id: string) => {
@@ -367,6 +382,16 @@ export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
           );
         })}
       </div>
+
+      {recusando && (
+        <MotivoRecusaOrcamento
+          orcamento={recusando}
+          numero={numeroOrcamento(recusando)}
+          salvando={recusaEmCurso}
+          onCancelar={() => setRecusando(null)}
+          onConfirmar={confirmarRecusa}
+        />
+      )}
 
       {falhaEnvio && (
         <FalhaEnvioOrcamento
@@ -1609,5 +1634,85 @@ function FalhaEnvioOrcamento({
         </>
       )}
     </div>
+  );
+}
+
+// Motivo da recusa. Era um `window.prompt`: caixa pintada pelo sistema, fora do
+// tema, e que nao dizia para onde o texto ia parar.
+//
+// O campo continua OPCIONAL de proposito. As vezes o vendedor so sabe que
+// perdeu, e obrigar a justificar faria ele desistir de marcar — status
+// desatualizado e pior que motivo em branco.
+function MotivoRecusaOrcamento({
+  orcamento, numero, salvando, onCancelar, onConfirmar,
+}: {
+  orcamento: Orcamento;
+  numero: string;
+  salvando: boolean;
+  onCancelar: () => void;
+  onConfirmar: (motivo: string) => void;
+}) {
+  const [motivo, setMotivo] = useState("");
+  const campo = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => { campo.current?.focus(); }, []);
+
+  useEffect(() => {
+    const aoTeclar = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !salvando) onCancelar();
+    };
+    document.addEventListener("keydown", aoTeclar);
+    return () => document.removeEventListener("keydown", aoTeclar);
+  }, [onCancelar, salvando]);
+
+  const rotulo = { fontSize: 10, fontWeight: 800, letterSpacing: "0.06em", color: "#9FD3EA", textTransform: "uppercase" } as const;
+
+  return createPortal(
+    <div onClick={() => { if (!salvando) onCancelar(); }}
+      style={{ position: "fixed", inset: 0, zIndex: 80, background:"rgba(10,31,51,0.42)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div onClick={e => e.stopPropagation()} role="dialog" aria-modal aria-label="Motivo da recusa"
+        style={{ width: "100%", maxWidth: 460, background:"#143354", borderRadius: 18, padding: 24, boxShadow: "0 24px 64px rgba(10,31,51,0.32)" }}>
+
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 16 }}>
+          <div style={{ width: 34, height: 34, borderRadius: 10, background:"rgba(220,38,38,0.12)", display: "grid", placeItems: "center", flexShrink: 0 }}>
+            <AlertTriangle style={{ width: 17, height: 17, color:"#F7B8B1" }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 16, fontWeight: 900, color:"#EAF6FB" }}>Marcar como recusado</div>
+            <div style={{ fontSize: 11.5, color:"#9FD3EA", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {numero} · {orcamento.empresa_nome || "sem empresa"}
+            </div>
+          </div>
+          <button onClick={onCancelar} disabled={salvando} className="vp-icon-btn" aria-label="Fechar"
+            style={{ width: 30, height: 30, background:"rgba(159,211,234,0.08)", color:"#EAF6FB", flexShrink: 0 }}>
+            <X style={{ width: 15, height: 15 }} />
+          </button>
+        </div>
+
+        <label style={rotulo} htmlFor="motivo-recusa">Motivo da recusa (opcional)</label>
+        <textarea id="motivo-recusa" ref={campo} value={motivo} onChange={e => setMotivo(e.target.value)}
+          placeholder="Preço acima do concorrente, prazo de entrega, adiou a compra…"
+          style={{ width: "100%", minHeight: 84, padding: "10px 12px", borderRadius: 10, border:"1.5px solid rgba(159,211,234,0.18)", background:"rgba(18,59,94,0.55)", fontSize: 13, marginTop: 5, outline:"none", fontFamily: "inherit", color:"#EAF6FB", resize: "vertical" }} />
+
+        <div style={{ fontSize: 11, color:"#9FD3EA", marginTop: 8, lineHeight: 1.5 }}>
+          Fica na linha deste orçamento, embaixo do título. Se o status mudar de
+          novo, o motivo é apagado.
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 18 }}>
+          <button onClick={onCancelar} disabled={salvando} className="vp-ghost" style={{ height: 40, padding: "0 16px", fontSize: 13 }}>
+            Cancelar
+          </button>
+          <button onClick={() => onConfirmar(motivo)} disabled={salvando}
+            style={{ display: "flex", alignItems: "center", gap: 6, height: 40, padding: "0 18px", borderRadius: 10, border:"none", background:"rgba(220,38,38,0.16)", color:"#FFC9C2", fontSize: 13, fontWeight: 700, fontFamily: "inherit", cursor: salvando ? "wait" : "pointer", opacity: salvando ? 0.7 : 1 }}>
+            {salvando
+              ? <Loader2 style={{ width: 14, height: 14, animation: "spin 1s linear infinite" }} />
+              : <X style={{ width: 14, height: 14 }} />}
+            Marcar como recusado
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
