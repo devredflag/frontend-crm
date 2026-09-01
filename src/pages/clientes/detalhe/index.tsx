@@ -628,8 +628,6 @@ export default function EmpresaDetalhe() {
                       { rot:"Total aprovado",   val: valorAprovado ? brl(valorAprovado, 0) : "—" },
                       { rot:"Orçamentos",       val: orcamentos.length || "—" },
                       { rot:"Vendas fechadas",  val: aprovados.length || "—", cor:"#83DDA8" },
-                      { rot:"Responsável",      val: empresa.responsavel_principal || "—" },
-                      { rot:"Próximo contato",  val: formatDate(empresa.data_proxima_acao || null) },
                     ]} />
                   </Caixa>
                 </>}>
@@ -670,52 +668,53 @@ export default function EmpresaDetalhe() {
                         </div>
                       )}
                     </section>
+
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(250px,1fr))", gap:16, alignItems:"start" }}>
+                  {/* Informações */}
+                  <motion.div className="glass-card" style={{ padding:"22px 24px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.07 }}>
+                    <div style={{ fontSize:13, fontWeight:700, color:"#EAF6FB", marginBottom:16, display:"flex", alignItems:"center", gap:7 }}>
+                      <Building2 style={{ width:15, height:15, color:"#9FD3EA" }} /> Informações da Empresa
+                    </div>
+                    {[
+                      { icon: Tag,         label:"Segmento",       value:empresa.segmento },
+                      { icon: Building2,   label:"Porte",          value:empresa.porte },
+                      { icon: MapPin,      label:"Cidade",         value:`${empresa.cidade}${empresa.estado ? ` / ${empresa.estado}` : ""}` },
+                      { icon: TrendingUp,  label:"Origem do lead", value:empresa.origem_lead },
+                      { icon: DollarSign,  label:"Ticket médio",   value:ticketMedio
+                          ? `R$ ${ticketMedio.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}`
+                          : "Sem orçamento aprovado" },
+                      { icon: Thermometer, label:"Temperatura",    value:empresa.temperatura },
+                    ].map(({ icon: Icon, label, value }) => (
+                      <div key={label} className="info-row">
+                        <Icon style={{ width:14, height:14, color:"#9FD3EA", flexShrink:0 }} />
+                        <span style={{ fontSize:12, color:"#9FD3EA", fontWeight:600, minWidth:110 }}>{label}</span>
+                        <span style={{ fontSize:12, color:"#EAF6FB", fontWeight:600 }}>{value || "—"}</span>
+                      </div>
+                    ))}
+                  </motion.div>
+
+                  {/* Relacionamento */}
+                  <motion.div className="glass-card" style={{ padding:"22px 24px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.12 }}>
+                    <div style={{ fontSize:13, fontWeight:700, color:"#EAF6FB", marginBottom:16, display:"flex", alignItems:"center", gap:7 }}>
+                      <ClipboardList style={{ width:15, height:15, color:"#9FD3EA" }} /> Relacionamento
+                    </div>
+                    {[
+                      { icon: User,         label:"Responsável",      value:empresa.responsavel_principal },
+                      { icon: Clock,        label:"Última interação", value:formatDate(empresa.ultima_interacao) },
+                      { icon: ChevronRight, label:"Próxima ação",     value:empresa.proxima_acao },
+                    ].map(({ icon: Icon, label, value }) => (
+                      <div key={label} className="info-row">
+                        <Icon style={{ width:14, height:14, color:"#9FD3EA", flexShrink:0 }} />
+                        <span style={{ fontSize:12, color:"#9FD3EA", fontWeight:600, minWidth:130 }}>{label}</span>
+                        <span style={{ fontSize:12, color:"#EAF6FB", fontWeight:600 }}>{value || "—"}</span>
+                      </div>
+                    ))}
+                  </motion.div>
+
+                  </div>
                   </div>
                 </Colunas>
 
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))", gap:18, alignItems:"start" }}>
-                {/* Informações */}
-                <motion.div className="glass-card" style={{ padding:"22px 24px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.07 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:"#EAF6FB", marginBottom:16, display:"flex", alignItems:"center", gap:7 }}>
-                    <Building2 style={{ width:15, height:15, color:"#9FD3EA" }} /> Informações da Empresa
-                  </div>
-                  {[
-                    { icon: Tag,         label:"Segmento",       value:empresa.segmento },
-                    { icon: Building2,   label:"Porte",          value:empresa.porte },
-                    { icon: MapPin,      label:"Cidade",         value:`${empresa.cidade}${empresa.estado ? ` / ${empresa.estado}` : ""}` },
-                    { icon: TrendingUp,  label:"Origem do lead", value:empresa.origem_lead },
-                    { icon: DollarSign,  label:"Ticket médio",   value:ticketMedio
-                        ? `R$ ${ticketMedio.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}`
-                        : "Sem orçamento aprovado" },
-                    { icon: Thermometer, label:"Temperatura",    value:empresa.temperatura },
-                  ].map(({ icon: Icon, label, value }) => (
-                    <div key={label} className="info-row">
-                      <Icon style={{ width:14, height:14, color:"#9FD3EA", flexShrink:0 }} />
-                      <span style={{ fontSize:12, color:"#9FD3EA", fontWeight:600, minWidth:110 }}>{label}</span>
-                      <span style={{ fontSize:12, color:"#EAF6FB", fontWeight:600 }}>{value || "—"}</span>
-                    </div>
-                  ))}
-                </motion.div>
-
-                {/* Relacionamento */}
-                <motion.div className="glass-card" style={{ padding:"22px 24px" }} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.12 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:"#EAF6FB", marginBottom:16, display:"flex", alignItems:"center", gap:7 }}>
-                    <ClipboardList style={{ width:15, height:15, color:"#9FD3EA" }} /> Relacionamento
-                  </div>
-                  {[
-                    { icon: User,         label:"Responsável",      value:empresa.responsavel_principal },
-                    { icon: Clock,        label:"Última interação", value:formatDate(empresa.ultima_interacao) },
-                    { icon: ChevronRight, label:"Próxima ação",     value:empresa.proxima_acao },
-                  ].map(({ icon: Icon, label, value }) => (
-                    <div key={label} className="info-row">
-                      <Icon style={{ width:14, height:14, color:"#9FD3EA", flexShrink:0 }} />
-                      <span style={{ fontSize:12, color:"#9FD3EA", fontWeight:600, minWidth:130 }}>{label}</span>
-                      <span style={{ fontSize:12, color:"#EAF6FB", fontWeight:600 }}>{value || "—"}</span>
-                    </div>
-                  ))}
-                </motion.div>
-
-                </div>
               </div>
               )}
 
