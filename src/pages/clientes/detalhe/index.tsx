@@ -11,8 +11,8 @@ import {
   ClipboardList, Calendar, ArrowLeft, Edit3,
   MapPin, Tag, Thermometer, TrendingUp, DollarSign,
   Phone, Mail, User, Clock, ChevronRight, MessageCircle, Link2,
-  FileText, Hash, Globe, Percent, NotebookPen,
-  Wallet, Target, CalendarCheck, ShoppingCart, Package, Filter, Timer,
+  FileText, Hash, Globe, NotebookPen,
+  Wallet, Target, CalendarCheck, ShoppingCart, Package, Filter,
 } from "lucide-react";
 
 import SelectRecipientsModal, {
@@ -23,7 +23,7 @@ import SelectRecipientsModal, {
 import EmpresaNotificationBell from "../../../components/EmpresaNotificationBell";
 import CardUsuario from "../../../components/CardUsuario";
 import EmpresasProximasDaEmpresa from "../../../components/EmpresasProximasDaEmpresa";
-import GraficoAprovadoMensal, { DonutConversao, serieAprovadaPorMes, somaSerie } from "../../../components/GraficoAprovadoMensal";
+import { DonutConversao, serieAprovadaPorMes, somaSerie } from "../../../components/GraficoAprovadoMensal";
 import useValoresOrcamento, { aoMudarOrcamentos } from "../../../hooks/useValoresOrcamento";
 import {
   OrcamentoDet, PainelVendas, PainelProdutos, PainelTimeline, PainelObservacoes,
@@ -336,19 +336,6 @@ export default function EmpresaDetalhe() {
     ? ((totalSemestre - totalSemestreAnterior) / totalSemestreAnterior) * 100
     : null;
 
-  // Ciclo médio: dias entre o envio e a decisão dos orçamentos aprovados. É a
-  // resposta para "quanto tempo esse cliente demora para decidir".
-  const cicloMedio = useMemo(() => {
-    const dias = orcamentos
-      .filter(o => o.status === "aprovado")
-      .map(o => {
-        const env = dataLocal(o.data_envio), dec = dataLocal(o.data_decisao);
-        return env && dec ? Math.max(0, Math.round((dec.getTime() - env.getTime()) / 86_400_000)) : null;
-      })
-      .filter((d): d is number => d !== null);
-    return dias.length ? Math.round(dias.reduce((a, b) => a + b, 0) / dias.length) : null;
-  }, [orcamentos]);
-
   const ultimoFechamento = aprovados
     .map(o => o.data_decisao || o.data_envio || o.criado_em || null)
     .filter(Boolean)
@@ -623,39 +610,6 @@ export default function EmpresaDetalhe() {
               {tab === "resumo" && (
               <div style={{ display:"flex", flexDirection:"column", gap:18 }}>
 
-                {/* Visão geral: os quatro números que respondem "como está esta
-                    conta" sem obrigar a abrir aba nenhuma. */}
-                <motion.div style={CARD} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:0.05 }}>
-                  <Cabecalho titulo="Visão geral da conta" sub="Consolidado do que o sistema tem registrado desta empresa" />
-                  <div style={{ padding:16, display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))", gap:12 }}>
-                    {[
-                      { lab:"Vendas fechadas", icon:ShoppingCart, cor:"#83DDA8",
-                        val:String(aprovados.length),
-                        sub:totalSemestre ? `${brlCurto(totalSemestre)} nos últimos 6 meses` : "nada nos últimos 6 meses" },
-                      { lab:"Orçamentos abertos", icon:FileText, cor:"#F2C879",
-                        val:String(emAberto.length),
-                        sub:valorEmAberto ? `${brlCurto(valorEmAberto)} em jogo` : "nada em negociação" },
-                      { lab:"Conversão", icon:Percent, cor:"#9FD3EA",
-                        val:conversao !== null ? `${conversao}%` : "—",
-                        sub:decididos ? `${aprovados.length} de ${decididos} decidido${decididos === 1 ? "" : "s"}` : "nenhum orçamento decidido" },
-                      { lab:"Ciclo médio", icon:Timer, cor:"#C9B6E4",
-                        val:cicloMedio !== null ? `${cicloMedio} dia${cicloMedio === 1 ? "" : "s"}` : "—",
-                        sub:"do envio à decisão" },
-                    ].map(k => (
-                      <div key={k.lab} style={{ background:"rgba(18,59,94,0.55)", border:"1px solid rgba(159,211,234,0.18)", borderRadius:10, padding:14, display:"flex", gap:12, alignItems:"flex-start" }}>
-                        <div style={{ width:36, height:36, borderRadius:9, display:"grid", placeItems:"center", flexShrink:0, background:`${k.cor}1f` }}>
-                          <k.icon style={{ width:18, height:18, color:k.cor }} />
-                        </div>
-                        <div style={{ minWidth:0 }}>
-                          <div style={{ fontSize:10.5, letterSpacing:"0.07em", textTransform:"uppercase", color:"#9FD3EA", fontWeight:800, marginBottom:3 }}>{k.lab}</div>
-                          <div style={{ fontSize:19, fontWeight:900, color:"#EAF6FB", letterSpacing:"-0.02em", fontVariantNumeric:"tabular-nums" }}>{k.val}</div>
-                          <div style={{ fontSize:11.5, color:"#9FD3EA", marginTop:2 }}>{k.sub}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-
                 <Colunas rail={<>
                   <Caixa titulo="Taxa de conversão">
                     <DonutConversao pct={conversao ?? 0} />
@@ -680,12 +634,6 @@ export default function EmpresaDetalhe() {
                   </Caixa>
                 </>}>
                   <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-                    <GraficoAprovadoMensal
-                      serie={serieMensal}
-                      subtitulo="Últimos 6 meses desta empresa"
-                      vazioTexto="Esta empresa não fechou nada no período."
-                    />
-
                     {/* Próximas ações — sai da agenda, que é onde as datas
                         futuras desta empresa realmente moram. */}
                     <section style={{ ...CARD, overflow:"hidden" }}>
