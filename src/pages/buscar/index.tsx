@@ -9,6 +9,7 @@ import {
   ClipboardList, Calendar, MapPin,
   X, Plus,
   Loader2, AlertCircle, Navigation2, Menu, UserRoundCog,
+  Check, CheckSquare, Square, Radius,
 } from "lucide-react";
 import useIsMobile from "../../hooks/useIsMobile";
 import CardUsuario from "../../components/CardUsuario";
@@ -50,6 +51,15 @@ const navItems = [
   { icon: ClipboardList,   label: "Gerenciamento", path: "/gerenciamento" },
   { icon: Calendar,        label: "Calendário",                path: "/calendario" },
 ];
+
+// Prospeccao nao e busca local: quem procura cliente novo varre regiao, nao
+// bairro. Por isso os presets comecam alto, e o campo livre existe para ir
+// alem do maior deles.
+const RAIOS_PRESET = [100, 200, 300, 500, 1000];
+const RAIO_PADRAO = 100;
+// Acima disto a Places API recusa o circulo e o backend passa a usar retangulo.
+// Nao muda o que o usuario faz, mas explica por que o resultado pega os cantos.
+const RAIO_CIRCULO_MAX_KM = 50;
 
 const SUGESTOES = ["embalagens", "metalúrgicas", "logística", "clínicas médicas", "tecnologia", "construção civil", "restaurantes", "farmácias"];
 
@@ -98,9 +108,10 @@ function PinNumerado({ numero, cadastrada }: { numero: number; cadastrada: boole
 }
 
 function ResultadoCard({
-  place, index, selected, onSelect, onCadastrar, salvando,
+  place, index, selected, marcado, onMarcar, onSelect, onCadastrar, salvando,
 }: {
   place: PlaceResult; index: number; selected: boolean;
+  marcado: boolean; onMarcar: () => void;
   onSelect: () => void; onCadastrar: () => void; salvando?: boolean;
 }) {
   const operacional = place.business_status === "OPERATIONAL";
@@ -109,6 +120,20 @@ function ResultadoCard({
       <div style={{ display:"flex", gap:10 }}>
         {/* Número + avatar */}
         <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:4, flexShrink:0 }}>
+          {/* Empresa ja cadastrada nao tem o que marcar: criar rascunho dela
+              seria duplicata, e o backend recusa com 409 de qualquer forma. */}
+          {!place.ja_cadastrada && (
+            <button
+              onClick={e => { e.stopPropagation(); onMarcar(); }}
+              aria-label={marcado ? `Desmarcar ${place.nome}` : `Marcar ${place.nome} para criar rascunho`}
+              aria-pressed={marcado}
+              style={{ width:22, height:22, borderRadius:6, border:"none", background:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", padding:0 }}
+            >
+              {marcado
+                ? <CheckSquare style={{ width:17, height:17, color:"#2CCD93" }} />
+                : <Square style={{ width:17, height:17, color:"#B6CFE4" }} />}
+            </button>
+          )}
           <div style={{ width:22, height:22, borderRadius:"50%", background:place.ja_cadastrada ? "#2CCD93" : "#ea4335", display:"flex", alignItems:"center", justifyContent:"center", fontSize:9, fontWeight:900, color:"#FFFFFF" }}>{index+1}</div>
           <div style={{ width:36, height:36, borderRadius:10, background:avatarColor(place.nome), display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:800, color:"#FFFFFF" }}>{initials(place.nome)}</div>
         </div>
@@ -186,6 +211,14 @@ export default function BuscarEmpresas() {
   );
   const [mapZoom, setMapZoom] = useState(11);
   const [myLocation, setMyLocation] = useState<{ lat: number; lng: number } | null>(null);
+  // Raio da busca. Fica em km na tela e vira metros na requisicao.
+  const [raioKm, setRaioKm] = useState(RAIO_PADRAO);
+  const [raioTexto, setRaioTexto] = useState("");
+  // Selecao multipla para criar varios rascunhos de uma vez.
+  const [marcados, setMarcados] = useState<Set<string>>(new Set());
+  const [criandoLote, setCriandoLote] = useState(false);
+  const [progressoLote, setProgressoLote] = useState(0);
+  const [resumoLote, setResumoLote] = useState<{ criados:number; jaExistiam:number; falhas:number } | null>(null);
   const [quotaExcedida, setQuotaExcedida] = useState(false);
   const [quotaResetTime, setQuotaResetTime] = useState<Date | null>(null);
   // A explicação do bloqueio vem do backend: só ele sabe se quem barrou foi o
@@ -227,7 +260,9 @@ export default function BuscarEmpresas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const buscar = useCallback(async (q: string) => {
+  // `km` opcional: quem troca o raio precisa buscar com o valor novo, que
+  // ainda nao entrou no estado neste render.
+  const buscar = useCallback(async (q: string, km?: number) => {
     if (!q.trim()) { setResults([]); return; }
     if (quotaExcedida) return;
     setLoading(true);
@@ -236,7 +271,7 @@ export default function BuscarEmpresas() {
       const res = await fetch(`${API}/places/search`, {
         method: "POST",
         headers: hdrs(),
-        body: JSON.stringify({ query: q, lat: mapCenter.lat, lng: mapCenter.lng, radius: 20000 }),
+        body: JSON.stringify({ query: q, lat: mapCenter.lat, lng: mapCenter.lng, radius: (km ?? raioKm) * 1000 }),
       });
       if (res.status === 429) {
         // `detail` é o objeto que o backend monta — seu teto mensal (reset na
@@ -254,6 +289,10 @@ export default function BuscarEmpresas() {
       if (!res.ok) throw new Error("Erro na busca");
       const data = await res.json();
       setResults(data);
+      // A selecao aponta para place_ids da busca anterior; manter seria criar
+      // rascunho de empresa que nao esta mais na lista.
+      setMarcados(new Set());
+      setResumoLote(null);
       const primeiro = data.find((p: PlaceResult) => p.lat && p.lng);
       if (primeiro) { setMapCenter({ lat: primeiro.lat!, lng: primeiro.lng! }); setMapZoom(13); }
       // Só cache miss consome cota, e daqui não dá para saber se consumiu —
@@ -266,7 +305,7 @@ export default function BuscarEmpresas() {
       setError("Não foi possível conectar ao Google Places. Verifique a chave de API.");
     }
     setLoading(false);
-  }, [mapCenter, quotaExcedida]);
+  }, [mapCenter, quotaExcedida, raioKm]);
 
   // Reabilita o campo na hora que o servidor informou, sem exigir recarregar a
   // página — e sem inventar a hora, como fazia o "meia-noite UTC" de antes.
@@ -304,6 +343,86 @@ export default function BuscarEmpresas() {
     setQuery(v);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => buscar(v), 600);
+  };
+
+  /**
+   * Troca o raio e refaz a busca.
+   *
+   * Cada raio novo e uma chave de cache diferente no servidor, entao a busca
+   * SAI cara (consome consulta paga). E proposital: sem refazer, o raio novo
+   * nao mudaria nada na tela e o seletor seria enfeite.
+   */
+  const aplicarRaio = (km: number) => {
+    const limpo = Math.max(1, Math.min(Math.round(km), 2000));
+    setRaioKm(limpo);
+    setRaioTexto("");
+    if (query.trim() && !quotaExcedida) buscar(query, limpo);
+  };
+
+  const alternarMarcado = (placeId: string) => {
+    setMarcados(prev => {
+      const novo = new Set(prev);
+      if (novo.has(placeId)) novo.delete(placeId); else novo.add(placeId);
+      return novo;
+    });
+    setResumoLote(null);
+  };
+
+  const selecionaveis = results.filter(p => !p.ja_cadastrada);
+  const todasMarcadas = selecionaveis.length > 0 && selecionaveis.every(p => marcados.has(p.place_id));
+
+  /**
+   * Cria um rascunho por empresa marcada.
+   *
+   * Sequencial de proposito: sao ate 20 INSERTs e o ganho de disparar tudo junto
+   * nao paga o risco de estourar a conexao do banco por um clique. O contador
+   * de progresso existe porque, sequencial, isto leva alguns segundos.
+   *
+   * 409 nao e falha: significa que a empresa ja entrou no CRM (por outra busca
+   * ou por outra pessoa) -- conta separado para o resumo nao acusar erro que
+   * nao houve.
+   */
+  const criarRascunhosEmLote = async () => {
+    const alvos = results.filter(p => marcados.has(p.place_id));
+    if (alvos.length === 0) return;
+    setCriandoLote(true);
+    setProgressoLote(0);
+    setResumoLote(null);
+    let criados = 0, jaExistiam = 0, falhas = 0;
+    const criadosIds = new Set<string>();
+
+    for (const place of alvos) {
+      try {
+        const r = await fetch(`${API}/empresas/rascunho`, {
+          method: "POST", headers: hdrs(),
+          body: JSON.stringify({
+            nome: place.nome,
+            endereco_completo: place.endereco_rua || place.endereco,
+            cidade: place.cidade,
+            google_place_id: place.place_id,
+            latitude: place.lat,
+            longitude: place.lng,
+            business_status: place.business_status,
+          }),
+        });
+        if (r.status === 201) { criados += 1; criadosIds.add(place.place_id); }
+        else if (r.status === 409) { jaExistiam += 1; criadosIds.add(place.place_id); }
+        else falhas += 1;
+      } catch { falhas += 1; }
+      setProgressoLote(p => p + 1);
+    }
+
+    // Quem entrou vira "✓ No CRM" na hora, sem refazer a busca paga.
+    if (criadosIds.size > 0) {
+      setResults(prev => prev.map(p => criadosIds.has(p.place_id) ? { ...p, ja_cadastrada: true } : p));
+    }
+    setMarcados(new Set());
+    setResumoLote({ criados, jaExistiam, falhas });
+    setCriandoLote(false);
+    fetch(`${API}/empresas/rascunhos`, { headers: hdrs() })
+      .then(r => r.ok && r.json())
+      .then(d => Array.isArray(d) && setTotalRascunhos(d.length))
+      .catch(() => {});
   };
 
   const cadastrar = (place: PlaceResult) => {
@@ -432,6 +551,71 @@ export default function BuscarEmpresas() {
                 )}
               </div>
 
+              {/* Raio da busca */}
+              <div style={{ marginTop:12 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:7 }}>
+                  <Radius style={{ width:12, height:12, color:"#B6CFE4", flexShrink:0 }} />
+                  <span style={{ fontSize:11, fontWeight:700, color:"#B6CFE4", textTransform:"uppercase", letterSpacing:"0.07em" }}>
+                    Raio da busca
+                  </span>
+                  <span style={{ marginLeft:"auto", fontSize:12, fontWeight:800, color:"#2CCD93" }}>{raioKm} km</span>
+                </div>
+
+                <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                  {RAIOS_PRESET.map(km => {
+                    const on = raioKm === km;
+                    return (
+                      <button key={km} onClick={() => aplicarRaio(km)} disabled={quotaExcedida || loading}
+                        aria-pressed={on}
+                        style={{ padding:"5px 11px", borderRadius:20, fontSize:11, fontWeight:700, fontFamily:"inherit",
+                          cursor: quotaExcedida || loading ? "not-allowed" : "pointer",
+                          border:`1.5px solid ${on ? "rgba(44,205,147,0.55)" : "rgba(126,176,219,0.16)"}`,
+                          background:on ? "rgba(44,205,147,0.14)" : "#143354",
+                          color:on ? "#2CCD93" : "#FFFFFF",
+                          opacity: quotaExcedida || loading ? 0.55 : 1, transition:"all 0.15s" }}>
+                        {km} km
+                      </button>
+                    );
+                  })}
+
+                  {/* Campo livre: os presets cobrem o comum, isto cobre o resto.
+                      Aplica no Enter ou no botao — a cada tecla seria uma busca
+                      paga por digito. */}
+                  <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                    <input
+                      value={raioTexto}
+                      onChange={e => setRaioTexto(e.target.value.replace(/[^\d]/g, "").slice(0, 4))}
+                      onKeyDown={e => { if (e.key === "Enter" && raioTexto) aplicarRaio(Number(raioTexto)); }}
+                      placeholder="outro"
+                      aria-label="Raio personalizado em quilômetros"
+                      disabled={quotaExcedida || loading}
+                      style={{ width:62, height:28, padding:"0 8px", borderRadius:20, fontSize:11, fontWeight:700,
+                        border:"1.5px solid rgba(126,176,219,0.16)", background:"#143354", color:"#FFFFFF",
+                        outline:"none", fontFamily:"inherit", textAlign:"center" }}
+                    />
+                    <button
+                      onClick={() => raioTexto && aplicarRaio(Number(raioTexto))}
+                      disabled={!raioTexto || quotaExcedida || loading}
+                      aria-label="Aplicar raio personalizado"
+                      style={{ width:28, height:28, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center",
+                        border:"1.5px solid rgba(126,176,219,0.16)", background:raioTexto ? "rgba(44,205,147,0.14)" : "#143354",
+                        cursor: raioTexto && !quotaExcedida && !loading ? "pointer" : "not-allowed",
+                        opacity: raioTexto ? 1 : 0.5 }}>
+                      <Check style={{ width:12, height:12, color:raioTexto ? "#2CCD93" : "#B6CFE4" }} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Duas coisas que o usuario so descobriria errando: o raio maior
+                    amplia a AREA, nao a quantidade de resultados; e trocar de raio
+                    e uma busca nova, que consome cota. */}
+                <div style={{ fontSize:10, color:"#B6CFE4", marginTop:7, lineHeight:1.45 }}>
+                  Traz até 20 empresas — raio maior amplia a área, não a quantidade.
+                  Trocar o raio refaz a busca e consome uma consulta.
+                  {raioKm > RAIO_CIRCULO_MAX_KM && " Acima de 50 km a área vira um retângulo, então entram também os cantos."}
+                </div>
+              </div>
+
               {/* Consumo do mês + interruptor do teto (só o gerente alterna) */}
               {cota && (
                 <div style={{ marginTop:10, display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, flexWrap:"wrap" }}>
@@ -522,16 +706,50 @@ export default function BuscarEmpresas() {
               {/* Resultados */}
               {!loading && resultadosFiltrados.length > 0 && (
                 <>
-                  <div style={{ fontSize:11, fontWeight:700, color:"#B6CFE4", padding:"0 2px" }}>
-                    {resultadosFiltrados.length} resultado{resultadosFiltrados.length > 1 ? "s" : ""}
-                    {results.length !== resultadosFiltrados.length ? ` (de ${results.length})` : ""}
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, padding:"0 2px" }}>
+                    <span style={{ fontSize:11, fontWeight:700, color:"#B6CFE4" }}>
+                      {resultadosFiltrados.length} resultado{resultadosFiltrados.length > 1 ? "s" : ""}
+                      {results.length !== resultadosFiltrados.length ? ` (de ${results.length})` : ""}
+                    </span>
+                    {selecionaveis.length > 0 && (
+                      <button
+                        onClick={() => setMarcados(todasMarcadas ? new Set() : new Set(selecionaveis.map(p => p.place_id)))}
+                        style={{ display:"flex", alignItems:"center", gap:5, padding:"4px 9px", borderRadius:8, fontSize:10.5, fontWeight:700,
+                          border:"1px solid rgba(126,176,219,0.16)", background:"#143354", color:"#B6CFE4", cursor:"pointer", fontFamily:"inherit" }}>
+                        {todasMarcadas
+                          ? <><Square style={{ width:12, height:12 }} /> Limpar seleção</>
+                          : <><CheckSquare style={{ width:12, height:12 }} /> Selecionar {selecionaveis.length}</>}
+                      </button>
+                    )}
                   </div>
+
+                  {/* Resumo do lote anterior. Fica acima da lista porque e
+                      resposta a uma acao que aconteceu ali. */}
+                  {resumoLote && (
+                    <div style={{ display:"flex", alignItems:"flex-start", gap:8, padding:"10px 12px", borderRadius:11,
+                      background: resumoLote.falhas ? "rgba(240,160,90,0.08)" : "rgba(44,205,147,0.08)",
+                      border:`1px solid ${resumoLote.falhas ? "rgba(240,160,90,0.28)" : "rgba(44,205,147,0.28)"}` }}>
+                      <Check style={{ width:13, height:13, color: resumoLote.falhas ? "#F0A05A" : "#2CCD93", flexShrink:0, marginTop:1 }} />
+                      <span style={{ fontSize:11, color:"#FFFFFF", lineHeight:1.5, flex:1 }}>
+                        {resumoLote.criados > 0 && <><strong>{resumoLote.criados} rascunho{resumoLote.criados > 1 ? "s" : ""}</strong> criado{resumoLote.criados > 1 ? "s" : ""}. </>}
+                        {resumoLote.jaExistiam > 0 && <>{resumoLote.jaExistiam} já {resumoLote.jaExistiam > 1 ? "estavam" : "estava"} no CRM. </>}
+                        {resumoLote.falhas > 0 && <span style={{ color:"#F0A05A" }}>{resumoLote.falhas} não {resumoLote.falhas > 1 ? "puderam" : "pôde"} ser criado{resumoLote.falhas > 1 ? "s" : ""}.</span>}
+                        {resumoLote.criados === 0 && resumoLote.jaExistiam === 0 && resumoLote.falhas === 0 && "Nada a criar."}
+                      </span>
+                      <button onClick={() => setResumoLote(null)} aria-label="Fechar aviso"
+                        style={{ border:"none", background:"none", cursor:"pointer", color:"#B6CFE4", display:"flex", padding:0 }}>
+                        <X style={{ width:12, height:12 }} />
+                      </button>
+                    </div>
+                  )}
                   {resultadosFiltrados.map((place, i) => (
                     <ResultadoCard
                       key={place.place_id}
                       place={place}
                       index={i}
                       selected={selectedId === place.place_id}
+                      marcado={marcados.has(place.place_id)}
+                      onMarcar={() => alternarMarcado(place.place_id)}
                       onSelect={() => { setSelectedId(place.place_id); setInfoWindowId(place.place_id); setMapCenter({ lat: place.lat || mapCenter.lat, lng: place.lng || mapCenter.lng }); }}
                       onCadastrar={() => cadastrar(place)}
                     />
@@ -540,6 +758,38 @@ export default function BuscarEmpresas() {
               )}
 
             </div>
+
+            {/* Barra do lote — so existe com algo marcado, e fica fora da area
+                rolavel para nao sumir quando o usuario desce a lista. */}
+            {marcados.size > 0 && (
+              <div style={{ padding:"12px 14px", borderTop:"1px solid rgba(126,176,219,0.16)", background:"#0F2E4B", display:"flex", alignItems:"center", gap:10 }}>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:12.5, fontWeight:800, color:"#FFFFFF" }}>
+                    {marcados.size} empresa{marcados.size > 1 ? "s" : ""} marcada{marcados.size > 1 ? "s" : ""}
+                  </div>
+                  <div style={{ fontSize:10.5, color:"#B6CFE4", marginTop:1 }}>
+                    {criandoLote ? `Criando ${progressoLote} de ${marcados.size}...` : "Entram como rascunho, prontas para completar"}
+                  </div>
+                </div>
+                <button onClick={() => setMarcados(new Set())} disabled={criandoLote}
+                  style={{ height:34, padding:"0 10px", borderRadius:9, fontSize:11, fontWeight:700, fontFamily:"inherit",
+                    border:"1px solid rgba(126,176,219,0.16)", background:"#143354", color:"#B6CFE4",
+                    cursor: criandoLote ? "not-allowed" : "pointer", opacity: criandoLote ? 0.5 : 1 }}>
+                  Limpar
+                </button>
+                <button onClick={criarRascunhosEmLote} disabled={criandoLote}
+                  style={{ height:34, padding:"0 14px", borderRadius:9, border:"none", fontSize:11.5, fontWeight:800, fontFamily:"inherit",
+                    background:"linear-gradient(135deg,#2CCD93,#2CCD93,#56A4F5,#2CCD93)", backgroundSize:"200% 200%",
+                    animation:"gradientShift 4s ease infinite", color:"#FFFFFF",
+                    cursor: criandoLote ? "wait" : "pointer", opacity: criandoLote ? 0.75 : 1,
+                    display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
+                  {criandoLote
+                    ? <Loader2 style={{ width:12, height:12, animation:"spin 1s linear infinite" }} />
+                    : <Plus style={{ width:12, height:12 }} />}
+                  Criar {marcados.size} rascunho{marcados.size > 1 ? "s" : ""}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Google Maps */}
