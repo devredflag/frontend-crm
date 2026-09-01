@@ -127,14 +127,19 @@ interface PreviaEmail {
 
 const formatDate = (v?: string | null) => formatarData(v);
 
-export default function VendasPanel({ empresas }: { empresas: EmpresaOpt[] }) {
+export default function VendasPanel({ empresas, statusInicial }: {
+  empresas: EmpresaOpt[];
+  /** Recorte ja escolhido em outra tela (deep link `?status=`). */
+  statusInicial?: string;
+}) {
   const isMobile = useIsMobile();
   const [sub, setSub] = useState<"orcamentos" | "equipamentos">("orcamentos");
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>([]);
   const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
   const [insights, setInsights] = useState<Insights | null>(null);
   const [loading, setLoading] = useState(true);
-  const [filtroStatus, setFiltroStatus] = useState("todos");
+  const [filtroStatus, setFiltroStatus] = useState(
+    statusInicial && STATUS_ORDEM.includes(statusInicial) ? statusInicial : "todos");
   const [pagina, setPagina] = useState(1);
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const [editando, setEditando] = useState<Orcamento | null>(null);

@@ -1,6 +1,6 @@
 import { getToken, setAccessToken } from "../../services/auth";
 import { useState, useEffect, useId, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Search, Building2, Users, ClipboardList,
@@ -346,7 +346,13 @@ export default function Gerenciamento() {
   const [showOverduePanel, setShowOverduePanel] = useState(false);
 
   // Abas do Gerenciamento: carteira de clientes x orçamentos/vendas.
-  const [aba, setAba] = useState<"clientes"|"vendas">("clientes");
+  // `?aba=vendas&status=enviado` abre direto no painel certo e ja filtrado: e
+  // como o "Ver no CRM" da visao de vendas do dashboard chega aqui sem obrigar
+  // o usuario a refazer na mao o recorte que ele acabou de escolher la.
+  const [params] = useSearchParams();
+  const [aba, setAba] = useState<"clientes"|"vendas">(
+    params.get("aba") === "vendas" ? "vendas" : "clientes");
+  const statusInicialVendas = params.get("status") || undefined;
   // Separa quem ainda é lead novo de quem já virou cliente em andamento.
   const [filtroLead, setFiltroLead] = useState<"todos"|"leads"|"clientes">("todos");
 
@@ -716,7 +722,8 @@ export default function Gerenciamento() {
         </div>
 
         {aba==="vendas" ? (
-          <VendasPanel empresas={empresas.map(e=>({empresa_id:e.empresa_id,nome:e.nome}))} />
+          <VendasPanel empresas={empresas.map(e=>({empresa_id:e.empresa_id,nome:e.nome}))}
+                       statusInicial={statusInicialVendas} />
         ) : (
         <>
         {/* Board */}

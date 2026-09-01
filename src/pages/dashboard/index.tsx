@@ -14,7 +14,7 @@ import FundoAzul from "../../components/FundoAzul";
     Trash2, CheckCheck, AlertTriangle, Info,
     CheckCircle2, Menu, UserRoundCog
   } from "lucide-react";
-  import VendasInsights from "../../components/VendasInsights";
+  import VendasInsights, { cssVendasInsights } from "../../components/VendasInsights";
   import { brlCompacto } from "../../utils/moeda";
   import useIsMobile from "../../hooks/useIsMobile";
   import useValoresOrcamento from "../../hooks/useValoresOrcamento";
@@ -261,7 +261,7 @@ import FundoAzul from "../../components/FundoAzul";
 
       return (
         <div style={{display:"flex",height:"100vh",overflow:"hidden",position:"relative"}}>
-          <style>{css + cssAbasGerenciamento}</style>
+          <style>{css + cssAbasGerenciamento + cssVendasInsights}</style>
 
           {/* Background */}
           <div style={{position:"fixed",inset:0,zIndex:0,overflow:"hidden",pointerEvents:"none"}}>
