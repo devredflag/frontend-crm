@@ -1,5 +1,5 @@
 import { getToken, setAccessToken } from "../../services/auth";
-import { useState, useEffect, useId, useRef } from "react";
+import { useState, useEffect, useId, useRef, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -7,12 +7,12 @@ import {
   Calendar, BarChart3, Plus, Eye,
   ChevronRight, ChevronDown, MapPin, TrendingUp,
   X,
-  CalendarClock, Clock, Filter, AlertCircle, Menu, UserRoundCog, FileText,
+  CalendarClock, CalendarCheck, Clock, Filter, AlertCircle, Menu, UserRoundCog, FileText,
 } from "lucide-react";
 import useIsMobile from "../../hooks/useIsMobile";
 import useValoresOrcamento from "../../hooks/useValoresOrcamento";
 import useEmpresasAoVivo, { notificarEmpresas, patchLocalEmpresa } from "../../hooks/useEmpresasAoVivo";
-import { dataLocal, formatarData, diasDesde, diasAte } from "../../utils/data";
+import { dataLocal, formatarData, diasDesde, diasAte, inicioDoDia } from "../../utils/data";
 import VendasPanel from "./VendasPanel";
 import CardUsuario from "../../components/CardUsuario";
 import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGerenciamento";
@@ -263,7 +263,10 @@ function calcScore(e: Empresa, valor: number) {
   if(e.porte==="Grande")s+=20;else if(e.porte==="Médio")s+=13;else s+=6;
   if(valor>=20000)s+=15;else if(valor>=5000)s+=10;else if(valor>0)s+=5;
   if(e.ultima_interacao){const d=diasDesde(e.ultima_interacao);if(d<=7)s+=10;else if(d<=30)s+=6;else s+=2;}
-  const action=nextActionInfo(e);
+  // De proposito NAO usa a data efetiva (que pode vir da agenda): o score e
+  // uma heuristica de qualidade do lead, e mudar a entrada dele em silencio
+  // deslocaria o numero de todos os cartoes sem ninguem ter pedido.
+  const action=nextActionInfo(e.data_proxima_acao);
   if(action.status==="atrasada")s-=8;else if(action.status==="hoje")s+=6;else if(action.status==="proxima")s+=4;
   return Math.max(0, Math.min(s,100));
 }
@@ -303,13 +306,44 @@ function daysLabel(d: number) {
   return `${d} ${d === 1 ? "dia" : "dias"} na etapa`;
 }
 
-function nextActionInfo(e: Empresa) {
-  const diff = diasAte(e.data_proxima_acao);
+function nextActionInfo(data?: string | null) {
+  const diff = diasAte(data);
   if(diff === null) return { label:"Sem data", status:"sem-data", color:"#9FD3EA", bg:"#9FD3EA" };
   if(diff < 0) return { label:`Atrasada ${Math.abs(diff)}d`, status:"atrasada", color:"#F7B8B1", bg:"rgba(220,38,38,0.1)" };
   if(diff === 0) return { label:"Hoje", status:"hoje", color:"#F2C879", bg:"rgba(217,119,6,0.12)" };
   return { label:`Em ${diff}d`, status:"proxima", color:"#9FD3EA", bg:"rgba(159,211,234,0.55)" };
 }
+interface EventoAgenda {
+  evento_id: string;
+  empresa_id: string | null;
+  titulo: string;
+  tipo: string;
+  data: string;
+  hora_inicio: string | null;
+}
+
+/**
+ * Proximo compromisso de cada empresa, indexado por empresa_id.
+ *
+ * So entra evento que ainda VAI acontecer: evento passado e historico, nao
+ * compromisso. Essa regra tambem e o que impede o cartao de virar "atrasada"
+ * por causa de uma visita que ja aconteceu — o painel de atrasadas e sobre
+ * follow-up esquecido, nao sobre agenda cumprida.
+ */
+function proximoEventoPorEmpresa(eventos: EventoAgenda[]) {
+  const hoje = inicioDoDia().getTime();
+  const mapa = new Map<string, EventoAgenda>();
+  for (const ev of eventos) {
+    if (!ev.empresa_id) continue;
+    const d = dataLocal(ev.data);
+    if (!d || inicioDoDia(d).getTime() < hoje) continue;
+    const atual = mapa.get(ev.empresa_id);
+    const atualEm = atual ? (dataLocal(atual.data)?.getTime() ?? Infinity) : Infinity;
+    if (d.getTime() < atualEm) mapa.set(ev.empresa_id, ev);
+  }
+  return mapa;
+}
+
 function uniqueOptions(values: Array<string | null | undefined>) {
   return Array.from(new Set(values.filter((v): v is string => Boolean(v)))).sort((a,b)=>a.localeCompare(b,"pt-BR"));
 }
@@ -350,6 +384,8 @@ export default function Gerenciamento() {
   // como o "Ver no CRM" da visao de vendas do dashboard chega aqui sem obrigar
   // o usuario a refazer na mao o recorte que ele acabou de escolher la.
   const [params] = useSearchParams();
+  // Agenda: alimenta o cartao quando a empresa nao tem proxima acao digitada.
+  const [eventos, setEventos] = useState<EventoAgenda[]>([]);
   const [aba, setAba] = useState<"clientes"|"vendas">(
     params.get("aba") === "vendas" ? "vendas" : "clientes");
   const statusInicialVendas = params.get("status") || undefined;
@@ -375,14 +411,21 @@ export default function Gerenciamento() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchAll(); }, []);
 
-  // As empresas vem do store ao vivo — aqui sobra so "quem sou eu". O botao de
-  // recarregar continua chamando isto, por isso o pedido explicito de releitura.
+  // As empresas vem do store ao vivo — aqui sobra so "quem sou eu" e a agenda.
+  // O botao de recarregar continua chamando isto, por isso o pedido explicito
+  // de releitura.
   const fetchAll = async () => {
     notificarEmpresas();
     try {
       const m = await fetch(`${API}/me`,{headers:hdrs()});
       if(m.ok) setUsuario(await m.json());
     } catch {}
+    try {
+      // /eventos ja vem no escopo de carteira do usuario, igual a /empresas:
+      // vendedor so recebe a propria agenda. Nao ha filtro a fazer aqui.
+      const r = await fetch(`${API}/eventos`,{headers:hdrs()});
+      if(r.ok) setEventos(await r.json());
+    } catch { /* sem agenda o cartao volta a dizer "Sem proxima acao" */ }
   };
 
   // Geocodifica empresas sem coordenada (em lotes) e recarrega o mapa.
@@ -439,10 +482,30 @@ export default function Gerenciamento() {
   const cidades = uniqueOptions(empresas.map(e=>e.cidade));
   const origens = uniqueOptions(empresas.map(e=>e.origem_lead));
 
+  const agendaPorEmpresa = useMemo(() => proximoEventoPorEmpresa(eventos), [eventos]);
+
+  /**
+   * O que a empresa tem marcado a seguir.
+   *
+   * A proxima acao digitada manda. So quando NAO existe nenhuma — nem texto nem
+   * data — o cartao cai para o proximo compromisso da agenda, que ate agora
+   * aparecia como "Sem proxima acao" mesmo com visita marcada para amanha.
+   * A regra e estreita de proposito: empresa que ja tem follow-up escrito nao
+   * muda de comportamento.
+   */
+  const acaoDe = (e: Empresa) => {
+    if (e.proxima_acao || e.data_proxima_acao) {
+      return { texto: e.proxima_acao || "Sem descrição", data: e.data_proxima_acao || null, agenda: false, hora: null as string | null };
+    }
+    const ev = agendaPorEmpresa.get(e.empresa_id);
+    if (ev) return { texto: ev.titulo, data: ev.data, agenda: true, hora: ev.hora_inicio };
+    return { texto: "Sem próxima ação", data: null, agenda: false, hora: null as string | null };
+  };
+
   const filtered = empresas
-    .filter(e => {
+    .filter(e=>{
       const q=search.toLowerCase();
-      const actionStatus = nextActionInfo(e).status;
+      const actionStatus = nextActionInfo(acaoDe(e).data).status;
       return (!q||e.nome.toLowerCase().includes(q)||e.segmento?.toLowerCase().includes(q)||e.cidade?.toLowerCase().includes(q)||e.responsavel_principal?.toLowerCase().includes(q))
         &&(filterTemp==="Todas"||e.temperatura===filterTemp)
         &&(filterStatus==="Todos"||e.status===filterStatus)
@@ -457,7 +520,9 @@ export default function Gerenciamento() {
       if(sortBy==="nome") return a.nome.localeCompare(b.nome,"pt-BR");
       if(sortBy==="valor") return valores.valorDe(b.empresa_id).total-valores.valorDe(a.empresa_id).total;
       // Sem data vai para o fim da fila, não para o começo.
-      if(sortBy==="proxima") return (dataLocal(a.data_proxima_acao)?.getTime() ?? Infinity)-(dataLocal(b.data_proxima_acao)?.getTime() ?? Infinity);
+      // Ordena pelo que o cartao mostra — inclusive quando o que ele mostra
+      // veio da agenda. Sem data vai para o fim da fila, não para o começo.
+      if(sortBy==="proxima") return (dataLocal(acaoDe(a).data)?.getTime() ?? Infinity)-(dataLocal(acaoDe(b).data)?.getTime() ?? Infinity);
       if(sortBy==="parado") return daysInStage(b)-daysInStage(a);
       return calcScore(b,valores.valorDe(b.empresa_id).total)-calcScore(a,valores.valorDe(a.empresa_id).total);
     });
@@ -474,7 +539,9 @@ export default function Gerenciamento() {
   const perda=empresas.length>0?((totalPerdido/empresas.length)*100).toFixed(1):"0";
 
   // ✅ MUDANÇA 3: Lista de empresas com ação atrasada
-  const overdueEmpresas = empresas.filter(e => nextActionInfo(e).status === "atrasada")
+  // Continua olhando SO a proxima acao digitada: agenda futura nunca esta
+  // atrasada, e evento passado nao e follow-up esquecido.
+  const overdueEmpresas = empresas.filter(e => nextActionInfo(e.data_proxima_acao).status === "atrasada")
     .sort((a,b) => {
       const da = dateOnly(a.data_proxima_acao) || "";
       const db = dateOnly(b.data_proxima_acao) || "";
@@ -776,7 +843,8 @@ export default function Gerenciamento() {
                         const score=calcScore(emp,valores.valorDe(emp.empresa_id).total);
                         const sc=scoreColor(score);
                         const pi=porteInfo(emp.porte);
-                        const next=nextActionInfo(emp);
+                        const acao=acaoDe(emp);
+                        const next=nextActionInfo(acao.data);
                         return(
                           <motion.div
                             key={emp.empresa_id}
@@ -820,9 +888,18 @@ export default function Gerenciamento() {
                                   </div>
                                 )}
                                 {/* ✅ Próxima ação + status badge */}
-                                <div style={{display:"flex",alignItems:"center",gap:5,fontSize:10}}>
-                                  <CalendarClock style={{width:9,height:9,flexShrink:0,color:next.color}}/>
-                                  <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:"#EAF6FB",flex:1}}>{emp.proxima_acao||"Sem próxima ação"}</span>
+                                <div style={{display:"flex",alignItems:"center",gap:5,fontSize:10}}
+                                  title={acao.agenda
+                                    ? `Compromisso da agenda${acao.hora?` às ${acao.hora}`:""} — esta empresa não tem próxima ação registrada`
+                                    : undefined}>
+                                  {/* Icone diferente quando o texto vem da agenda: sem isso
+                                      o cartao pareceria ter um follow-up digitado que nao existe. */}
+                                  {acao.agenda
+                                    ? <CalendarCheck style={{width:9,height:9,flexShrink:0,color:"#C9B6E4"}}/>
+                                    : <CalendarClock style={{width:9,height:9,flexShrink:0,color:next.color}}/>}
+                                  <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:acao.agenda?"#C9B6E4":"#EAF6FB",flex:1}}>
+                                    {acao.texto}{acao.agenda&&acao.hora?` · ${acao.hora}`:""}
+                                  </span>
                                   <span style={{flexShrink:0,padding:"1px 6px",borderRadius:5,background:next.bg,color:next.color,fontWeight:700,fontSize:9}}>{next.label}</span>
                                 </div>
                                 {/* Quanto esta em jogo neste cartao. Sem orcamento
@@ -900,7 +977,8 @@ export default function Gerenciamento() {
                 const score=calcScore(emp,valores.valorDe(emp.empresa_id).total);
                 const sc=scoreColor(score);
                 const si=PIPELINE.find(p=>p.key===emp.status)||PIPELINE[0];
-                const next=nextActionInfo(emp);
+                const acao=acaoDe(emp);
+                const next=nextActionInfo(acao.data);
                 return(
                   <motion.div key={emp.empresa_id} className="list-row" initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} transition={{duration:0.18,delay:idx*0.03}} style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 105px 145px 100px 110px",gap:12,alignItems:"center",padding:"12px 18px",minWidth:isMobile?900:undefined}}>
                     <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
@@ -920,9 +998,16 @@ export default function Gerenciamento() {
                       </div>
                       <span style={{fontSize:11,fontWeight:800,color:sc.color}}>{score}</span>
                     </div>
-                    <div>
-                      <div style={{fontSize:11,fontWeight:800,color:next.color}}>{emp.proxima_acao||"—"}</div>
-                      <div style={{fontSize:10,color:"#9FD3EA"}}>{formatDate(emp.data_proxima_acao)}</div>
+                    <div title={acao.agenda?"Compromisso da agenda — sem próxima ação registrada":undefined}>
+                      <div style={{fontSize:11,fontWeight:800,color:acao.agenda?"#C9B6E4":next.color,display:"flex",alignItems:"center",gap:4}}>
+                        {acao.agenda&&<CalendarCheck style={{width:10,height:10,flexShrink:0}}/>}
+                        <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                          {acao.data||acao.agenda?acao.texto:"—"}
+                        </span>
+                      </div>
+                      <div style={{fontSize:10,color:"#9FD3EA"}}>
+                        {formatDate(acao.data)}{acao.agenda&&acao.hora?` · ${acao.hora}`:""}
+                      </div>
                     </div>
                     <span style={{fontSize:12,fontWeight:700,color:"#9FD3EA"}}>{daysInStage(emp)} {daysInStage(emp)===1?"dia":"dias"}</span>
                     <div style={{display:"flex",gap:5,alignItems:"center"}}>
