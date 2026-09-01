@@ -8,6 +8,7 @@ import AtivarConta from "./pages/ativar";
 import Login from "./pages/login";
 import Signup from "./pages/signup";
 import Dashboard from "./pages/dashboard";
+import Insights from "./pages/insights";
 import Equipe from "./pages/equipe";
 import NovaEmpresa from "./pages/empresas/nova";
 import Clientes from "./pages/clientes";
@@ -59,6 +60,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/insights" element={<Insights />} />
         <Route path="/equipe" element={<Equipe />} />
         <Route path="/empresas/nova" element={<NovaEmpresa />} />
         <Route path="/clientes" element={<Clientes />} />

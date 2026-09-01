@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { User, Bell, Shield, Mail,
   MessageCircle, Monitor, Check, ChevronRight,
   Globe, ExternalLink, Info, Save, BarChart3,
-  LayoutDashboard, Building2, Users, UserRoundCog,
+  LayoutDashboard, TrendingUp, Building2, Users, UserRoundCog,
   Search, ClipboardList, Calendar,
   AlertTriangle, CalendarCheck, Repeat, Trash2, FileText, Menu,
   RefreshCw, XCircle, CheckCircle2
@@ -101,6 +101,7 @@ function initials(n: string) { return n?.split(" ").slice(0,2).map(w => w[0]).jo
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboards",                path: "/dashboard" },
+  { icon: TrendingUp,      label: "Insights",                  path: "/insights" },
   { icon: Search,          label: "Buscar Empresas",           path: "/buscar" },
   { icon: Building2,       label: "Cadastrar Empresas",        path: "/empresas/nova" },
   { icon: Users,           label: "Todos os clientes",         path: "/clientes" },

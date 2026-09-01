@@ -8,7 +8,7 @@ import { diasDesde } from "../../utils/data";
 import useValoresOrcamento from "../../hooks/useValoresOrcamento";
 import useEmpresasAoVivo, { notificarEmpresas, removerEmpresaLocal } from "../../hooks/useEmpresasAoVivo";
 import {
-  LayoutDashboard, Search, Building2, Users, ClipboardList,
+  LayoutDashboard, TrendingUp, Search, Building2, Users, ClipboardList,
   Calendar, BarChart3, ChevronDown, Plus, Filter,
   Eye, Edit3, Trash2, CheckSquare, ArrowUpDown, RefreshCw,
   Star, UserRoundCog,
@@ -59,6 +59,7 @@ interface Usuario {
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboards",                active: false },
+  { icon: TrendingUp,      label: "Insights",                  active: false },
   { icon: Search,          label: "Buscar Empresas",           active: false },
   { icon: Building2,       label: "Cadastrar Empresas",        active: false },
   { icon: Users,           label: "Todos os clientes",         active: false },
@@ -234,6 +235,7 @@ export default function TodosClientes() {
           {navItems.map(item => (
             <div key={item.label} className={`nav-item${item.active?" active":""}`} onClick={() => {
               if (item.label==="Dashboards") navigate("/dashboard");
+              if (item.label==="Insights") navigate("/insights");
               if (item.label==="Buscar Empresas") navigate("/buscar");
               if (item.label==="Cadastrar Empresas") navigate("/empresas/nova");
               if (item.label==="Todos os clientes") navigate("/clientes");

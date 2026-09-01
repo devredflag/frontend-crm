@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard, Search, Building2, Users, ClipboardList,
+  LayoutDashboard, TrendingUp, Search, Building2, Users, ClipboardList,
   Calendar, BarChart3, ChevronDown, Plus, Filter,
   Eye, Edit3, Trash2, ArrowUpDown, RefreshCw,
   Star, AlertTriangle, X, FileText, Map as MapIcon, List, Menu, UserRoundCog,
@@ -63,6 +63,7 @@ interface Usuario { nome: string; cargo: string; }
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboards",                active: false },
+  { icon: TrendingUp,      label: "Insights",                  active: false },
   { icon: Search,          label: "Buscar Empresas",           active: false },
   { icon: Building2,       label: "Cadastrar Empresas",        active: false },
   { icon: Users,           label: "Todos os clientes",         active: true  },
@@ -294,6 +295,7 @@ export default function TodosClientes() {
           {navItems.map(item=>(
             <div key={item.label} className={`nav-item${item.active?" active":""}`} onClick={()=>{
               if(item.label==="Dashboards")navigate("/dashboard");
+              if(item.label==="Insights")navigate("/insights");
               if(item.label==="Buscar Empresas")navigate("/buscar");
               if(item.label==="Cadastrar Empresas")navigate("/empresas/nova");
               if(item.label==="Todos os clientes")navigate("/clientes");

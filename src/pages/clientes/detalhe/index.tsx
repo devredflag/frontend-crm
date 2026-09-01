@@ -57,6 +57,7 @@ const css = `
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboards",                path: "/dashboard" },
+  { icon: TrendingUp,      label: "Insights",                  path: "/insights" },
   { icon: Search,          label: "Buscar Empresas",           path: "/buscar" },
   { icon: Building2,       label: "Cadastrar Empresas",        path: "/empresas/nova" },
   { icon: Users,           label: "Todos os clientes",         path: "/clientes" },

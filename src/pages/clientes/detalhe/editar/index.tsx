@@ -6,7 +6,7 @@ import { FUNDO_AZUL } from "../../../../components/FundoAzul";
   import { useParams, useNavigate } from "react-router-dom";
   import { motion, AnimatePresence } from "framer-motion";
   import {
-    Building2, Users, LayoutDashboard, Search, Calendar,
+    Building2, Users, LayoutDashboard, TrendingUp, Search, Calendar,
     ClipboardList, BarChart3, ChevronDown, ArrowLeft,
     Plus, Trash2, Globe, Link2, Phone, Mail,
     MapPin, Briefcase, Hash, User, Thermometer,
@@ -136,6 +136,7 @@ import { FUNDO_AZUL } from "../../../../components/FundoAzul";
 
   const navItems = [
     { icon: LayoutDashboard, label: "Dashboards",                path: "/dashboard" },
+    { icon: TrendingUp,      label: "Insights",                  path: "/insights" },
     { icon: Search,          label: "Buscar Empresas",           path: null },
     { icon: Building2,       label: "Cadastrar Empresas",        path: "/empresas/nova" },
     { icon: Users,           label: "Todos os clientes",         path: "/clientes" },

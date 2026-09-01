@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  LayoutDashboard, Search, Building2, Users, ClipboardList,
+  LayoutDashboard, TrendingUp, Search, Building2, Users, ClipboardList,
   Calendar, BarChart3, ChevronLeft, ChevronRight,
   Plus, X, Phone, Eye, Users2, FileText, Trash2, Clock,
   Mail, CheckCircle2, Link2, ChevronDown, Menu, UserRoundCog,
@@ -91,6 +91,7 @@ function isToday(y: number, m: number, d: number) {
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboards", active: false },
+  { icon: TrendingUp, label: "Insights", active: false },
   { icon: Search, label: "Buscar Empresas", active: false },
   { icon: Building2, label: "Cadastrar Empresas", active: false },
   { icon: Users, label: "Todos os clientes", active: false },
@@ -469,6 +470,7 @@ export default function Calendario() {
           {navItems.map(item=>(
             <div key={item.label} className={`nav-item${item.active?" active":""}`} onClick={()=>{
               if(item.label==="Dashboards")navigate("/dashboard");
+              if(item.label==="Insights")navigate("/insights");
               if(item.label==="Buscar Empresas")navigate("/buscar");
               if(item.label==="Todos os clientes")navigate("/clientes");
               if(item.label==="Cadastrar Empresas")navigate("/empresas/nova");

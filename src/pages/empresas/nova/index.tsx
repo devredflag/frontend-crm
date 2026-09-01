@@ -3,7 +3,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Building2, Users, LayoutDashboard, Search, Calendar,
+  Building2, Users, LayoutDashboard, TrendingUp, Search, Calendar,
   ClipboardList, BarChart3, ChevronDown,
   Plus, Trash2, Globe, Link2, Phone, Mail,
   MapPin, Briefcase, Hash, User, Thermometer,
@@ -176,6 +176,7 @@ const css = `
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboards",                path: "/dashboard",      active: false },
+  { icon: TrendingUp,      label: "Insights",                  path: "/insights",       active: false },
   { icon: Search,          label: "Buscar Empresas",           path: "/buscar",          active: false },
   { icon: Building2,       label: "Cadastrar Empresas",        path: "/empresas/nova",  active: true  },
   { icon: Users,           label: "Todos os clientes",         path: "/clientes",       active: false },

@@ -5,7 +5,7 @@ import {
   APIProvider, Map, AdvancedMarker, InfoWindow,
 } from "@vis.gl/react-google-maps";
 import {
-  BarChart3, LayoutDashboard, Search, Building2, Users,
+  BarChart3, LayoutDashboard, TrendingUp, Search, Building2, Users,
   ClipboardList, Calendar, MapPin,
   X, Plus,
   Loader2, AlertCircle, Navigation2, Menu, UserRoundCog,
@@ -43,6 +43,7 @@ const css = `
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboards",                path: "/dashboard" },
+  { icon: TrendingUp,      label: "Insights",                  path: "/insights" },
   { icon: Search,          label: "Buscar Empresas",           path: "/buscar", active: true },
   { icon: Building2,       label: "Cadastrar Empresas",        path: "/empresas/nova" },
   { icon: Users,           label: "Todos os clientes",         path: "/clientes" },
