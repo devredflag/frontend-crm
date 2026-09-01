@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText, Send, Repeat, CheckCircle2, XCircle, Clock, CalendarCheck,
   Package, ArrowRight, Percent, Wallet, Timer, Info, Building2, AlertTriangle, Wrench,
+  TrendingUp, TrendingDown,
 } from "lucide-react";
 
 import { getToken } from "../services/auth";
@@ -207,14 +208,27 @@ export default function VendasInsights() {
   const equipamentos = useMemo(
     () => todosItens.filter(e => (e.tipo === "servico" ? "servico" : "equipamento") === tipoItem),
     [todosItens, tipoItem]);
-  const maxQtd = Math.max(1, ...equipamentos.map(e => e.quantidade));
-  // O item que mais aparece em proposta e nunca fechou: o alerta mais barato de
-  // preço fora do mercado que este CRM consegue dar. Segue o tipo escolhido —
-  // acusar um equipamento enquanto a aba mostra serviços seria confuso.
-  const nuncaFecha = useMemo(() => {
-    const candidatos = equipamentos.filter(e => e.taxa_aprovacao !== null && e.taxa_aprovacao === 0);
-    return candidatos.sort((a, b) => b.quantidade - a.quantidade)[0] || null;
-  }, [equipamentos]);
+  // Quanto SAIU, não quanto foi empurrado. A oferta continua na tela, mas como
+  // contexto: ela explica por que um item está no fim da lista, não define a
+  // posição dele.
+  const maisVendidos = useMemo(
+    () => [...equipamentos]
+      .sort((a, b) => b.qtd_aprovada - a.qtd_aprovada || b.valor_aprovado - a.valor_aprovado)
+      .slice(0, 5),
+    [equipamentos]);
+
+  // Empate em zero vendas é desempatado pela OFERTA, decrescente: o item que
+  // mais foi para o cliente e menos voltou é o acionável — os outros zeros
+  // podem ser só falta de amostra.
+  const menosVendidos = useMemo(() => {
+    const ordenado = [...equipamentos]
+      .sort((a, b) => a.qtd_aprovada - b.qtd_aprovada || b.quantidade - a.quantidade)
+      .slice(0, 5);
+    // Com catálogo pequeno as duas listas seriam a mesma coisa invertida, e
+    // mostrar o mesmo item nas duas colunas passa a impressão de erro.
+    const noTopo = new Set(maisVendidos.map(e => e.nome));
+    return ordenado.filter(e => !noTopo.has(e.nome));
+  }, [equipamentos, maisVendidos]);
 
   if (loading) {
     return (
@@ -438,9 +452,11 @@ export default function VendasInsights() {
         <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,flexWrap:"wrap",marginBottom:16}}>
           <div style={{minWidth:0}}>
             <div style={{fontSize:15,fontWeight:800,color:"#FFFFFF",letterSpacing:"-0.01em"}}>
-              Desempenho por {temServico ? "item" : "equipamento"}
+              Mais e menos vendidos
             </div>
-            <div style={{fontSize:11.5,color:"#B6CFE4",marginTop:3}}>Ordenado pelo que mais fecha, não pelo que mais é ofertado</div>
+            <div style={{fontSize:11.5,color:"#B6CFE4",marginTop:3}}>
+              Pelo que fechou de verdade — a oferta aparece só como contexto
+            </div>
           </div>
           {/* O alternador só existe quando há serviço cadastrado: sem isso ele
               seria um botão que nunca muda nada. */}
@@ -463,15 +479,6 @@ export default function VendasInsights() {
               })}
             </div>
           )}
-          {equipamentos.length > 0 && (
-            <div style={{display:"flex",alignItems:"center",gap:12,fontSize:10.5,color:"#B6CFE4",flexShrink:0}}>
-              {[["Aprovado","#2CCD93"],["Em aberto","#F0A05A"],["Recusado","#F87171"]].map(([r,c])=>(
-                <span key={r} style={{display:"inline-flex",alignItems:"center",gap:5}}>
-                  <span style={{width:8,height:8,borderRadius:2,background:c as string}}/>{r}
-                </span>
-              ))}
-            </div>
-          )}
         </div>
 
         {equipamentos.length === 0 ? (
@@ -488,55 +495,70 @@ export default function VendasInsights() {
             </p>
           </div>
         ) : (
-          <>
-            {nuncaFecha && (
-              <div style={{display:"flex",alignItems:"center",gap:9,padding:"11px 14px",borderRadius:11,background:"rgba(248,113,113,0.07)",border:"1px solid rgba(248,113,113,0.22)",marginBottom:16}}>
-                <AlertTriangle style={{width:14,height:14,color:"#F87171",flexShrink:0}}/>
-                <span style={{fontSize:12,color:"#DCE9F5",lineHeight:1.5}}>
-                  <strong style={{color:"#FFFFFF"}}>{nuncaFecha.nome}</strong> foi ofertado {nuncaFecha.quantidade}x
-                  e nunca foi aprovado — vale conferir preço ou a ficha do produto.
-                </span>
-              </div>
+          <div style={{display:"grid",gridTemplateColumns:isMobile||menosVendidos.length===0?"1fr":"repeat(2,minmax(0,1fr))",gap:isMobile?20:26}}>
+            <ListaVendidos titulo="Mais vendidos" sub="O que sai sozinho" cor="#2CCD93"
+              icone={TrendingUp} itens={maisVendidos}/>
+            {menosVendidos.length > 0 && (
+              <ListaVendidos titulo="Menos vendidos" sub="Vai para o cliente e não volta" cor="#F87171"
+                icone={TrendingDown} itens={menosVendidos}/>
             )}
-
-            <div style={{display:"flex",flexDirection:"column",gap:14}}>
-              {equipamentos.slice(0,8).map(e => {
-                const decidido = e.qtd_aprovada + e.qtd_recusada;
-                // A barra é proporcional ao item MAIS ofertado, para comparar
-                // volume entre linhas; dentro dela, a divisão é o desfecho.
-                const escala = (e.quantidade / maxQtd) * 100;
-                const parte = (q: number) => (e.quantidade ? (q / e.quantidade) * 100 : 0);
-                return (
-                  <div key={e.nome}>
-                    <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:5}}>
-                      <span style={{fontSize:12.5,fontWeight:700,color:"#FFFFFF",flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.nome}</span>
-                      <span style={{fontSize:11,color:"#B6CFE4",whiteSpace:"nowrap"}}>{e.quantidade}x ofertado</span>
-                      <span title={decidido ? `${e.qtd_aprovada} aprovados de ${decidido} decididos` : "Nenhum decidido ainda"}
-                        style={{fontSize:12.5,fontWeight:800,minWidth:54,textAlign:"right",
-                          color:e.taxa_aprovacao === null ? "#7E9DBB"
-                            : e.taxa_aprovacao >= 50 ? "#2CCD93"
-                            : e.taxa_aprovacao > 0 ? "#F0A05A" : "#F87171"}}>
-                        {e.taxa_aprovacao === null ? "—" : `${e.taxa_aprovacao}%`}
-                      </span>
-                    </div>
-                    <div style={{height:9,borderRadius:6,background:"rgba(126,176,219,0.08)",overflow:"hidden"}}>
-                      <div style={{height:"100%",width:`${Math.max(escala,2)}%`,display:"flex",borderRadius:6,overflow:"hidden"}}>
-                        <div style={{width:`${parte(e.qtd_aprovada)}%`,background:"#2CCD93"}}/>
-                        <div style={{width:`${parte(e.qtd_aberta)}%`,background:"#F0A05A"}}/>
-                        <div style={{width:`${parte(e.qtd_recusada)}%`,background:"#F87171"}}/>
-                      </div>
-                    </div>
-                    <div style={{display:"flex",gap:14,marginTop:5,fontSize:10.5,color:"#8AA9C6"}}>
-                      <span>Fechado <strong style={{color:e.valor_aprovado?"#83DDA8":"#7E9DBB"}}>{brlCompacto(e.valor_aprovado)}</strong></span>
-                      <span>Em jogo <strong style={{color:e.valor_aberto?"#DCE9F5":"#7E9DBB"}}>{brlCompacto(e.valor_aberto)}</strong></span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </>
+          </div>
         )}
       </motion.div>
+    </div>
+  );
+}
+
+/**
+ * Uma das duas colunas de ranking.
+ *
+ * O número grande é a QUANTIDADE VENDIDA — antes era a ofertada, que respondia
+ * quanto a gente empurra, não quanto sai. A barra é proporcional ao primeiro
+ * item da própria lista, e não ao maior do catálogo: em "menos vendidos" todos
+ * seriam fatias invisíveis se a escala fosse global.
+ */
+function ListaVendidos({ titulo, sub, cor, icone: Icone, itens }: {
+  titulo: string; sub: string; cor: string; icone: any; itens: Equipamento[];
+}) {
+  const topo = Math.max(1, ...itens.map(e => e.qtd_aprovada));
+  return (
+    <div>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
+        <Icone style={{width:14,height:14,color:cor,flexShrink:0}}/>
+        <div style={{minWidth:0}}>
+          <div style={{fontSize:12.5,fontWeight:800,color:"#FFFFFF"}}>{titulo}</div>
+          <div style={{fontSize:10.5,color:"#8AA9C6",marginTop:1}}>{sub}</div>
+        </div>
+      </div>
+
+      <div style={{display:"flex",flexDirection:"column",gap:13}}>
+        {itens.map(e => (
+          <div key={e.nome}>
+            <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:5}}>
+              <span style={{fontSize:12.5,fontWeight:700,color:"#FFFFFF",flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.nome}</span>
+              <span style={{fontSize:13,fontWeight:800,whiteSpace:"nowrap",color:e.qtd_aprovada?cor:"#7E9DBB"}}>
+                {e.qtd_aprovada} vendido{e.qtd_aprovada===1?"":"s"}
+              </span>
+            </div>
+            <div style={{height:8,borderRadius:6,background:"rgba(126,176,219,0.08)",overflow:"hidden"}}>
+              <div style={{height:"100%",width:`${Math.max((e.qtd_aprovada/topo)*100, e.qtd_aprovada?4:0)}%`,background:cor,borderRadius:6,transition:"width 0.4s ease"}}/>
+            </div>
+            {/* Rodapé = o porquê. Sem a oferta ao lado, "0 vendidos" tanto pode
+                ser encalhe quanto item que ninguém chegou a oferecer; e o que
+                está em aberto ainda pode virar venda, então não é fracasso. */}
+            <div style={{display:"flex",flexWrap:"wrap",gap:"2px 10px",marginTop:5,fontSize:10.5,color:"#8AA9C6"}}>
+              <span>{e.quantidade}x ofertado</span>
+              {e.qtd_aberta > 0 && <span style={{color:"#F0A05A"}}>{e.qtd_aberta} em aberto</span>}
+              {e.valor_aprovado > 0 && (
+                <span>fechou <strong style={{color:"#83DDA8"}}>{brlCompacto(e.valor_aprovado)}</strong></span>
+              )}
+              <span title={e.taxa_aprovacao === null ? "Nenhuma proposta decidida ainda" : `${e.qtd_aprovada} aprovados de ${e.qtd_aprovada + e.qtd_recusada} decididos`}>
+                {e.taxa_aprovacao === null ? "sem decisão ainda" : `${e.taxa_aprovacao}% de aprovação`}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
