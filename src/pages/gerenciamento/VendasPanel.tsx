@@ -7,7 +7,7 @@ import {
   Plus, Send, Trash2, X, FileText, Package, Check, AlertCircle, Loader2,
   DollarSign, Wallet, Target, CalendarCheck, ArrowRight, Filter,
   ChevronDown, ChevronLeft, ChevronRight, Download, Upload, FileSpreadsheet,
-  AlertTriangle, Hash, Building2, TrendingUp,
+  AlertTriangle, Hash, Building2, TrendingUp, Wrench,
 } from "lucide-react";
 import Dropdown from "../../components/Dropdown";
 import { dataLocal, diasDesde, formatarData } from "../../utils/data";
@@ -71,15 +71,49 @@ const css = `
   .vp-pag.on { background:rgba(46,111,149,0.30); border-color:rgba(159,211,234,0.45); color:#EAF6FB; }
 `;
 
+type TipoCatalogo = "equipamento" | "servico";
+
 interface Equipamento {
   equipamento_id: string;
   codigo: string | null;      // SKU — identifica o item numa reimportação
   nome: string;
   descricao: string | null;
   preco_base: number;
-  quantidade: number;         // saldo em estoque
+  quantidade: number;         // saldo em estoque (sempre 0 em serviço)
+  // Opcional porque o backend pode estar atrás num deploy: sem o campo, tudo
+  // cai em "equipamento", que é onde esses itens sempre estiveram.
+  tipo?: TipoCatalogo;
   ativo: boolean;
 }
+
+/** Serviço e equipamento moram na mesma tabela; só o rótulo e o estoque mudam. */
+const CATALOGO: Record<TipoCatalogo, {
+  titulo: string; sub: string; rotulo: string; coluna: string;
+  placeholder: string; icone: any; temEstoque: boolean;
+  vazio: string; vazioSub: string; arquivo: string;
+}> = {
+  equipamento: {
+    titulo: "Catálogo de equipamentos",
+    sub: "Itens reutilizáveis na montagem dos orçamentos.",
+    rotulo: "equipamento", coluna: "Equipamento",
+    placeholder: "Nome do equipamento", icone: Package, temEstoque: true,
+    vazio: "Nenhum equipamento no catálogo.",
+    vazioSub: "Cadastre os itens que você costuma orçar.",
+    arquivo: "modelo-catalogo-prospectageo.xlsx",
+  },
+  servico: {
+    titulo: "Catálogo de serviços",
+    sub: "Mão de obra que entra no orçamento junto com o equipamento — instalação, manutenção, treinamento.",
+    rotulo: "serviço", coluna: "Serviço",
+    placeholder: "Nome do serviço", icone: Wrench, temEstoque: false,
+    vazio: "Nenhum serviço no catálogo.",
+    vazioSub: "Cadastre o que você cobra além do equipamento.",
+    arquivo: "modelo-servicos-prospectageo.xlsx",
+  },
+};
+
+/** Item sem `tipo` (backend antigo) conta como equipamento. */
+const tipoDe = (e: Equipamento): TipoCatalogo => e.tipo === "servico" ? "servico" : "equipamento";
 interface Item {
   equipamento_id: string | null;
   descricao: string;
@@ -133,7 +167,7 @@ export default function VendasPanel({ empresas, statusInicial }: {
   statusInicial?: string;
 }) {
   const isMobile = useIsMobile();
-  const [sub, setSub] = useState<"orcamentos" | "equipamentos">("orcamentos");
+  const [sub, setSub] = useState<"orcamentos" | "equipamentos" | "servicos">("orcamentos");
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>([]);
   const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
   const [insights, setInsights] = useState<Insights | null>(null);
@@ -157,6 +191,14 @@ export default function VendasPanel({ empresas, statusInicial }: {
     "Content-Type": "application/json",
     Authorization: `Bearer ${getToken() || ""}`,
   });
+
+  // GET /equipamentos sem `?tipo=` traz os dois catalogos numa requisicao so;
+  // a separacao e aqui. Duas chamadas para dois recortes da mesma tabela
+  // custariam o dobro para mostrar a mesma coisa.
+  const soEquipamentos = useMemo(
+    () => equipamentos.filter(e => tipoDe(e) === "equipamento"), [equipamentos]);
+  const soServicos = useMemo(
+    () => equipamentos.filter(e => tipoDe(e) === "servico"), [equipamentos]);
 
   // Quando este painel buscou por conta propria. Serve para ele nao repetir a
   // busca quando o aviso de mudanca chegar logo depois — nesse caso quem mudou
@@ -399,6 +441,7 @@ export default function VendasPanel({ empresas, statusInicial }: {
         {([
           { key: "orcamentos" as const, label: "Orçamentos", icon: FileText },
           { key: "equipamentos" as const, label: "Equipamentos", icon: Package },
+          { key: "servicos" as const, label: "Serviços", icon: Wrench },
         ]).map(t => {
           const on = sub === t.key;
           return (
@@ -441,8 +484,12 @@ export default function VendasPanel({ empresas, statusInicial }: {
 
       {loading ? (
         <div className="skeleton" style={{ height: 260, borderRadius: 16 }} />
-      ) : sub === "equipamentos" ? (
-        <CatalogoEquipamentos equipamentos={equipamentos} hdrs={hdrs} onMudou={fetchTudo} onErro={setErro} />
+      ) : sub === "equipamentos" || sub === "servicos" ? (
+        <CatalogoItens
+          tipo={sub === "servicos" ? "servico" : "equipamento"}
+          itens={sub === "servicos" ? soServicos : soEquipamentos}
+          hdrs={hdrs} onMudou={fetchTudo} onErro={setErro}
+        />
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "minmax(0,1fr)" : "minmax(0,1fr) 280px", gap: 16, alignItems: "start" }}>
 
@@ -668,14 +715,17 @@ export default function VendasPanel({ empresas, statusInicial }: {
 }
 
 // ── Catálogo de equipamentos ──────────────────────────────────
-function CatalogoEquipamentos({
-  equipamentos, hdrs, onMudou, onErro,
+function CatalogoItens({
+  tipo, itens, hdrs, onMudou, onErro,
 }: {
-  equipamentos: Equipamento[];
+  tipo: TipoCatalogo;
+  itens: Equipamento[];
   hdrs: () => Record<string, string>;
   onMudou: () => void;
   onErro: (m: string) => void;
 }) {
+  const cfg = CATALOGO[tipo];
+  const Icone = cfg.icone;
   const [nome, setNome] = useState("");
   const [codigo, setCodigo] = useState("");
   const [preco, setPreco] = useState("");
@@ -689,7 +739,7 @@ function CatalogoEquipamentos({
   const baixarModelo = async () => {
     setBaixando(true);
     try {
-      const res = await fetch(`${API}/equipamentos/modelo-importacao`, {
+      const res = await fetch(`${API}/equipamentos/modelo-importacao?tipo=${tipo}`, {
         headers: { Authorization: hdrs().Authorization },
       });
       if (!res.ok) { onErro("Não foi possível gerar o modelo de importação."); return; }
@@ -697,7 +747,7 @@ function CatalogoEquipamentos({
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "modelo-catalogo-prospectageo.xlsx";
+      a.download = cfg.arquivo;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -716,13 +766,14 @@ function CatalogoEquipamentos({
           nome: nome.trim(),
           codigo: codigo.trim() || null,
           preco_base: Number(preco.replace(",", ".")) || 0,
-          quantidade: Number(quantidade) || 0,
+          quantidade: cfg.temEstoque ? Number(quantidade) || 0 : 0,
+          tipo,
         }),
       });
       if (res.ok) { setNome(""); setCodigo(""); setPreco(""); setQuantidade(""); onMudou(); }
       else {
         const d = await res.json().catch(() => ({}));
-        onErro(typeof d.detail === "string" ? d.detail : "Não foi possível cadastrar o equipamento.");
+        onErro(typeof d.detail === "string" ? d.detail : `Não foi possível cadastrar o ${cfg.rotulo}.`);
       }
     } catch { onErro("Erro de conexão ao cadastrar."); }
     setSalvando(false);
@@ -741,8 +792,8 @@ function CatalogoEquipamentos({
     <section className="vp-card" style={{ overflow: "hidden" }}>
       <div style={{ padding: "15px 18px", borderBottom:"1px solid rgba(159,211,234,0.18)", display: "flex", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 200 }}>
-          <h3 style={{ fontSize: 14.5, fontWeight: 800, color:"#EAF6FB", letterSpacing: "-0.01em" }}>Catálogo de equipamentos</h3>
-          <p style={{ fontSize: 12, color:"#9FD3EA", marginTop: 2 }}>Itens reutilizáveis na montagem dos orçamentos.</p>
+          <h3 style={{ fontSize: 14.5, fontWeight: 800, color:"#EAF6FB", letterSpacing: "-0.01em" }}>{cfg.titulo}</h3>
+          <p style={{ fontSize: 12, color:"#9FD3EA", marginTop: 2 }}>{cfg.sub}</p>
         </div>
         {/* Estoque/catálogo em Excel: baixar o modelo oficial e importar de volta */}
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -761,47 +812,58 @@ function CatalogoEquipamentos({
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", padding: "14px 18px", borderBottom:"1px solid rgba(159,211,234,0.18)" }}>
         <input value={codigo} onChange={e => setCodigo(e.target.value)} onKeyDown={e => e.key === "Enter" && adicionar()}
-          placeholder="Código / SKU" aria-label="Código ou SKU do equipamento" style={{ ...inputStyle, width: 130 }} />
+          placeholder="Código / SKU" aria-label={`Código ou SKU do ${cfg.rotulo}`} style={{ ...inputStyle, width: 130 }} />
         <input value={nome} onChange={e => setNome(e.target.value)} onKeyDown={e => e.key === "Enter" && adicionar()}
-          placeholder="Nome do equipamento" aria-label="Nome do equipamento" style={{ ...inputStyle, flex: 1, minWidth: 180 }} />
-        <input value={quantidade} onChange={e => setQuantidade(e.target.value.replace(/[^\d]/g, ""))} onKeyDown={e => e.key === "Enter" && adicionar()}
-          placeholder="Qtd." aria-label="Quantidade em estoque" className="vp-num" style={{ ...inputStyle, width: 84, textAlign: "center" }} />
+          placeholder={cfg.placeholder} aria-label={cfg.placeholder} style={{ ...inputStyle, flex: 1, minWidth: 180 }} />
+        {/* Serviço não tem saldo para controlar: o campo sai do formulário em
+            vez de ficar aceitando um número que ninguém usa. */}
+        {cfg.temEstoque && (
+          <input value={quantidade} onChange={e => setQuantidade(e.target.value.replace(/[^\d]/g, ""))} onKeyDown={e => e.key === "Enter" && adicionar()}
+            placeholder="Qtd." aria-label="Quantidade em estoque" className="vp-num" style={{ ...inputStyle, width: 84, textAlign: "center" }} />
+        )}
         <input value={preco} onChange={e => setPreco(e.target.value.replace(/[^\d.,]/g, ""))} onKeyDown={e => e.key === "Enter" && adicionar()}
-          placeholder="Preço base" aria-label="Preço base" className="vp-num" style={{ ...inputStyle, width: 130 }} />
+          placeholder={cfg.temEstoque ? "Preço base" : "Valor"} aria-label={cfg.temEstoque ? "Preço base" : "Valor do serviço"} className="vp-num" style={{ ...inputStyle, width: 130 }} />
         <button onClick={adicionar} disabled={salvando || !nome.trim()}
           style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 18px", height: 40, borderRadius: 10, border:"none", color:"#EAF6FB", fontSize: 12.5, fontWeight: 700, fontFamily: "inherit", background:"linear-gradient(135deg,#2E6F95,#2E6F95)", cursor: salvando || !nome.trim() ? "not-allowed" : "pointer", opacity: salvando || !nome.trim() ? 0.5 : 1 }}>
           <Plus style={{ width: 14, height: 14 }} /> Cadastrar
         </button>
       </div>
 
-      {equipamentos.length === 0 ? (
+      {itens.length === 0 ? (
         <div style={{ padding: "56px 20px", textAlign: "center", color:"#9FD3EA" }}>
-          <Package style={{ width: 30, height: 30, marginBottom: 8 }} />
-          <p style={{ fontSize: 13, fontWeight: 700 }}>Nenhum equipamento no catálogo.</p>
-          <p style={{ fontSize: 11.5, marginTop: 4 }}>Cadastre os itens que você costuma orçar.</p>
+          <Icone style={{ width: 30, height: 30, marginBottom: 8 }} />
+          <p style={{ fontSize: 13, fontWeight: 700 }}>{cfg.vazio}</p>
+          <p style={{ fontSize: 11.5, marginTop: 4 }}>{cfg.vazioSub}</p>
         </div>
       ) : (
         <div style={{ overflowX: "auto" }}>
           <table className="vp-table">
             <thead>
-              <tr><th>Código</th><th>Equipamento</th><th>Descrição</th><th className="c">Estoque</th><th className="r">Preço base</th><th className="r">Ações</th></tr>
+              <tr>
+                <th>Código</th><th>{cfg.coluna}</th><th>Descrição</th>
+                {cfg.temEstoque && <th className="c">Estoque</th>}
+                <th className="r">{cfg.temEstoque ? "Preço base" : "Valor"}</th>
+                <th className="r">Ações</th>
+              </tr>
             </thead>
             <tbody>
-              {equipamentos.map(e => (
+              {itens.map(e => (
                 <tr key={e.equipamento_id}>
                   <td className="vp-num" style={{ color:e.codigo ? "#EAF6FB" : "#9FD3EA", fontWeight: 700, whiteSpace: "nowrap" }}>
                     {e.codigo || "—"}
                   </td>
                   <td style={{ fontWeight: 700 }}>
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                      <Package style={{ width: 14, height: 14, color:"#9FD3EA", flexShrink: 0 }} />
+                      <Icone style={{ width: 14, height: 14, color:"#9FD3EA", flexShrink: 0 }} />
                       {e.nome}
                     </span>
                   </td>
                   <td style={{ color:"#EAF6FB" }}>{e.descricao || "—"}</td>
-                  <td className="vp-num c" style={{ fontWeight: 700, color:e.quantidade > 0 ? "#83DDA8" : "#9FD3EA" }}>
-                    {e.quantidade ?? 0}
-                  </td>
+                  {cfg.temEstoque && (
+                    <td className="vp-num c" style={{ fontWeight: 700, color:e.quantidade > 0 ? "#83DDA8" : "#9FD3EA" }}>
+                      {e.quantidade ?? 0}
+                    </td>
+                  )}
                   <td className="vp-num r" style={{ fontWeight: 800, whiteSpace: "nowrap" }}>{brl(e.preco_base)}</td>
                   <td className="r">
                     <button onClick={() => desativar(e.equipamento_id)} className="vp-icon-btn vp-btn-remover"
@@ -820,6 +882,7 @@ function CatalogoEquipamentos({
 
       {importando && (
         <ImportarCatalogo
+          tipo={tipo}
           hdrs={hdrs}
           onFechar={() => setImportando(false)}
           onImportado={() => { setImportando(false); onMudou(); }}
@@ -853,8 +916,9 @@ interface Previa {
 }
 
 function ImportarCatalogo({
-  hdrs, onFechar, onImportado,
+  tipo, hdrs, onFechar, onImportado,
 }: {
+  tipo: TipoCatalogo;
   hdrs: () => Record<string, string>;
   onFechar: () => void;
   onImportado: () => void;
@@ -873,7 +937,7 @@ function ImportarCatalogo({
       const fd = new FormData();
       fd.append("arquivo", f);
       // Só o Authorization: o Content-Type do multipart é montado pelo browser.
-      const res = await fetch(`${API}/equipamentos/importar?confirmar=${confirmar}`, {
+      const res = await fetch(`${API}/equipamentos/importar?confirmar=${confirmar}&tipo=${tipo}`, {
         method: "POST",
         headers: { Authorization: hdrs().Authorization },
         body: fd,
@@ -917,7 +981,9 @@ function ImportarCatalogo({
             <FileSpreadsheet style={{ width: 17, height: 17, color:"#83DDA8" }} />
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 16, fontWeight: 900, color:"#EAF6FB" }}>Importar catálogo do Excel</div>
+            <div style={{ fontSize: 16, fontWeight: 900, color:"#EAF6FB" }}>
+              Importar {tipo === "servico" ? "serviços" : "catálogo"} do Excel
+            </div>
             <div style={{ fontSize: 11.5, color:"#9FD3EA", marginTop: 1 }}>
               As colunas são reconhecidas pelo nome do cabeçalho — pode reordená-las à vontade.
             </div>
@@ -1331,7 +1397,16 @@ function SeletorCatalogo({
     );
   }, [equipamentos, busca]);
 
+  // Agrupado por tipo, na ordem em que a venda acontece: o equipamento primeiro,
+  // o servico que vai junto com ele depois. Misturado, "Instalação" no meio de
+  // bombas e painéis não se lê como serviço.
+  const grupos = useMemo(() => ([
+    { tipo: "equipamento" as TipoCatalogo, itens: filtrados.filter(e => tipoDe(e) === "equipamento") },
+    { tipo: "servico" as TipoCatalogo, itens: filtrados.filter(e => tipoDe(e) === "servico") },
+  ].filter(g => g.itens.length > 0)), [filtrados]);
+
   const vazio = equipamentos.length === 0;
+  const qtdServicos = equipamentos.filter(e => tipoDe(e) === "servico").length;
 
   return (
     <div ref={caixa} style={{ position: "relative", flex: 1, minWidth: 230 }}>
@@ -1365,8 +1440,10 @@ function SeletorCatalogo({
           {/* era rgba(21,84,127,0.62) — azul escuro sobre fundo naval, ilegível */}
           <span style={{ display: "block", fontSize: 10.5, fontWeight: 600, color:"#9FD3EA", marginTop: 1 }}>
             {vazio
-              ? "Nenhum equipamento cadastrado ainda"
-              : `${equipamentos.length} ${equipamentos.length === 1 ? "item disponível" : "itens disponíveis"} — preço já preenchido`}
+              ? "Nenhum item cadastrado ainda"
+              : `${equipamentos.length} ${equipamentos.length === 1 ? "item disponível" : "itens disponíveis"}`
+                + (qtdServicos > 0 ? `, ${qtdServicos} serviço${qtdServicos === 1 ? "" : "s"}` : "")
+                + " — preço já preenchido"}
           </span>
         </span>
         <ChevronDown style={{ width: 15, height: 15, color:"#9FD3EA", flexShrink: 0, transform: aberto ? "rotate(180deg)" : "none", transition: "transform 0.16s" }} />
@@ -1395,7 +1472,20 @@ function SeletorCatalogo({
             <div style={{ padding: "22px 14px", textAlign: "center", fontSize: 12, fontWeight: 600, color:"#9FD3EA" }}>
               Nenhum item encontrado para “{busca}”.
             </div>
-          ) : filtrados.map(eq => (
+          ) : grupos.map(g => (
+            <div key={g.tipo}>
+              {/* O cabeçalho só aparece quando há os dois grupos: com um tipo
+                  só ele vira ruído em cima de uma lista que já é homogênea. */}
+              {grupos.length > 1 && (
+                <div style={{
+                  padding: "7px 12px", fontSize: 9.5, fontWeight: 800, letterSpacing: "0.09em",
+                  textTransform: "uppercase", color:"#9FD3EA", background:"rgba(46,111,149,0.16)",
+                  borderBottom:"1px solid rgba(159,211,234,0.18)",
+                }}>
+                  {g.tipo === "servico" ? "Serviços" : "Equipamentos"}
+                </div>
+              )}
+              {g.itens.map(eq => (
             <button
               key={eq.equipamento_id} role="option" aria-selected={false} type="button"
               onClick={() => { onEscolher(eq.equipamento_id); setAberto(false); }}
@@ -1406,7 +1496,9 @@ function SeletorCatalogo({
                 cursor: "pointer", textAlign: "left", fontFamily: "inherit",
               }}
             >
-              <Package style={{ width: 14, height: 14, color:"#9FD3EA", flexShrink: 0 }} />
+              {g.tipo === "servico"
+                ? <Wrench style={{ width: 14, height: 14, color:"#C9B6E4", flexShrink: 0 }} />
+                : <Package style={{ width: 14, height: 14, color:"#9FD3EA", flexShrink: 0 }} />}
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ display: "block", fontSize: 12.5, fontWeight: 700, color:"#EAF6FB", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   {eq.nome}
@@ -1424,6 +1516,8 @@ function SeletorCatalogo({
                 {brl(eq.preco_base)}
               </span>
             </button>
+              ))}
+            </div>
           ))}
         </div>
       )}

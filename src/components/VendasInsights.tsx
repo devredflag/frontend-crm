@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText, Send, Repeat, CheckCircle2, XCircle, Clock, CalendarCheck,
-  Package, ArrowRight, Percent, Wallet, Timer, Info, Building2, AlertTriangle,
+  Package, ArrowRight, Percent, Wallet, Timer, Info, Building2, AlertTriangle, Wrench,
 } from "lucide-react";
 
 import { getToken } from "../services/auth";
@@ -34,8 +34,12 @@ const DIAS_SEM_RESPOSTA = 7;
 
 const ABERTOS = ["enviado", "em_negociacao"];
 
+type TipoItem = "equipamento" | "servico";
+
 interface Equipamento {
   nome: string;
+  /** Ausente enquanto o backend nao subir: tudo cai em "equipamento". */
+  tipo?: TipoItem;
   quantidade: number;
   valor: number;
   qtd_aprovada: number;
@@ -108,6 +112,7 @@ export default function VendasInsights() {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(false);
   const [filtro, setFiltro] = useState<FiltroVendas>("todos");
+  const [tipoItem, setTipoItem] = useState<TipoItem>("equipamento");
 
   const carregar = useCallback(async () => {
     const cab = { Authorization: `Bearer ${getToken() || ""}` };
@@ -192,12 +197,20 @@ export default function VendasInsights() {
   ];
 
   // ── Equipamentos ──
-  // useMemo e nao `d.equipamentos || []` direto: o fallback cria array novo a
-  // cada render e o useMemo de baixo recalcularia sempre.
-  const equipamentos = useMemo(() => insights?.equipamentos || [], [insights]);
+  // useMemo e nao `insights?.equipamentos || []` direto: o fallback cria array
+  // novo a cada render e os useMemo de baixo recalculariam sempre.
+  const todosItens = useMemo(() => insights?.equipamentos || [], [insights]);
+  const temServico = useMemo(
+    () => todosItens.some(e => e.tipo === "servico"), [todosItens]);
+  // Item sem `tipo` (avulso, ou backend atrasado) conta como equipamento — e
+  // onde ele sempre apareceu, e reclassificar esconderia historico.
+  const equipamentos = useMemo(
+    () => todosItens.filter(e => (e.tipo === "servico" ? "servico" : "equipamento") === tipoItem),
+    [todosItens, tipoItem]);
   const maxQtd = Math.max(1, ...equipamentos.map(e => e.quantidade));
   // O item que mais aparece em proposta e nunca fechou: o alerta mais barato de
-  // preço fora do mercado que este CRM consegue dar.
+  // preço fora do mercado que este CRM consegue dar. Segue o tipo escolhido —
+  // acusar um equipamento enquanto a aba mostra serviços seria confuso.
   const nuncaFecha = useMemo(() => {
     const candidatos = equipamentos.filter(e => e.taxa_aprovacao !== null && e.taxa_aprovacao === 0);
     return candidatos.sort((a, b) => b.quantidade - a.quantidade)[0] || null;
@@ -424,9 +437,32 @@ export default function VendasInsights() {
         initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.4,delay:0.45}}>
         <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,flexWrap:"wrap",marginBottom:16}}>
           <div style={{minWidth:0}}>
-            <div style={{fontSize:15,fontWeight:800,color:"#FFFFFF",letterSpacing:"-0.01em"}}>Desempenho por equipamento</div>
+            <div style={{fontSize:15,fontWeight:800,color:"#FFFFFF",letterSpacing:"-0.01em"}}>
+              Desempenho por {temServico ? "item" : "equipamento"}
+            </div>
             <div style={{fontSize:11.5,color:"#B6CFE4",marginTop:3}}>Ordenado pelo que mais fecha, não pelo que mais é ofertado</div>
           </div>
+          {/* O alternador só existe quando há serviço cadastrado: sem isso ele
+              seria um botão que nunca muda nada. */}
+          {temServico && (
+            <div role="tablist" aria-label="Tipo de item" style={{display:"flex",gap:4,padding:4,borderRadius:10,background:"rgba(3,14,26,0.25)",border:"1px solid rgba(126,176,219,0.16)",flexShrink:0}}>
+              {([
+                { key:"equipamento" as TipoItem, rotulo:"Equipamentos", icone:Package },
+                { key:"servico" as TipoItem, rotulo:"Serviços", icone:Wrench },
+              ]).map(op => {
+                const on = tipoItem === op.key;
+                return (
+                  <button key={op.key} role="tab" aria-selected={on} onClick={()=>setTipoItem(op.key)}
+                    style={{display:"inline-flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:7,cursor:"pointer",fontFamily:"inherit",fontSize:11.5,
+                      fontWeight:on?800:600,color:on?"#FFFFFF":"#B6CFE4",
+                      border:on?"1px solid rgba(86,164,245,0.45)":"1px solid transparent",
+                      background:on?"#1A3F63":"transparent",transition:"all 0.16s"}}>
+                    <op.icone style={{width:13,height:13}}/>{op.rotulo}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           {equipamentos.length > 0 && (
             <div style={{display:"flex",alignItems:"center",gap:12,fontSize:10.5,color:"#B6CFE4",flexShrink:0}}>
               {[["Aprovado","#2CCD93"],["Em aberto","#F0A05A"],["Recusado","#F87171"]].map(([r,c])=>(
@@ -440,11 +476,15 @@ export default function VendasInsights() {
 
         {equipamentos.length === 0 ? (
           <div style={{padding:"30px 0",textAlign:"center",color:"#B6CFE4"}}>
-            <Package style={{width:26,height:26,marginBottom:8,opacity:0.6}}/>
+            {tipoItem === "servico"
+              ? <Wrench style={{width:26,height:26,marginBottom:8,opacity:0.6}}/>
+              : <Package style={{width:26,height:26,marginBottom:8,opacity:0.6}}/>}
             <p style={{fontSize:12.5,fontWeight:600}}>
               {insights && !("equipamentos" in insights)
-                ? "O backend ainda não envia o detalhamento por equipamento."
-                : "Nenhum item orçado ainda."}
+                ? "O backend ainda não envia o detalhamento por item."
+                : tipoItem === "servico"
+                  ? "Nenhum serviço orçado ainda."
+                  : "Nenhum equipamento orçado ainda."}
             </p>
           </div>
         ) : (
