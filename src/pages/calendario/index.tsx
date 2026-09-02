@@ -11,7 +11,7 @@ import {
 import useIsMobile from "../../hooks/useIsMobile";
 import useEmpresasAoVivo from "../../hooks/useEmpresasAoVivo";
 import { OutlookIcon, GoogleIcon } from "../../components/LogosMarcas";
-import CardUsuario from "../../components/CardUsuario";
+import CardUsuario, { useUsuarioLogado } from "../../components/CardUsuario";
 
 import FundoAzul from "../../components/FundoAzul";
 const css = `
@@ -221,6 +221,8 @@ function EmailsConvidadosField({ emails, setEmails, contatos, empresaNome, dropd
 
 export default function Calendario() {
   const navigate = useNavigate();
+  // Insights e tela de gestao: fica fora do menu de quem nao e gerente.
+  const ehGerenteMenu = !!useUsuarioLogado()?.is_gerente;
   const isMobile = useIsMobile();
   const [menuOpen, setMenuOpen] = useState(false);
   const today = new Date();
@@ -467,7 +469,7 @@ export default function Calendario() {
           </div>
         </div>
         <nav style={{flex:1,display:"flex",flexDirection:"column",gap:2}}>
-          {navItems.map(item=>(
+          {navItems.filter(nav => nav.label !== "Insights" || ehGerenteMenu).map(item=>(
             <div key={item.label} className={`nav-item${item.active?" active":""}`} onClick={()=>{
               if(item.label==="Dashboards")navigate("/dashboard");
               if(item.label==="Insights")navigate("/insights");

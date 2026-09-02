@@ -2,7 +2,7 @@ import { getToken } from "../../services/auth";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import CardUsuario from "../../components/CardUsuario";
+import CardUsuario, { useUsuarioLogado } from "../../components/CardUsuario";
 import FundoAzul from "../../components/FundoAzul";
 import { diasDesde } from "../../utils/data";
 import useValoresOrcamento from "../../hooks/useValoresOrcamento";
@@ -134,6 +134,8 @@ function ScoreBar({ score }: { score: number }) {
 
 export default function TodosClientes() {
   const navigate = useNavigate();
+  // Insights e tela de gestao: fica fora do menu de quem nao e gerente.
+  const ehGerenteMenu = !!useUsuarioLogado()?.is_gerente;
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [usuario, setUsuario] = useState<Usuario|null>(null);
   const empresasVivas = useEmpresasAoVivo<Empresa>(setEmpresas);
@@ -232,7 +234,7 @@ export default function TodosClientes() {
           </div>
         </div>
         <nav style={{ flex:1, display:"flex", flexDirection:"column", gap:2 }}>
-          {navItems.map(item => (
+          {navItems.filter(nav => nav.label !== "Insights" || ehGerenteMenu).map(item => (
             <div key={item.label} className={`nav-item${item.active?" active":""}`} onClick={() => {
               if (item.label==="Dashboards") navigate("/dashboard");
               if (item.label==="Insights") navigate("/insights");

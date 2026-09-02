@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText, Send, Repeat, CheckCircle2, XCircle, Clock, CalendarCheck,
-  Package, ArrowRight, Percent, Wallet, Timer, Info, Building2, AlertTriangle, Wrench,
+  Package, ArrowRight, Info, Building2, AlertTriangle, Wrench,
   TrendingUp, TrendingDown,
 } from "lucide-react";
 
@@ -137,11 +137,6 @@ export default function VendasInsights() {
   // Gerenciamento deixaria este painel mostrando o número velho.
   useEffect(() => aoMudarOrcamentos(() => { carregar(); }), [carregar]);
 
-  const d = insights || {
-    por_status: {}, total_orcamentos: 0, valor_em_aberto: 0,
-    valor_aprovado: 0, taxa_conversao: 0,
-  } as Insights;
-
   // ── Recortes ──
   // Um mapa só, usado tanto pela contagem dos cards quanto pela lista de baixo:
   // impossível o card dizer 7 e a lista mostrar 5.
@@ -174,27 +169,6 @@ export default function VendasInsights() {
   const lista = recortes[filtro];
   const cardAtivo = cards.find(c => c.key === filtro) || cards[0];
   const cobranca = recortes.sem_resposta;
-
-  // ── Ritmo da venda ──
-  // Taxas, não contagens: não viram card-filtro porque não existe "a lista dos
-  // 32%". Ficam num bloco separado de propósito.
-  const ritmo = [
-    {
-      icon: Percent, cor: "#2CCD93", rotulo: "Taxa de conversão",
-      valor: `${d.taxa_conversao}%`,
-      sub: `${d.por_status.aprovado?.total || 0} de ${(d.por_status.aprovado?.total || 0) + (d.por_status.recusado?.total || 0)} decididas`,
-    },
-    {
-      icon: Wallet, cor: "#F2C879", rotulo: "Ticket médio",
-      valor: d.ticket_medio ? brl(d.ticket_medio) : "—",
-      sub: d.ticket_medio ? "por orçamento aprovado" : "nenhum aprovado ainda",
-    },
-    {
-      icon: Timer, cor: "#8FC4FA", rotulo: "Resposta do cliente",
-      valor: d.tempo_medio_resposta_dias != null ? `${d.tempo_medio_resposta_dias} dias` : "—",
-      sub: d.tempo_medio_resposta_dias != null ? "média do envio até a decisão" : "nenhuma proposta decidida",
-    },
-  ];
 
   // ── Equipamentos ──
   // useMemo e nao `insights?.equipamentos || []` direto: o fallback cria array
@@ -400,29 +374,6 @@ export default function VendasInsights() {
             )}
           </>
         )}
-      </motion.div>
-
-      {/* Ritmo da venda */}
-      <motion.div className="glass-card" style={{padding:"20px 22px"}}
-        initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.4,delay:0.35}}>
-        <div style={{fontSize:15,fontWeight:800,color:"#FFFFFF",letterSpacing:"-0.01em"}}>Ritmo da venda</div>
-        <div style={{fontSize:11.5,color:"#B6CFE4",marginTop:3,marginBottom:6}}>Taxas — não filtram lista, orientam a meta</div>
-        {/* Em linha agora que o funil saiu: as tres taxas se leem juntas, e
-            empilhadas numa coluna estreita sobrava espaco vazio ao lado. */}
-        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(3,minmax(0,1fr))",gap:12}}>
-          {ritmo.map(r => (
-            <div key={r.rotulo} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 0"}}>
-              <div style={{width:32,height:32,borderRadius:9,background:`${r.cor}1F`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                <r.icon style={{width:15,height:15,color:r.cor}}/>
-              </div>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:12.5,fontWeight:700,color:"#FFFFFF"}}>{r.rotulo}</div>
-                <div style={{fontSize:10.5,color:"#B6CFE4",marginTop:2}}>{r.sub}</div>
-              </div>
-              <span title={r.valor} style={{fontSize:13.5,fontWeight:800,color:r.cor,flexShrink:0,textAlign:"right",overflowWrap:"anywhere"}}>{r.valor}</span>
-            </div>
-          ))}
-        </div>
       </motion.div>
 
       {/* Mais e menos vendidos, uma coluna por tipo */}

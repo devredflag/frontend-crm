@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 
 import { getToken } from "../../services/auth";
-import CardUsuario from "../../components/CardUsuario";
+import CardUsuario, { useUsuarioLogado } from "../../components/CardUsuario";
 import FundoAzul from "../../components/FundoAzul";
 import EvolucaoDaBase from "../../components/EvolucaoDaBase";
 import PrecisamDeAtencao from "../../components/PrecisamDeAtencao";
@@ -160,6 +160,8 @@ function VazioBloco({ texto }: { texto: string }) {
 
 export default function Insights() {
   const navigate = useNavigate();
+  // Insights e tela de gestao: fica fora do menu de quem nao e gerente.
+  const ehGerenteMenu = !!useUsuarioLogado()?.is_gerente;
   const isMobile = useIsMobile();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -187,6 +189,14 @@ export default function Insights() {
   }, []);
 
   useEffect(() => { carregar(); }, [carregar]);
+
+  // Tela de gestao. Esconder o item do menu nao fecha o caminho: /insights
+  // digitado direto abriria assim mesmo. So redireciona depois do /me responder
+  // -- enquanto `me` e null nao da para saber a funcao, e chutar expulsaria o
+  // gerente na propria carga da pagina.
+  useEffect(() => {
+    if (me && !me.is_gerente) navigate("/dashboard", { replace: true });
+  }, [me, navigate]);
 
   // A lista de usuários é rota de gestor: pedir como vendedor volta 403 e
   // polui o console. Só é buscada depois do /me confirmar a função.
@@ -381,7 +391,7 @@ export default function Insights() {
           </div>
         </div>
         <nav style={{flex:1,display:"flex",flexDirection:"column",gap:2}}>
-          {navItems.map(item => (
+          {navItems.filter(nav => nav.label !== "Insights" || ehGerenteMenu).map(item => (
             <div key={item.label} className={`nav-item${item.path === "/insights" ? " active" : ""}`} onClick={() => navigate(item.path)}>
               <item.icon style={{width:16,height:16,flexShrink:0}}/>{item.label}
             </div>

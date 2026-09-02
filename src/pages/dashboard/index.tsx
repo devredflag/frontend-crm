@@ -1,5 +1,5 @@
 import { getToken } from "../../services/auth";
-import CardUsuario from "../../components/CardUsuario";
+import CardUsuario, { useUsuarioLogado } from "../../components/CardUsuario";
 import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGerenciamento";
 import FundoAzul from "../../components/FundoAzul";
   import { useState, useEffect, useRef } from "react";
@@ -139,6 +139,8 @@ import FundoAzul from "../../components/FundoAzul";
 
     export default function Dashboard() {
       const navigate = useNavigate();
+  // Insights e tela de gestao: fica fora do menu de quem nao e gerente.
+  const ehGerenteMenu = !!useUsuarioLogado()?.is_gerente;
       const [empresas, setEmpresas] = useState<Empresa[]>([]);
       // Lista viva: o dashboard acompanha o funil sem precisar de F5.
       const empresasVivas = useEmpresasAoVivo<Empresa>(setEmpresas);
@@ -299,7 +301,7 @@ import FundoAzul from "../../components/FundoAzul";
               </div>
             </div>
             <nav style={{flex:1,display:"flex",flexDirection:"column",gap:2}}>
-              {navItems.map(item=>(
+              {navItems.filter(nav => nav.label !== "Insights" || ehGerenteMenu).map(item=>(
                 <div key={item.label} className={`nav-item${item.active?" active":""}`} onClick={()=>{
                   if(item.label==="Insights")navigate("/insights");
                   if(item.label==="Buscar Empresas")navigate("/buscar");

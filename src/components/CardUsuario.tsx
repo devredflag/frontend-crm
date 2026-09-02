@@ -64,6 +64,24 @@ function carregarMe(): Promise<UsuarioCard | null> {
   return promessaMe;
 }
 
+/**
+ * Usuario logado, do MESMO cache de modulo que o card usa.
+ *
+ * Existe para as sidebars decidirem o que mostrar por funcao (hoje: Insights, so
+ * do gerente) sem cada pagina ter que buscar /me por conta propria -- varias nem
+ * buscam. `carregarMe` funde chamadas simultaneas e guarda o resultado, entao
+ * usar isto nao acrescenta nenhuma requisicao.
+ */
+export function useUsuarioLogado(): UsuarioCard | null {
+  const [u, setU] = useState<UsuarioCard | null>(cacheMe);
+  useEffect(() => {
+    let vivo = true;
+    carregarMe().then(d => { if (vivo && d) setU(d); });
+    return () => { vivo = false; };
+  }, []);
+  return u;
+}
+
 export default function CardUsuario({
   usuario,
   compacto = false,

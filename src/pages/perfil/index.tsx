@@ -12,7 +12,7 @@ import { User, Bell, Shield, Mail,
 } from "lucide-react";
 import useIsMobile from "../../hooks/useIsMobile";
 import { GmailIcon, OutlookIcon, WhatsAppIcon } from "../../components/LogosMarcas";
-import CardUsuario from "../../components/CardUsuario";
+import CardUsuario, { useUsuarioLogado } from "../../components/CardUsuario";
 
 import FundoAzul from "../../components/FundoAzul";
 const css = `
@@ -289,6 +289,8 @@ function PainelIntegracoes() {
 
 export default function Perfil() {
   const navigate = useNavigate();
+  // Insights e tela de gestao: fica fora do menu de quem nao e gerente.
+  const ehGerenteMenu = !!useUsuarioLogado()?.is_gerente;
   const isMobile = useIsMobile();
   const [menuOpen, setMenuOpen] = useState(false);
   const [usuario, setUsuario]         = useState<Usuario | null>(null);
@@ -461,7 +463,7 @@ export default function Perfil() {
           </div>
         </div>
         <nav style={{ flex:1, display:"flex", flexDirection:"column", gap:2 }}>
-          {navItems.map(item => (
+          {navItems.filter(nav => nav.label !== "Insights" || ehGerenteMenu).map(item => (
             <div key={item.label} className="nav-item" onClick={() => navigate(item.path)}>
               <item.icon style={{ width:16, height:16 }}/>{item.label}
             </div>
