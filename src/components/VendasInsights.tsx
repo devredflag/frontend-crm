@@ -12,7 +12,7 @@ import { aoMudarOrcamentos } from "../hooks/useValoresOrcamento";
 import useIsMobile from "../hooks/useIsMobile";
 import { STATUS_ORCAMENTO } from "../utils/orcamento";
 import { dataLocal, diasDesde, formatarData } from "../utils/data";
-import { brl, brlCompacto } from "../utils/moeda";
+import { brl } from "../utils/moeda";
 
 const API = (process.env.REACT_APP_API_URL || "https://backend-crm-production-157b.up.railway.app");
 
@@ -113,7 +113,6 @@ export default function VendasInsights() {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(false);
   const [filtro, setFiltro] = useState<FiltroVendas>("todos");
-  const [tipoItem, setTipoItem] = useState<TipoItem>("equipamento");
 
   const carregar = useCallback(async () => {
     const cab = { Authorization: `Bearer ${getToken() || ""}` };
@@ -187,7 +186,7 @@ export default function VendasInsights() {
     },
     {
       icon: Wallet, cor: "#F2C879", rotulo: "Ticket médio",
-      valor: d.ticket_medio ? brl(d.ticket_medio, 0) : "—",
+      valor: d.ticket_medio ? brl(d.ticket_medio) : "—",
       sub: d.ticket_medio ? "por orçamento aprovado" : "nenhum aprovado ainda",
     },
     {
@@ -201,34 +200,37 @@ export default function VendasInsights() {
   // useMemo e nao `insights?.equipamentos || []` direto: o fallback cria array
   // novo a cada render e os useMemo de baixo recalculariam sempre.
   const todosItens = useMemo(() => insights?.equipamentos || [], [insights]);
-  const temServico = useMemo(
-    () => todosItens.some(e => e.tipo === "servico"), [todosItens]);
-  // Item sem `tipo` (avulso, ou backend atrasado) conta como equipamento — e
-  // onde ele sempre apareceu, e reclassificar esconderia historico.
-  const equipamentos = useMemo(
-    () => todosItens.filter(e => (e.tipo === "servico" ? "servico" : "equipamento") === tipoItem),
-    [todosItens, tipoItem]);
-  // Quanto SAIU, não quanto foi empurrado. A oferta continua na tela, mas como
-  // contexto: ela explica por que um item está no fim da lista, não define a
-  // posição dele.
-  const maisVendidos = useMemo(
-    () => [...equipamentos]
-      .sort((a, b) => b.qtd_aprovada - a.qtd_aprovada || b.valor_aprovado - a.valor_aprovado)
-      .slice(0, 5),
-    [equipamentos]);
 
-  // Empate em zero vendas é desempatado pela OFERTA, decrescente: o item que
-  // mais foi para o cliente e menos voltou é o acionável — os outros zeros
-  // podem ser só falta de amostra.
-  const menosVendidos = useMemo(() => {
-    const ordenado = [...equipamentos]
-      .sort((a, b) => a.qtd_aprovada - b.qtd_aprovada || b.quantidade - a.quantidade)
-      .slice(0, 5);
-    // Com catálogo pequeno as duas listas seriam a mesma coisa invertida, e
-    // mostrar o mesmo item nas duas colunas passa a impressão de erro.
-    const noTopo = new Set(maisVendidos.map(e => e.nome));
-    return ordenado.filter(e => !noTopo.has(e.nome));
-  }, [equipamentos, maisVendidos]);
+  /**
+   * Os dois rankings de cada tipo: o que mais sai e o que encalha.
+   *
+   * Quanto SAIU, não quanto foi empurrado — a oferta continua na tela, mas como
+   * contexto: ela explica por que um item está no fim, não define a posição.
+   *
+   * Item sem `tipo` (avulso, ou backend atrasado) conta como equipamento: é
+   * onde ele sempre apareceu, e reclassificar esconderia histórico.
+   */
+  const rankings = useMemo(() => {
+    const monta = (tipo: TipoItem) => {
+      const doTipo = todosItens.filter(
+        e => (e.tipo === "servico" ? "servico" : "equipamento") === tipo);
+      const mais = [...doTipo]
+        .sort((a, b) => b.qtd_aprovada - a.qtd_aprovada || b.valor_aprovado - a.valor_aprovado)
+        .slice(0, 5);
+      // Empate em zero venda é desempatado pela OFERTA, decrescente: o item que
+      // mais foi ao cliente e menos voltou é o acionável — os outros zeros podem
+      // ser só falta de amostra.
+      const noTopo = new Set(mais.map(e => e.nome));
+      const menos = [...doTipo]
+        .sort((a, b) => a.qtd_aprovada - b.qtd_aprovada || b.quantidade - a.quantidade)
+        .slice(0, 5)
+        // Catálogo pequeno faria as duas listas serem a mesma coisa invertida, e
+        // o mesmo nome nas duas passa impressão de erro.
+        .filter(e => !noTopo.has(e.nome));
+      return { total: doTipo.length, mais, menos };
+    };
+    return { equipamento: monta("equipamento"), servico: monta("servico") };
+  }, [todosItens]);
 
   if (loading) {
     return (
@@ -267,7 +269,7 @@ export default function VendasInsights() {
                 {cobranca.length} proposta{cobranca.length!==1?"s":""} sem resposta há {DIAS_SEM_RESPOSTA} dias ou mais
               </div>
               <div style={{fontSize:11,color:"#B6CFE4",marginTop:1}}>
-                {brl(soma(cobranca), 0)} parados esperando um retorno seu
+                {brl(soma(cobranca))} parados esperando um retorno seu
               </div>
             </div>
             <button onClick={()=>setFiltro("sem_resposta")}
@@ -301,8 +303,11 @@ export default function VendasInsights() {
               <div style={{fontSize:10,color:"#B6CFE4",fontWeight:600,marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.label}</div>
               {/* O valor é o que diferencia vendas de clientes: contar proposta
                   sem olhar quanto ela vale esconde o que importa. */}
-              <div style={{fontSize:12,fontWeight:700,color:valor>0?c.color:"#7E9DBB",marginTop:7}}>
-                {valor>0?brlCompacto(valor):"—"}
+              {/* Valor por extenso, sem encurtar: "15k" no lugar de 14.900
+                  destroi a metrica de quem acompanha o numero. */}
+              <div title={valor>0?brl(valor):undefined}
+                style={{fontSize:11,fontWeight:700,color:valor>0?c.color:"#7E9DBB",marginTop:7,lineHeight:1.3,overflowWrap:"anywhere"}}>
+                {valor>0?brl(valor):"—"}
               </div>
             </motion.div>
           );
@@ -319,7 +324,7 @@ export default function VendasInsights() {
             <div style={{minWidth:0}}>
               <div style={{fontSize:13,fontWeight:700,color:"#FFFFFF"}}>{cardAtivo.label}</div>
               <div style={{fontSize:11,color:"#B6CFE4"}}>
-                {lista.length} orçamento{lista.length!==1?"s":""} · {brl(soma(lista), 0)}
+                {lista.length} orçamento{lista.length!==1?"s":""} · {brl(soma(lista))}
               </div>
             </div>
           </div>
@@ -382,7 +387,7 @@ export default function VendasInsights() {
                       </span>
                     )}
                     <span style={{fontSize:12,fontWeight:700,color:o.status==="aprovado"?"#83DDA8":"#FFFFFF"}}>
-                      {brlCompacto(Number(o.total) || 0)}
+                      {brl(Number(o.total) || 0)}
                     </span>
                   </div>
                 );
@@ -397,111 +402,90 @@ export default function VendasInsights() {
         )}
       </motion.div>
 
-      {/* Ritmo + funil */}
-      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"330px minmax(0,1fr)",gap:16,alignItems:"stretch"}}>
-
-        <motion.div className="glass-card" style={{padding:"20px 22px",display:"flex",flexDirection:"column"}}
-          initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.4,delay:0.35}}>
-          <div style={{fontSize:15,fontWeight:800,color:"#FFFFFF",letterSpacing:"-0.01em"}}>Ritmo da venda</div>
-          <div style={{fontSize:11.5,color:"#B6CFE4",marginTop:3}}>Taxas — não filtram lista, orientam a meta</div>
-          <div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"space-around",marginTop:10}}>
-            {ritmo.map((r,i) => (
-              <div key={r.rotulo} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 0",borderTop:i===0?"none":"1px solid rgba(126,176,219,0.16)"}}>
-                <div style={{width:32,height:32,borderRadius:9,background:`${r.cor}1F`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                  <r.icon style={{width:15,height:15,color:r.cor}}/>
-                </div>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:12.5,fontWeight:700,color:"#FFFFFF"}}>{r.rotulo}</div>
-                  <div style={{fontSize:10.5,color:"#B6CFE4",marginTop:2}}>{r.sub}</div>
-                </div>
-                <span style={{fontSize:15,fontWeight:800,color:r.cor,flexShrink:0}}>{r.valor}</span>
+      {/* Ritmo da venda */}
+      <motion.div className="glass-card" style={{padding:"20px 22px"}}
+        initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.4,delay:0.35}}>
+        <div style={{fontSize:15,fontWeight:800,color:"#FFFFFF",letterSpacing:"-0.01em"}}>Ritmo da venda</div>
+        <div style={{fontSize:11.5,color:"#B6CFE4",marginTop:3,marginBottom:6}}>Taxas — não filtram lista, orientam a meta</div>
+        {/* Em linha agora que o funil saiu: as tres taxas se leem juntas, e
+            empilhadas numa coluna estreita sobrava espaco vazio ao lado. */}
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(3,minmax(0,1fr))",gap:12}}>
+          {ritmo.map(r => (
+            <div key={r.rotulo} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 0"}}>
+              <div style={{width:32,height:32,borderRadius:9,background:`${r.cor}1F`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <r.icon style={{width:15,height:15,color:r.cor}}/>
               </div>
-            ))}
-          </div>
-        </motion.div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:12.5,fontWeight:700,color:"#FFFFFF"}}>{r.rotulo}</div>
+                <div style={{fontSize:10.5,color:"#B6CFE4",marginTop:2}}>{r.sub}</div>
+              </div>
+              <span title={r.valor} style={{fontSize:13.5,fontWeight:800,color:r.cor,flexShrink:0,textAlign:"right",overflowWrap:"anywhere"}}>{r.valor}</span>
+            </div>
+          ))}
+        </div>
+      </motion.div>
 
-        <motion.div className="glass-card" style={{padding:"20px 22px"}}
-          initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.4,delay:0.4}}>
-          <div style={{fontSize:15,fontWeight:800,color:"#FFFFFF",letterSpacing:"-0.01em"}}>Funil de orçamentos</div>
-          <div style={{fontSize:11.5,color:"#B6CFE4",marginTop:3,marginBottom:16}}>Quantidade e valor parados em cada etapa</div>
-          <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            {["rascunho","enviado","em_negociacao","aprovado","recusado"].map(s => {
-              const info = STATUS_ORCAMENTO[s];
-              const v = d.por_status[s] || { total: 0, valor: 0 };
-              const fatia = d.total_orcamentos ? (v.total / d.total_orcamentos) * 100 : 0;
-              return (
-                <div key={s} onClick={()=>setFiltro(s as FiltroVendas)} style={{cursor:"pointer"}}>
-                  <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:5}}>
-                    <span style={{fontSize:12.5,fontWeight:700,color:info.color,flex:1}}>{info.label}</span>
-                    <span style={{fontSize:13,fontWeight:800,color:"#FFFFFF"}}>{v.total}</span>
-                    <span style={{fontSize:11,color:"#B6CFE4",minWidth:78,textAlign:"right"}}>{brlCompacto(v.valor)}</span>
-                  </div>
-                  <div style={{height:8,borderRadius:6,background:"rgba(126,176,219,0.10)",overflow:"hidden"}}>
-                    <div style={{height:"100%",width:`${Math.max(fatia, v.total?2:0)}%`,background:info.color,borderRadius:6,transition:"width 0.4s"}}/>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </motion.div>
-      </div>
-
-      {/* Equipamentos */}
+      {/* Mais e menos vendidos, uma coluna por tipo */}
       <motion.div className="glass-card" style={{padding:"20px 22px"}}
         initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.4,delay:0.45}}>
-        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,flexWrap:"wrap",marginBottom:16}}>
-          <div style={{minWidth:0}}>
-            <div style={{fontSize:15,fontWeight:800,color:"#FFFFFF",letterSpacing:"-0.01em"}}>
-              Mais e menos vendidos
-            </div>
-            <div style={{fontSize:11.5,color:"#B6CFE4",marginTop:3}}>
-              Pelo que fechou de verdade — a oferta aparece só como contexto
-            </div>
+        <div style={{marginBottom:18}}>
+          <div style={{fontSize:15,fontWeight:800,color:"#FFFFFF",letterSpacing:"-0.01em"}}>
+            Mais e menos vendidos
           </div>
-          {/* O alternador só existe quando há serviço cadastrado: sem isso ele
-              seria um botão que nunca muda nada. */}
-          {temServico && (
-            <div role="tablist" aria-label="Tipo de item" style={{display:"flex",gap:4,padding:4,borderRadius:10,background:"rgba(3,14,26,0.25)",border:"1px solid rgba(126,176,219,0.16)",flexShrink:0}}>
-              {([
-                { key:"equipamento" as TipoItem, rotulo:"Equipamentos", icone:Package },
-                { key:"servico" as TipoItem, rotulo:"Serviços", icone:Wrench },
-              ]).map(op => {
-                const on = tipoItem === op.key;
-                return (
-                  <button key={op.key} role="tab" aria-selected={on} onClick={()=>setTipoItem(op.key)}
-                    style={{display:"inline-flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:7,cursor:"pointer",fontFamily:"inherit",fontSize:11.5,
-                      fontWeight:on?800:600,color:on?"#FFFFFF":"#B6CFE4",
-                      border:on?"1px solid rgba(86,164,245,0.45)":"1px solid transparent",
-                      background:on?"#1A3F63":"transparent",transition:"all 0.16s"}}>
-                    <op.icone style={{width:13,height:13}}/>{op.rotulo}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          <div style={{fontSize:11.5,color:"#B6CFE4",marginTop:3}}>
+            Pelo que fechou de verdade — a oferta aparece só como contexto
+          </div>
         </div>
 
-        {equipamentos.length === 0 ? (
+        {todosItens.length === 0 ? (
           <div style={{padding:"30px 0",textAlign:"center",color:"#B6CFE4"}}>
-            {tipoItem === "servico"
-              ? <Wrench style={{width:26,height:26,marginBottom:8,opacity:0.6}}/>
-              : <Package style={{width:26,height:26,marginBottom:8,opacity:0.6}}/>}
+            <Package style={{width:26,height:26,marginBottom:8,opacity:0.6}}/>
             <p style={{fontSize:12.5,fontWeight:600}}>
               {insights && !("equipamentos" in insights)
                 ? "O backend ainda não envia o detalhamento por item."
-                : tipoItem === "servico"
-                  ? "Nenhum serviço orçado ainda."
-                  : "Nenhum equipamento orçado ainda."}
+                : "Nenhum item orçado ainda."}
             </p>
           </div>
         ) : (
-          <div style={{display:"grid",gridTemplateColumns:isMobile||menosVendidos.length===0?"1fr":"repeat(2,minmax(0,1fr))",gap:isMobile?20:26}}>
-            <ListaVendidos titulo="Mais vendidos" sub="O que sai sozinho" cor="#2CCD93"
-              icone={TrendingUp} itens={maisVendidos}/>
-            {menosVendidos.length > 0 && (
-              <ListaVendidos titulo="Menos vendidos" sub="Vai para o cliente e não volta" cor="#F87171"
-                icone={TrendingDown} itens={menosVendidos}/>
-            )}
+          // Uma coluna por tipo, com os dois rankings empilhados dentro dela:
+          // comparar equipamento com serviço lado a lado nao faz sentido (sao
+          // catalogos diferentes), mas comparar o que sai e o que encalha
+          // DENTRO de um catalogo e exatamente a leitura util.
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(2,minmax(0,1fr))",gap:isMobile?26:30}}>
+            {([
+              { tipo:"equipamento" as TipoItem, rotulo:"Equipamentos / Materiais", icone:Package },
+              { tipo:"servico" as TipoItem, rotulo:"Serviços", icone:Wrench },
+            ]).map(col => {
+              const r = rankings[col.tipo];
+              return (
+                <div key={col.tipo}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,paddingBottom:11,marginBottom:16,borderBottom:"1px solid rgba(126,176,219,0.16)"}}>
+                    <col.icone style={{width:14,height:14,color:"#8FC4FA",flexShrink:0}}/>
+                    <span style={{fontSize:12.5,fontWeight:800,color:"#FFFFFF",letterSpacing:"-0.01em"}}>{col.rotulo}</span>
+                    <span style={{marginLeft:"auto",fontSize:10.5,color:"#8AA9C6",flexShrink:0}}>
+                      {r.total} {r.total === 1 ? "item" : "itens"}
+                    </span>
+                  </div>
+
+                  {r.total === 0 ? (
+                    <div style={{padding:"18px 0",fontSize:11.5,color:"#8AA9C6"}}>
+                      {col.tipo === "servico"
+                        ? "Nenhum serviço orçado ainda."
+                        : "Nenhum equipamento orçado ainda."}
+                    </div>
+                  ) : (
+                    <div style={{display:"flex",flexDirection:"column",gap:22}}>
+                      <ListaVendidos titulo="Mais vendidos" sub="O que sai sozinho" cor="#2CCD93"
+                        icone={TrendingUp} itens={r.mais}/>
+                      {r.menos.length > 0 && (
+                        <ListaVendidos titulo="Menos vendidos" sub="Vai para o cliente e não volta" cor="#F87171"
+                          icone={TrendingDown} itens={r.menos}/>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </motion.div>
@@ -550,7 +534,7 @@ function ListaVendidos({ titulo, sub, cor, icone: Icone, itens }: {
               <span>{e.quantidade}x ofertado</span>
               {e.qtd_aberta > 0 && <span style={{color:"#F0A05A"}}>{e.qtd_aberta} em aberto</span>}
               {e.valor_aprovado > 0 && (
-                <span>fechou <strong style={{color:"#83DDA8"}}>{brlCompacto(e.valor_aprovado)}</strong></span>
+                <span>fechou <strong style={{color:"#83DDA8"}}>{brl(e.valor_aprovado)}</strong></span>
               )}
               <span title={e.taxa_aprovacao === null ? "Nenhuma proposta decidida ainda" : `${e.qtd_aprovada} aprovados de ${e.qtd_aprovada + e.qtd_recusada} decididos`}>
                 {e.taxa_aprovacao === null ? "sem decisão ainda" : `${e.taxa_aprovacao}% de aprovação`}

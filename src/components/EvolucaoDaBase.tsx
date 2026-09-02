@@ -6,7 +6,7 @@ import { getToken } from "../services/auth";
 import Dropdown from "./Dropdown";
 import useIsMobile from "../hooks/useIsMobile";
 import { dataLocal } from "../utils/data";
-import { brlCompacto } from "../utils/moeda";
+import { brlCompacto, brlEixo } from "../utils/moeda";
 
 // Este gráfico saiu do /dashboard e passou a ser a peça central de /insights.
 // O dashboard ficou com os cards filtrados e a prévia da carteira; a leitura
@@ -430,7 +430,7 @@ export default function EvolucaoDaBase({ empresas }: { empresas: EmpresaSerie[] 
           {stats.map(s=>(
             <div key={s.rotulo} style={{background:"rgba(126,176,219,0.06)",border:"1px solid rgba(126,176,219,0.16)",borderRadius:12,padding:"12px 14px",minWidth:0}}>
               <div style={{fontSize:11.5,color:"#B6CFE4",marginBottom:4,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.rotulo}</div>
-              <div style={{fontSize:21,fontWeight:800,color:s.cor||"#FFFFFF",letterSpacing:"-0.01em",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.valor}</div>
+              <div title={s.valor} style={{fontSize:16.5,fontWeight:800,color:s.cor||"#FFFFFF",letterSpacing:"-0.02em",lineHeight:1.25,overflowWrap:"anywhere"}}>{s.valor}</div>
             </div>
           ))}
         </div>
@@ -455,7 +455,7 @@ export default function EvolucaoDaBase({ empresas }: { empresas: EmpresaSerie[] 
                 <g key={m}>
                   <line x1={L} x2={W-R} y1={y(m)} y2={y(m)} stroke="rgba(126,176,219,0.14)" strokeWidth="1"/>
                   <text x={L-8} y={y(m)+3.5} textAnchor="end" fontSize="10" fontWeight="600" fill="#8AA9C6">
-                    {indicador.moeda ? brlCompacto(m).replace("R$ ","") : m.toLocaleString("pt-BR")}
+                    {indicador.moeda ? brlEixo(m).replace("R$ ","") : m.toLocaleString("pt-BR")}
                   </text>
                 </g>
               ))}

@@ -289,6 +289,8 @@ import { FUNDO_AZUL } from "../../../../components/FundoAzul";
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    // Empresa que chegou como rascunho (criada pela busca, em lote ou avulsa).
+    const [eraRascunho, setEraRascunho] = useState(false);
     const [segmentos, setSegmentos] = useState<string[]>(SEGMENTOS_PADRAO);
     const [contatos, setContatos] = useState<any[]>([]);
     const [deletedContatoIds, setDeletedContatoIds] = useState<string[]>([]);
@@ -329,13 +331,22 @@ import { FUNDO_AZUL } from "../../../../components/FundoAzul";
           ]);
           if(!empRes.ok) { navigate("/clientes"); return; }
           const emp = await empRes.json();
+          // Salvar esta ficha e o ato que tira a empresa do rascunho. Guardamos
+          // porque depois do setForm o status ja foi trocado para "Lead".
+          setEraRascunho(emp.status === "Rascunho" || emp.status_cadastro === "rascunho");
           setForm({
             nome: emp.nome||"", segmento: emp.segmento||"", porte: emp.porte||"",
             cidade: emp.cidade||"", endereco: emp.endereco||"", numero: emp.numero||"", cep: emp.cep||"",
             bairro: emp.bairro||"", regiao: emp.regiao||"", observacoes: emp.observacoes||"",
             cnpj: emp.cnpj||"", site: emp.site||"", linkedin_empresa: emp.linkedin_empresa||"",
             responsavel_principal: emp.responsavel_principal||"",
-            status: emp.status||"", origem_lead: emp.origem_lead||"",
+            // "Rascunho" nao esta em STATUS_OPTS, entao o <select> ficaria com
+            // um valor que nenhuma opcao representa: a tela mostraria a primeira
+            // opcao e o save mandaria "Rascunho" de volta -- a empresa nunca
+            // sairia do rascunho por mais que o usuario salvasse. Ao abrir a
+            // ficha ja propomos "Lead", que e a primeira etapa real do funil.
+            status: emp.status === "Rascunho" ? "Lead" : (emp.status||""),
+            origem_lead: emp.origem_lead||"",
             proxima_acao: emp.proxima_acao||"", temperatura: emp.temperatura||"",
             ultima_interacao: dateOnly(emp.ultima_interacao),
             data_proxima_acao: dateOnly(emp.data_proxima_acao),
@@ -408,6 +419,11 @@ import { FUNDO_AZUL } from "../../../../components/FundoAzul";
           status: form.status, origem_lead: form.origem_lead,
           proxima_acao: form.proxima_acao, temperatura: form.temperatura,
         };
+        // Salvar e o que promove o rascunho. Sem mandar `status_cadastro`, a
+        // empresa entraria no funil mas continuaria contada como rascunho pelo
+        // backend (/empresas/rascunhos e o painel do gerente filtram por ele) --
+        // apareceria nos dois lugares ao mesmo tempo.
+        if(eraRascunho) body.status_cadastro = "ativo";
         if(form.ultima_interacao) body.ultima_interacao = `${form.ultima_interacao}T00:00:00`;
         if(form.data_proxima_acao) body.data_proxima_acao = form.data_proxima_acao;
 
