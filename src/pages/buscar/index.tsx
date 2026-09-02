@@ -9,7 +9,7 @@ import {
   ClipboardList, Calendar, MapPin,
   X, Plus,
   Loader2, AlertCircle, Navigation2, Menu, UserRoundCog,
-  Check, CheckSquare, Square, Radius,
+  Check, CheckSquare, Square,
 } from "lucide-react";
 import useIsMobile from "../../hooks/useIsMobile";
 import CardUsuario from "../../components/CardUsuario";
@@ -52,14 +52,25 @@ const navItems = [
   { icon: Calendar,        label: "Calendário",                path: "/calendario" },
 ];
 
-// Prospeccao nao e busca local: quem procura cliente novo varre regiao, nao
-// bairro. Por isso os presets comecam alto, e o campo livre existe para ir
-// alem do maior deles.
-const RAIOS_PRESET = [100, 200, 300, 500, 1000];
-const RAIO_PADRAO = 100;
-// Acima disto a Places API recusa o circulo e o backend passa a usar retangulo.
-// Nao muda o que o usuario faz, mas explica por que o resultado pega os cantos.
-const RAIO_CIRCULO_MAX_KM = 50;
+// Raio fixo, e nao um seletor na tela. Houve um seletor com presets; foi
+// removido de proposito depois de checar a documentacao da Places API:
+//
+//   1. `pageSize` maximo e 20. Raio maior NAO traz mais empresas -- muda quais
+//      20 aparecem, nada alem disso.
+//   2. `locationBias` e PREFERENCIA, nao filtro: "results around the specified
+//      location can be returned, including results outside the specified area".
+//      Ou seja, o numero nunca foi uma fronteira, e a interface que o chamava de
+//      "raio" prometia uma precisao que a API nao entrega.
+//
+// Sobrava um controle que gastava uma consulta paga por clique para trocar a
+// composicao dos mesmos 20 resultados. Fixar alto entrega o mesmo alcance sem
+// o custo e sem a promessa falsa. Para virar fronteira de verdade seria preciso
+// `locationRestriction` -- que so aceita retangulo e devolve MENOS de 20, por
+// filtrar de fato.
+//
+// 300 km cobre uma regiao de porte estadual a partir do ponto de origem, que e
+// a escala em que a prospeccao deste CRM acontece.
+const RAIO_BUSCA_KM = 300;
 
 const SUGESTOES = ["embalagens", "metalúrgicas", "logística", "clínicas médicas", "tecnologia", "construção civil", "restaurantes", "farmácias"];
 
@@ -211,9 +222,6 @@ export default function BuscarEmpresas() {
   );
   const [mapZoom, setMapZoom] = useState(11);
   const [myLocation, setMyLocation] = useState<{ lat: number; lng: number } | null>(null);
-  // Raio da busca. Fica em km na tela e vira metros na requisicao.
-  const [raioKm, setRaioKm] = useState(RAIO_PADRAO);
-  const [raioTexto, setRaioTexto] = useState("");
   // Selecao multipla para criar varios rascunhos de uma vez.
   const [marcados, setMarcados] = useState<Set<string>>(new Set());
   const [criandoLote, setCriandoLote] = useState(false);
@@ -260,9 +268,7 @@ export default function BuscarEmpresas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // `km` opcional: quem troca o raio precisa buscar com o valor novo, que
-  // ainda nao entrou no estado neste render.
-  const buscar = useCallback(async (q: string, km?: number) => {
+  const buscar = useCallback(async (q: string) => {
     if (!q.trim()) { setResults([]); return; }
     if (quotaExcedida) return;
     setLoading(true);
@@ -271,7 +277,7 @@ export default function BuscarEmpresas() {
       const res = await fetch(`${API}/places/search`, {
         method: "POST",
         headers: hdrs(),
-        body: JSON.stringify({ query: q, lat: mapCenter.lat, lng: mapCenter.lng, radius: (km ?? raioKm) * 1000 }),
+        body: JSON.stringify({ query: q, lat: mapCenter.lat, lng: mapCenter.lng, radius: RAIO_BUSCA_KM * 1000 }),
       });
       if (res.status === 429) {
         // `detail` é o objeto que o backend monta — seu teto mensal (reset na
@@ -305,7 +311,7 @@ export default function BuscarEmpresas() {
       setError("Não foi possível conectar ao Google Places. Verifique a chave de API.");
     }
     setLoading(false);
-  }, [mapCenter, quotaExcedida, raioKm]);
+  }, [mapCenter, quotaExcedida]);
 
   // Reabilita o campo na hora que o servidor informou, sem exigir recarregar a
   // página — e sem inventar a hora, como fazia o "meia-noite UTC" de antes.
@@ -343,20 +349,6 @@ export default function BuscarEmpresas() {
     setQuery(v);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => buscar(v), 600);
-  };
-
-  /**
-   * Troca o raio e refaz a busca.
-   *
-   * Cada raio novo e uma chave de cache diferente no servidor, entao a busca
-   * SAI cara (consome consulta paga). E proposital: sem refazer, o raio novo
-   * nao mudaria nada na tela e o seletor seria enfeite.
-   */
-  const aplicarRaio = (km: number) => {
-    const limpo = Math.max(1, Math.min(Math.round(km), 2000));
-    setRaioKm(limpo);
-    setRaioTexto("");
-    if (query.trim() && !quotaExcedida) buscar(query, limpo);
   };
 
   const alternarMarcado = (placeId: string) => {
@@ -549,71 +541,6 @@ export default function BuscarEmpresas() {
                     <X style={{ width:11, height:11, color:"#B6CFE4" }} />
                   </button>
                 )}
-              </div>
-
-              {/* Raio da busca */}
-              <div style={{ marginTop:12 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:7 }}>
-                  <Radius style={{ width:12, height:12, color:"#B6CFE4", flexShrink:0 }} />
-                  <span style={{ fontSize:11, fontWeight:700, color:"#B6CFE4", textTransform:"uppercase", letterSpacing:"0.07em" }}>
-                    Raio da busca
-                  </span>
-                  <span style={{ marginLeft:"auto", fontSize:12, fontWeight:800, color:"#2CCD93" }}>{raioKm} km</span>
-                </div>
-
-                <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-                  {RAIOS_PRESET.map(km => {
-                    const on = raioKm === km;
-                    return (
-                      <button key={km} onClick={() => aplicarRaio(km)} disabled={quotaExcedida || loading}
-                        aria-pressed={on}
-                        style={{ padding:"5px 11px", borderRadius:20, fontSize:11, fontWeight:700, fontFamily:"inherit",
-                          cursor: quotaExcedida || loading ? "not-allowed" : "pointer",
-                          border:`1.5px solid ${on ? "rgba(44,205,147,0.55)" : "rgba(126,176,219,0.16)"}`,
-                          background:on ? "rgba(44,205,147,0.14)" : "#143354",
-                          color:on ? "#2CCD93" : "#FFFFFF",
-                          opacity: quotaExcedida || loading ? 0.55 : 1, transition:"all 0.15s" }}>
-                        {km} km
-                      </button>
-                    );
-                  })}
-
-                  {/* Campo livre: os presets cobrem o comum, isto cobre o resto.
-                      Aplica no Enter ou no botao — a cada tecla seria uma busca
-                      paga por digito. */}
-                  <div style={{ display:"flex", alignItems:"center", gap:4 }}>
-                    <input
-                      value={raioTexto}
-                      onChange={e => setRaioTexto(e.target.value.replace(/[^\d]/g, "").slice(0, 4))}
-                      onKeyDown={e => { if (e.key === "Enter" && raioTexto) aplicarRaio(Number(raioTexto)); }}
-                      placeholder="outro"
-                      aria-label="Raio personalizado em quilômetros"
-                      disabled={quotaExcedida || loading}
-                      style={{ width:62, height:28, padding:"0 8px", borderRadius:20, fontSize:11, fontWeight:700,
-                        border:"1.5px solid rgba(126,176,219,0.16)", background:"#143354", color:"#FFFFFF",
-                        outline:"none", fontFamily:"inherit", textAlign:"center" }}
-                    />
-                    <button
-                      onClick={() => raioTexto && aplicarRaio(Number(raioTexto))}
-                      disabled={!raioTexto || quotaExcedida || loading}
-                      aria-label="Aplicar raio personalizado"
-                      style={{ width:28, height:28, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center",
-                        border:"1.5px solid rgba(126,176,219,0.16)", background:raioTexto ? "rgba(44,205,147,0.14)" : "#143354",
-                        cursor: raioTexto && !quotaExcedida && !loading ? "pointer" : "not-allowed",
-                        opacity: raioTexto ? 1 : 0.5 }}>
-                      <Check style={{ width:12, height:12, color:raioTexto ? "#2CCD93" : "#B6CFE4" }} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Duas coisas que o usuario so descobriria errando: o raio maior
-                    amplia a AREA, nao a quantidade de resultados; e trocar de raio
-                    e uma busca nova, que consome cota. */}
-                <div style={{ fontSize:10, color:"#B6CFE4", marginTop:7, lineHeight:1.45 }}>
-                  Traz até 20 empresas — raio maior amplia a área, não a quantidade.
-                  Trocar o raio refaz a busca e consome uma consulta.
-                  {raioKm > RAIO_CIRCULO_MAX_KM && " Acima de 50 km a área vira um retângulo, então entram também os cantos."}
-                </div>
               </div>
 
               {/* Consumo do mês + interruptor do teto (só o gerente alterna) */}
