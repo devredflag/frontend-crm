@@ -18,6 +18,10 @@ export interface UsuarioCard {
   cargo?: string;
   is_gerente?: boolean;
   is_supervisor?: boolean;
+  /** Plano da assinatura (GET /me). Informativo — quem decide é `recursos`. */
+  plano?: string;
+  /** Recursos liberados pelo plano, já resolvidos pelo backend. */
+  recursos?: string[];
 }
 
 // Rótulo da função como o usuário final lê. O backend já manda `funcao` pronta
@@ -35,6 +39,23 @@ export function funcaoDoUsuario(u?: UsuarioCard | null): string {
   if (u.is_gerente) return "Gerente";
   if (u.is_supervisor) return "Supervisor";
   return "Vendedor";
+}
+
+/**
+ * Único ponto da UI que decide se um recurso pago aparece.
+ *
+ * Existe para que "Insights é pago" não vire `if (plano === 'x')` espalhado por
+ * tela: o backend resolve o pacote e manda a lista pronta em /me, e aqui só se
+ * pergunta pelo nome do recurso.
+ *
+ * FAIL-OPEN de propósito: `recursos` ausente significa backend atrás num deploy
+ * (o campo é novo), não plano restrito. Esconder a tela nesse caso tiraria o
+ * Insights do gerente durante a janela entre os dois deploys. O bloqueio de
+ * verdade é server side — ver exigir_recurso() no main.py.
+ */
+export function temRecurso(u: UsuarioCard | null | undefined, nome: string): boolean {
+  if (!u || !Array.isArray(u.recursos)) return true;
+  return u.recursos.includes(nome);
 }
 
 export function initials(n?: string) {

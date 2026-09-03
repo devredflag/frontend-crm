@@ -8,10 +8,11 @@ import {
 } from "lucide-react";
 
 import { getToken } from "../../services/auth";
-import CardUsuario, { useUsuarioLogado } from "../../components/CardUsuario";
+import CardUsuario, { useUsuarioLogado, temRecurso } from "../../components/CardUsuario";
 import FundoAzul from "../../components/FundoAzul";
 import EvolucaoDaBase from "../../components/EvolucaoDaBase";
 import PrecisamDeAtencao from "../../components/PrecisamDeAtencao";
+import RankingItensVendidos from "../../components/RankingItensVendidos";
 import useIsMobile from "../../hooks/useIsMobile";
 import useEmpresasAoVivo, { notificarEmpresas } from "../../hooks/useEmpresasAoVivo";
 import { dataLocal, diasDesde, inicioDoDia } from "../../utils/data";
@@ -93,7 +94,12 @@ interface Orcamento {
   criado_em: string | null; data_envio: string | null; data_decisao: string | null;
 }
 interface UsuarioRow { usuario_id: string; nome: string; role: string; ativo: boolean }
-interface Me { nome: string; email: string; is_gerente?: boolean; is_supervisor?: boolean; conta_nome?: string }
+interface Me {
+  nome: string; email: string; is_gerente?: boolean; is_supervisor?: boolean;
+  conta_nome?: string;
+  /** Recursos do plano (GET /me). Insights é recurso pago — ver temRecurso. */
+  recursos?: string[];
+}
 
 const ABERTOS = ["enviado", "em_negociacao"];
 const pct = (parte: number, todo: number) => (todo > 0 ? (parte / todo) * 100 : 0);
@@ -160,8 +166,10 @@ function VazioBloco({ texto }: { texto: string }) {
 
 export default function Insights() {
   const navigate = useNavigate();
-  // Insights e tela de gestao: fica fora do menu de quem nao e gerente.
-  const ehGerenteMenu = !!useUsuarioLogado()?.is_gerente;
+  // Insights e tela de gestao E recurso pago: fica fora do menu de quem nao e
+  // gerente, e de quem esta num plano que nao inclui.
+  const usuarioMenu = useUsuarioLogado();
+  const ehGerenteMenu = !!usuarioMenu?.is_gerente && temRecurso(usuarioMenu, "insights");
   const isMobile = useIsMobile();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -190,12 +198,18 @@ export default function Insights() {
 
   useEffect(() => { carregar(); }, [carregar]);
 
-  // Tela de gestao. Esconder o item do menu nao fecha o caminho: /insights
-  // digitado direto abriria assim mesmo. So redireciona depois do /me responder
-  // -- enquanto `me` e null nao da para saber a funcao, e chutar expulsaria o
-  // gerente na propria carga da pagina.
+  // Tela de gestao e recurso pago. Esconder o item do menu nao fecha o caminho:
+  // /insights digitado direto abriria assim mesmo. So redireciona depois do /me
+  // responder -- enquanto `me` e null nao da para saber a funcao, e chutar
+  // expulsaria o gerente na propria carga da pagina.
+  //
+  // Isto e conveniencia, nao seguranca: quem fecha o recurso de verdade e o
+  // backend (exigir_recurso no main.py). Bundle editado nao pode virar acesso.
   useEffect(() => {
-    if (me && !me.is_gerente) navigate("/dashboard", { replace: true });
+    if (!me) return;
+    if (!me.is_gerente || !temRecurso(me, "insights")) {
+      navigate("/dashboard", { replace: true });
+    }
   }, [me, navigate]);
 
   // A lista de usuários é rota de gestor: pedir como vendedor volta 403 e
@@ -535,6 +549,13 @@ export default function Insights() {
               </motion.div>
             </>
           )}
+
+          {/* Dois graficos, um por catalogo: equipamentos/materiais a esquerda,
+              servicos a direita. Vieram da aba de vendas do dashboard -- la
+              respondiam a pergunta errada, porque quem trabalha a carteira
+              precisa da fila de hoje, nao do ranking do catalogo. */}
+          <div className="secao">O que mais vende</div>
+          <RankingItensVendidos />
 
           <div className="secao">De onde vem o cliente</div>
           <motion.div className="glass-card" style={{padding:"22px 24px"}} initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} transition={{duration:0.35}}>

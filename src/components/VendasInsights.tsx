@@ -3,8 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText, Send, Repeat, CheckCircle2, XCircle, Clock, CalendarCheck,
-  Package, ArrowRight, Info, Building2, AlertTriangle, Wrench,
-  TrendingUp, TrendingDown,
+  Package, ArrowRight, Info, Building2, AlertTriangle,
 } from "lucide-react";
 
 import { getToken } from "../services/auth";
@@ -17,7 +16,17 @@ import { brl } from "../utils/moeda";
 const API = (process.env.REACT_APP_API_URL || "https://backend-crm-production-157b.up.railway.app");
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Visão de vendas do dashboard.
+// Visão de vendas do dashboard — VISÃO DE VENDEDOR.
+//
+// É a tela de quem trabalha a carteira: cada cartão é um recorte de orçamentos
+// e a tabela abaixo mostra aquele recorte. O ranking de itens saiu daqui para
+// a tela de Insights (RankingItensVendidos): "o que mais vende no catálogo" é
+// pergunta de quem define meta e desconto, não de quem tem que cobrar as sete
+// propostas paradas hoje de manhã.
+//
+// Quem monta esta tela decide o perfil — ver o Dashboard. Aqui não há checagem
+// de função de propósito: um componente que se esconde sozinho é invisível na
+// leitura da página que o usa.
 //
 // Antes eram quatro números parados e duas listas de barras: dava para ver o
 // tamanho do funil, mas não havia o que FAZER com aquilo — nenhum número levava
@@ -34,36 +43,6 @@ const API = (process.env.REACT_APP_API_URL || "https://backend-crm-production-15
 const DIAS_SEM_RESPOSTA = 7;
 
 const ABERTOS = ["enviado", "em_negociacao"];
-
-type TipoItem = "equipamento" | "servico";
-
-interface Equipamento {
-  nome: string;
-  /** Ausente enquanto o backend nao subir: tudo cai em "equipamento". */
-  tipo?: TipoItem;
-  quantidade: number;
-  valor: number;
-  qtd_aprovada: number;
-  valor_aprovado: number;
-  qtd_recusada: number;
-  qtd_aberta: number;
-  valor_aberto: number;
-  /** null = nada decidido ainda. Diferente de 0% — ver comentário no backend. */
-  taxa_aprovacao: number | null;
-}
-
-interface Insights {
-  por_status: Record<string, { total: number; valor: number }>;
-  total_orcamentos: number;
-  valor_em_aberto: number;
-  valor_aprovado: number;
-  taxa_conversao: number;
-  // Campos da rodada nova. Opcionais de propósito: se o front subir antes do
-  // backend, os blocos somem em vez de quebrar a tela.
-  ticket_medio?: number | null;
-  tempo_medio_resposta_dias?: number | null;
-  equipamentos?: Equipamento[];
-}
 
 interface Orcamento {
   orcamento_id: string;
@@ -108,7 +87,6 @@ function paradoHa(o: Orcamento): number {
 export default function VendasInsights() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const [insights, setInsights] = useState<Insights | null>(null);
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(false);
@@ -116,14 +94,13 @@ export default function VendasInsights() {
 
   const carregar = useCallback(async () => {
     const cab = { Authorization: `Bearer ${getToken() || ""}` };
+    // Só /orcamentos: todo cartão e toda linha da tabela saem desta lista.
+    // O /vendas/insights saiu junto com o ranking de itens — mantê-lo aqui
+    // custaria uma requisição por carga para alimentar tela nenhuma.
     try {
-      const [iRes, oRes] = await Promise.all([
-        fetch(`${API}/vendas/insights`, { headers: cab }),
-        fetch(`${API}/orcamentos`, { headers: cab }),
-      ]);
-      if (iRes.ok) setInsights(await iRes.json());
+      const oRes = await fetch(`${API}/orcamentos`, { headers: cab });
       if (oRes.ok) setOrcamentos(await oRes.json());
-      setErro(!iRes.ok || !oRes.ok);
+      setErro(!oRes.ok);
     } catch {
       setErro(true);
     }
@@ -169,42 +146,6 @@ export default function VendasInsights() {
   const lista = recortes[filtro];
   const cardAtivo = cards.find(c => c.key === filtro) || cards[0];
   const cobranca = recortes.sem_resposta;
-
-  // ── Equipamentos ──
-  // useMemo e nao `insights?.equipamentos || []` direto: o fallback cria array
-  // novo a cada render e os useMemo de baixo recalculariam sempre.
-  const todosItens = useMemo(() => insights?.equipamentos || [], [insights]);
-
-  /**
-   * Os dois rankings de cada tipo: o que mais sai e o que encalha.
-   *
-   * Quanto SAIU, não quanto foi empurrado — a oferta continua na tela, mas como
-   * contexto: ela explica por que um item está no fim, não define a posição.
-   *
-   * Item sem `tipo` (avulso, ou backend atrasado) conta como equipamento: é
-   * onde ele sempre apareceu, e reclassificar esconderia histórico.
-   */
-  const rankings = useMemo(() => {
-    const monta = (tipo: TipoItem) => {
-      const doTipo = todosItens.filter(
-        e => (e.tipo === "servico" ? "servico" : "equipamento") === tipo);
-      const mais = [...doTipo]
-        .sort((a, b) => b.qtd_aprovada - a.qtd_aprovada || b.valor_aprovado - a.valor_aprovado)
-        .slice(0, 5);
-      // Empate em zero venda é desempatado pela OFERTA, decrescente: o item que
-      // mais foi ao cliente e menos voltou é o acionável — os outros zeros podem
-      // ser só falta de amostra.
-      const noTopo = new Set(mais.map(e => e.nome));
-      const menos = [...doTipo]
-        .sort((a, b) => a.qtd_aprovada - b.qtd_aprovada || b.quantidade - a.quantidade)
-        .slice(0, 5)
-        // Catálogo pequeno faria as duas listas serem a mesma coisa invertida, e
-        // o mesmo nome nas duas passa impressão de erro.
-        .filter(e => !noTopo.has(e.nome));
-      return { total: doTipo.length, mais, menos };
-    };
-    return { equipamento: monta("equipamento"), servico: monta("servico") };
-  }, [todosItens]);
 
   if (loading) {
     return (
@@ -376,124 +317,6 @@ export default function VendasInsights() {
         )}
       </motion.div>
 
-      {/* Mais e menos vendidos, uma coluna por tipo */}
-      <motion.div className="glass-card" style={{padding:"20px 22px"}}
-        initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.4,delay:0.45}}>
-        <div style={{marginBottom:18}}>
-          <div style={{fontSize:15,fontWeight:800,color:"#FFFFFF",letterSpacing:"-0.01em"}}>
-            Mais e menos vendidos
-          </div>
-          <div style={{fontSize:11.5,color:"#B6CFE4",marginTop:3}}>
-            Pelo que fechou de verdade — a oferta aparece só como contexto
-          </div>
-        </div>
-
-        {todosItens.length === 0 ? (
-          <div style={{padding:"30px 0",textAlign:"center",color:"#B6CFE4"}}>
-            <Package style={{width:26,height:26,marginBottom:8,opacity:0.6}}/>
-            <p style={{fontSize:12.5,fontWeight:600}}>
-              {insights && !("equipamentos" in insights)
-                ? "O backend ainda não envia o detalhamento por item."
-                : "Nenhum item orçado ainda."}
-            </p>
-          </div>
-        ) : (
-          // Uma coluna por tipo, com os dois rankings empilhados dentro dela:
-          // comparar equipamento com serviço lado a lado nao faz sentido (sao
-          // catalogos diferentes), mas comparar o que sai e o que encalha
-          // DENTRO de um catalogo e exatamente a leitura util.
-          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(2,minmax(0,1fr))",gap:isMobile?26:30}}>
-            {([
-              { tipo:"equipamento" as TipoItem, rotulo:"Equipamentos / Materiais", icone:Package },
-              { tipo:"servico" as TipoItem, rotulo:"Serviços", icone:Wrench },
-            ]).map(col => {
-              const r = rankings[col.tipo];
-              return (
-                <div key={col.tipo}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,paddingBottom:11,marginBottom:16,borderBottom:"1px solid rgba(126,176,219,0.16)"}}>
-                    <col.icone style={{width:14,height:14,color:"#8FC4FA",flexShrink:0}}/>
-                    <span style={{fontSize:12.5,fontWeight:800,color:"#FFFFFF",letterSpacing:"-0.01em"}}>{col.rotulo}</span>
-                    <span style={{marginLeft:"auto",fontSize:10.5,color:"#8AA9C6",flexShrink:0}}>
-                      {r.total} {r.total === 1 ? "item" : "itens"}
-                    </span>
-                  </div>
-
-                  {r.total === 0 ? (
-                    <div style={{padding:"18px 0",fontSize:11.5,color:"#8AA9C6"}}>
-                      {col.tipo === "servico"
-                        ? "Nenhum serviço orçado ainda."
-                        : "Nenhum equipamento orçado ainda."}
-                    </div>
-                  ) : (
-                    <div style={{display:"flex",flexDirection:"column",gap:22}}>
-                      <ListaVendidos titulo="Mais vendidos" sub="O que sai sozinho" cor="#2CCD93"
-                        icone={TrendingUp} itens={r.mais}/>
-                      {r.menos.length > 0 && (
-                        <ListaVendidos titulo="Menos vendidos" sub="Vai para o cliente e não volta" cor="#F87171"
-                          icone={TrendingDown} itens={r.menos}/>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </motion.div>
-    </div>
-  );
-}
-
-/**
- * Uma das duas colunas de ranking.
- *
- * O número grande é a QUANTIDADE VENDIDA — antes era a ofertada, que respondia
- * quanto a gente empurra, não quanto sai. A barra é proporcional ao primeiro
- * item da própria lista, e não ao maior do catálogo: em "menos vendidos" todos
- * seriam fatias invisíveis se a escala fosse global.
- */
-function ListaVendidos({ titulo, sub, cor, icone: Icone, itens }: {
-  titulo: string; sub: string; cor: string; icone: any; itens: Equipamento[];
-}) {
-  const topo = Math.max(1, ...itens.map(e => e.qtd_aprovada));
-  return (
-    <div>
-      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
-        <Icone style={{width:14,height:14,color:cor,flexShrink:0}}/>
-        <div style={{minWidth:0}}>
-          <div style={{fontSize:12.5,fontWeight:800,color:"#FFFFFF"}}>{titulo}</div>
-          <div style={{fontSize:10.5,color:"#8AA9C6",marginTop:1}}>{sub}</div>
-        </div>
-      </div>
-
-      <div style={{display:"flex",flexDirection:"column",gap:13}}>
-        {itens.map(e => (
-          <div key={e.nome}>
-            <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:5}}>
-              <span style={{fontSize:12.5,fontWeight:700,color:"#FFFFFF",flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.nome}</span>
-              <span style={{fontSize:13,fontWeight:800,whiteSpace:"nowrap",color:e.qtd_aprovada?cor:"#7E9DBB"}}>
-                {e.qtd_aprovada} vendido{e.qtd_aprovada===1?"":"s"}
-              </span>
-            </div>
-            <div style={{height:8,borderRadius:6,background:"rgba(126,176,219,0.08)",overflow:"hidden"}}>
-              <div style={{height:"100%",width:`${Math.max((e.qtd_aprovada/topo)*100, e.qtd_aprovada?4:0)}%`,background:cor,borderRadius:6,transition:"width 0.4s ease"}}/>
-            </div>
-            {/* Rodapé = o porquê. Sem a oferta ao lado, "0 vendidos" tanto pode
-                ser encalhe quanto item que ninguém chegou a oferecer; e o que
-                está em aberto ainda pode virar venda, então não é fracasso. */}
-            <div style={{display:"flex",flexWrap:"wrap",gap:"2px 10px",marginTop:5,fontSize:10.5,color:"#8AA9C6"}}>
-              <span>{e.quantidade}x ofertado</span>
-              {e.qtd_aberta > 0 && <span style={{color:"#F0A05A"}}>{e.qtd_aberta} em aberto</span>}
-              {e.valor_aprovado > 0 && (
-                <span>fechou <strong style={{color:"#83DDA8"}}>{brl(e.valor_aprovado)}</strong></span>
-              )}
-              <span title={e.taxa_aprovacao === null ? "Nenhuma proposta decidida ainda" : `${e.qtd_aprovada} aprovados de ${e.qtd_aprovada + e.qtd_recusada} decididos`}>
-                {e.taxa_aprovacao === null ? "sem decisão ainda" : `${e.taxa_aprovacao}% de aprovação`}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

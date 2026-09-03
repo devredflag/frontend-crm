@@ -67,7 +67,7 @@ import FundoAzul from "../../components/FundoAzul";
       criado_em: string | null; status_atualizado_em: string | null;
       data_proxima_acao: string | null; vendedor_id: string | null;
     }
-    interface Usuario { nome: string; email: string; cargo: string; empresa_nome: string; is_gerente?: boolean; }
+    interface Usuario { nome: string; email: string; cargo: string; empresa_nome: string; is_gerente?: boolean; is_supervisor?: boolean; }
     interface Notificacao {
       notificacao_id: string; tipo: string; titulo: string; mensagem: string;
       empresa_id: string | null; empresa_nome: string | null;
@@ -148,12 +148,19 @@ import FundoAzul from "../../components/FundoAzul";
       const isMobile = useIsMobile();
       const [menuOpen, setMenuOpen] = useState(false);
       const [activeFilter, setActiveFilter] = useState<FilterKey>("total");
-      // Dashboard dividido nas mesmas duas visões do Gerenciamento.
+      // Dashboard dividido nas mesmas duas visões do Gerenciamento — só para
+      // quem tem carteira. A visão de vendas é de VENDEDOR: cartões-filtro e a
+      // lista de orçamentos para trabalhar hoje. Gerente e supervisor não veem
+      // a aba: a leitura de vendas deles é a tela de Insights, e deixar a aba
+      // aqui duplicaria o assunto em dois lugares que divergem com o tempo.
       const [abaDash, setAbaDash] = useState<"clientes"|"vendas">("clientes");
       // Valor por empresa na tabela de prévia — dos orçamentos, não do cadastro.
       const valores = useValoresOrcamento();
       const [searchValue, setSearchValue] = useState("");
       const [usuario, setUsuario] = useState<Usuario|null>(null);
+      // Gestor = gerente ou supervisor. Um nome só, usado nos dois pontos que
+      // decidem a aba, para não haver duas regras de perfil divergindo.
+      const ehGestorDash = !!(usuario?.is_gerente || usuario?.is_supervisor);
 
       // Notificações
       const [notificacoes, setNotificacoes] = useState<Notificacao[]>([]);
@@ -448,10 +455,14 @@ import FundoAzul from "../../components/FundoAzul";
 
             <div style={{padding:isMobile?"16px 14px 32px":"22px 28px 32px",display:"flex",flexDirection:"column",gap:18}}>
 
-              {/* Abas: visao de clientes x visao de vendas */}
-              <AbasGerenciamento aba={abaDash} onChange={setAbaDash} variante="dashboard" />
+              {/* Abas: visao de clientes x visao de vendas. Só aparecem depois
+                  do /me responder — renderizar antes mostraria a aba de vendas
+                  para o gerente por um instante e ela sumiria sozinha. */}
+              {usuario && !ehGestorDash && (
+                <AbasGerenciamento aba={abaDash} onChange={setAbaDash} variante="dashboard" />
+              )}
 
-              {abaDash==="vendas" ? <VendasInsights /> : (
+              {(abaDash==="vendas" && !ehGestorDash) ? <VendasInsights /> : (
               <>
 
               {/* Banner rascunhos */}
