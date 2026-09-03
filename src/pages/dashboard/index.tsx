@@ -148,19 +148,17 @@ import FundoAzul from "../../components/FundoAzul";
       const isMobile = useIsMobile();
       const [menuOpen, setMenuOpen] = useState(false);
       const [activeFilter, setActiveFilter] = useState<FilterKey>("total");
-      // Dashboard dividido nas mesmas duas visões do Gerenciamento — só para
-      // quem tem carteira. A visão de vendas é de VENDEDOR: cartões-filtro e a
-      // lista de orçamentos para trabalhar hoje. Gerente e supervisor não veem
-      // a aba: a leitura de vendas deles é a tela de Insights, e deixar a aba
-      // aqui duplicaria o assunto em dois lugares que divergem com o tempo.
+      // Dashboard dividido nas mesmas duas visões do Gerenciamento. A visão de
+      // vendas vale para TODO perfil — o que muda é o recorte, não a tela:
+      // gerente vê os orçamentos de todas as equipes, supervisor os da equipe
+      // dele, vendedor os próprios. Quem aplica esse corte é o backend
+      // (`_escopo_vendas` em /orcamentos), não uma condição aqui: regra de
+      // escopo duplicada na UI é regra que diverge do servidor com o tempo.
       const [abaDash, setAbaDash] = useState<"clientes"|"vendas">("clientes");
       // Valor por empresa na tabela de prévia — dos orçamentos, não do cadastro.
       const valores = useValoresOrcamento();
       const [searchValue, setSearchValue] = useState("");
       const [usuario, setUsuario] = useState<Usuario|null>(null);
-      // Gestor = gerente ou supervisor. Um nome só, usado nos dois pontos que
-      // decidem a aba, para não haver duas regras de perfil divergindo.
-      const ehGestorDash = !!(usuario?.is_gerente || usuario?.is_supervisor);
 
       // Notificações
       const [notificacoes, setNotificacoes] = useState<Notificacao[]>([]);
@@ -455,14 +453,10 @@ import FundoAzul from "../../components/FundoAzul";
 
             <div style={{padding:isMobile?"16px 14px 32px":"22px 28px 32px",display:"flex",flexDirection:"column",gap:18}}>
 
-              {/* Abas: visao de clientes x visao de vendas. Só aparecem depois
-                  do /me responder — renderizar antes mostraria a aba de vendas
-                  para o gerente por um instante e ela sumiria sozinha. */}
-              {usuario && !ehGestorDash && (
-                <AbasGerenciamento aba={abaDash} onChange={setAbaDash} variante="dashboard" />
-              )}
+              {/* Abas: visao de clientes x visao de vendas */}
+              <AbasGerenciamento aba={abaDash} onChange={setAbaDash} variante="dashboard" />
 
-              {(abaDash==="vendas" && !ehGestorDash) ? <VendasInsights /> : (
+              {abaDash==="vendas" ? <VendasInsights /> : (
               <>
 
               {/* Banner rascunhos */}

@@ -16,7 +16,7 @@ import { brl } from "../utils/moeda";
 const API = (process.env.REACT_APP_API_URL || "https://backend-crm-production-157b.up.railway.app");
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Visão de vendas do dashboard — VISÃO DE VENDEDOR.
+// Visão de vendas do dashboard.
 //
 // É a tela de quem trabalha a carteira: cada cartão é um recorte de orçamentos
 // e a tabela abaixo mostra aquele recorte. O ranking de itens saiu daqui para
@@ -24,9 +24,11 @@ const API = (process.env.REACT_APP_API_URL || "https://backend-crm-production-15
 // pergunta de quem define meta e desconto, não de quem tem que cobrar as sete
 // propostas paradas hoje de manhã.
 //
-// Quem monta esta tela decide o perfil — ver o Dashboard. Aqui não há checagem
-// de função de propósito: um componente que se esconde sozinho é invisível na
-// leitura da página que o usa.
+// Vale para TODO perfil, e não há checagem de função aqui de propósito: o
+// recorte já vem pronto de /orcamentos, que passa por `_escopo_vendas` —
+// gerente recebe todas as equipes, supervisor a dele, vendedor as próprias.
+// Filtrar de novo no cliente só criaria uma segunda regra de escopo para
+// divergir da do servidor.
 //
 // Antes eram quatro números parados e duas listas de barras: dava para ver o
 // tamanho do funil, mas não havia o que FAZER com aquilo — nenhum número levava
