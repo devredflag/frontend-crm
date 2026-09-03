@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import {
-  X, Navigation, MapPin, Building2, Crosshair, Search, Loader2,
-  Route as RouteIcon, AlertTriangle, Flag, Plus,
+  X, MapPin, Building2, Crosshair, Search, Loader2,
+  Route as RouteIcon, AlertTriangle, Flag, Plus, RefreshCw,
 } from "lucide-react";
 
 import { getToken } from "../services/auth";
@@ -12,6 +12,7 @@ import {
   TILE_URL, TILE_ATTR, type LatLng, type Coord,
 } from "../utils/mapa";
 import { formatarDistancia } from "../utils/distancia";
+import Dropdown from "./Dropdown";
 import type { EmpresaComGeo } from "../hooks/useEmpresasProximas";
 
 const API = (process.env.REACT_APP_API_URL || "https://backend-crm-production-157b.up.railway.app");
@@ -28,11 +29,14 @@ const API = (process.env.REACT_APP_API_URL || "https://backend-crm-production-15
 // ao Google Places, então a cota mensal não é tocada.
 //
 // São serviços comunitários, então o volume de chamadas importa mesmo sem
-// custo. O desenho é de propósito:
-//   1 chamada  — a rota A→B;
-//   0 chamadas — o corredor, que é Haversine contra a linha já baixada;
-//   N chamadas — o desvio exato, só dos candidatos que sobraram do corredor,
-//                em série e limitado por MAX_DESVIOS.
+// custo. O trabalho está separado em três camadas justamente por isso:
+//
+//   1 chamada  — a rota A→B. Só refaz quando A ou B mudam.
+//   0 chamadas — o corredor. É Haversine contra a geometria JÁ baixada, então
+//                mexer no raio refiltra na hora, de graça, sem tocar a rede.
+//   N chamadas — o desvio exato, só dos que sobraram do corredor, em série,
+//                limitado a MAX_DESVIOS e com debounce.
+//
 // Pedir rota para toda empresa cadastrada seria uma chamada por candidato para
 // depois descartar quase todos.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -40,7 +44,13 @@ const API = (process.env.REACT_APP_API_URL || "https://backend-crm-production-15
 /** Quantos desvios exatos calcular. Acima disso a espera não compensa. */
 const MAX_DESVIOS = 12;
 
+/** Atalhos. O valor final é digitável: viagem curta pede 3 km, longa pede 80. */
 const RAIOS = [5, 10, 25, 50];
+const RAIO_MIN = 1;
+const RAIO_MAX = 500;
+
+/** Respiro antes de medir desvios: sem ele, cada tecla no raio dispara N rotas. */
+const ESPERA_MEDICAO_MS = 700;
 
 type TipoPonto = "empresa" | "gps" | "endereco";
 
@@ -55,11 +65,11 @@ interface Candidata extends EmpresaComGeo {
   lng: number;
   /** Distância em linha reta até a linha da rota — o filtro do corredor. */
   desvioLinhaKm: number;
-  /** km a mais na viagem inteira ao parar aqui. null = ainda não calculado. */
-  desvioRealKm: number | null;
-  /** minutos a mais. null = não calculado ou OSRM indisponível. */
-  desvioMin: number | null;
 }
+
+/** km e minutos a mais na viagem, por empresa. Vive fora da lista de candidatas
+ *  para que mexer no raio (que refaz a lista) não jogue fora o que já foi medido. */
+interface Desvio { km: number; min: number }
 
 const cor = {
   a: "#83DDA8",
@@ -67,6 +77,22 @@ const cor = {
   rota: "#56A4F5",
   desvio: "#F2C879",
 };
+
+/**
+ * Pin do mapa. SVG em gota, com a ponta ancorada na coordenada exata — o
+ * círculo que havia antes marcava o centro e, no zoom de rua, apontava para o
+ * quarteirão errado.
+ */
+function pinHtml(fundo: string, texto: string, corTexto = "#0A2540") {
+  return `<div style="position:relative;width:28px;height:36px;filter:drop-shadow(0 2px 4px rgba(3,14,26,.55))">
+    <svg width="28" height="36" viewBox="0 0 28 36" aria-hidden="true">
+      <path d="M14 0C6.3 0 0 6.3 0 14c0 10.2 14 22 14 22s14-11.8 14-22C28 6.3 21.7 0 14 0z"
+            fill="${fundo}" stroke="#0F2E4B" stroke-width="2"/>
+    </svg>
+    <span style="position:absolute;top:5px;left:0;width:28px;text-align:center;
+                 font:800 12px/1.1 'Plus Jakarta Sans',sans-serif;color:${corTexto}">${texto}</span>
+  </div>`;
+}
 
 export default function PlanejadorRota({
   empresas, origemInicial, onFechar,
@@ -87,12 +113,17 @@ export default function PlanejadorRota({
   const [pontoA, setPontoA] = useState<Ponto | null>(origemInicial);
   const [pontoB, setPontoB] = useState<Ponto | null>(null);
   const [raioKm, setRaioKm] = useState(25);
+  // Texto separado do número: enquanto a pessoa apaga para redigitar, o campo
+  // fica vazio e `Number("")` é 0 — usar isso como raio faria a busca rodar com
+  // zero. O número só acompanha o texto quando o texto é válido.
+  const [raioTexto, setRaioTexto] = useState("25");
   const [rotaBase, setRotaBase] = useState<{ coords: Coord[]; km: number; min: number } | null>(null);
-  const [calculando, setCalculando] = useState(false);
+  const [carregandoRota, setCarregandoRota] = useState(false);
   const [osrmForaDoAr, setOsrmForaDoAr] = useState(false);
-  const [candidatas, setCandidatas] = useState<Candidata[]>([]);
-  const [medindoDesvios, setMedindoDesvios] = useState(false);
-  const [paradas, setParadas] = useState<Candidata[]>([]);
+  const [desvios, setDesvios] = useState<Record<string, Desvio>>({});
+  const [medindo, setMedindo] = useState(false);
+  const [paradas, setParadas] = useState<string[]>([]);
+  const [tentativa, setTentativa] = useState(0);
 
   // Empresas com coordenada válida — as únicas que podem entrar no corredor.
   const comGeo = useMemo(() => empresas
@@ -113,7 +144,7 @@ export default function PlanejadorRota({
     if (!pronto || !containerRef.current || mapRef.current) return;
     const L = window.L;
     const map = L.map(containerRef.current, { scrollWheelZoom: true });
-    map.setView(pontoA ? [pontoA.lat, pontoA.lng] : [-15.78, -47.93], pontoA ? 11 : 4);
+    map.setView(origemInicial ? [origemInicial.lat, origemInicial.lng] : [-15.78, -47.93], origemInicial ? 11 : 4);
     L.tileLayer(TILE_URL, { maxZoom: 19, attribution: TILE_ATTR }).addTo(map);
     camadaRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
@@ -121,63 +152,85 @@ export default function PlanejadorRota({
     // renderiza um quarto de tela cinza até alguém redimensionar a janela.
     setTimeout(() => map.invalidateSize(), 60);
     return () => { map.remove(); mapRef.current = null; camadaRef.current = null; };
-  }, [pronto, pontoA]);
+  }, [pronto, origemInicial]);
 
-  // ── Traçar ──
-  const tracar = useCallback(async () => {
-    if (!pontoA || !pontoB) return;
-    setCalculando(true);
+  // ── Camada 1: a rota A→B, automática ──
+  // Dispara sozinha ao ter as duas pontas: escolher os pontos e não ver nada
+  // até apertar um botão fazia parecer que a seleção não tinha funcionado.
+  useEffect(() => {
+    if (!pontoA || !pontoB) { setRotaBase(null); setOsrmForaDoAr(false); return; }
+    let vivo = true;
+    const ctrl = new AbortController();
+    setCarregandoRota(true);
     setOsrmForaDoAr(false);
-    setCandidatas([]);
+    // Desvios são medidos CONTRA uma rota; trocar a rota invalida todos.
+    setDesvios({});
     setParadas([]);
+    (async () => {
+      const r = await rotaOSRM([pontoA, pontoB], { overview: "full", signal: ctrl.signal });
+      if (!vivo) return;
+      if (!r) { setOsrmForaDoAr(true); setRotaBase(null); }
+      else setRotaBase(r);
+      setCarregandoRota(false);
+    })();
+    return () => { vivo = false; ctrl.abort(); };
+  }, [pontoA, pontoB, tentativa]);
 
-    const rota = await rotaOSRM([pontoA, pontoB], { overview: "full" });
-    if (!rota) {
-      // Sem rota viária não há corredor para medir: a tela diz isso em vez de
-      // mostrar uma lista vazia que parece "nenhuma empresa no caminho".
-      setOsrmForaDoAr(true);
-      setRotaBase(null);
-      setCalculando(false);
-      return;
-    }
-    setRotaBase(rota);
-
-    // Corredor: quem está a até `raioKm` de qualquer ponto do caminho. Como a
-    // medida é contra os SEGMENTOS, as pontas viram meia-lua — então entra
-    // também quem está até o mesmo raio ALÉM do destino.
-    const dentro: Candidata[] = comGeo
+  // ── Camada 2: o corredor, de graça ──
+  // Puro cálculo sobre a geometria já baixada. Por isso mexer no raio responde
+  // na hora e não gasta requisição nenhuma.
+  const candidatas = useMemo<Candidata[]>(() => {
+    if (!rotaBase) return [];
+    return comGeo
       .map(({ e, lat, lng }) => ({
         ...e, lat, lng,
-        desvioLinhaKm: distanciaAteRotaKm({ lat, lng }, rota.coords, 8),
-        desvioRealKm: null as number | null,
-        desvioMin: null as number | null,
+        desvioLinhaKm: distanciaAteRotaKm({ lat, lng }, rotaBase.coords, 8),
       }))
       .filter(c => c.desvioLinhaKm <= raioKm)
-      .filter(c => c.empresa_id !== pontoA.empresa_id && c.empresa_id !== pontoB.empresa_id)
+      .filter(c => c.empresa_id !== pontoA?.empresa_id && c.empresa_id !== pontoB?.empresa_id)
       .sort((a, b) => a.desvioLinhaKm - b.desvioLinhaKm);
+  }, [rotaBase, raioKm, comGeo, pontoA, pontoB]);
 
-    setCandidatas(dentro);
-    setCalculando(false);
+  // ── Camada 3: o desvio exato, com parcimônia ──
+  // Em série e com debounce de propósito: é servidor público da comunidade, e
+  // disparar doze requisições a cada tecla do raio é o tipo de uso que faz
+  // bloquearem cliente. Quem já foi medido nesta rota não é medido de novo.
+  const idsParaMedir = useMemo(
+    () => candidatas.slice(0, MAX_DESVIOS).map(c => c.empresa_id).join(","),
+    [candidatas]);
 
-    // Desvio real, um por vez, só dos primeiros. Em série de propósito: é
-    // servidor público, e disparar 12 requisições juntas é o tipo de uso que
-    // faz a comunidade bloquear cliente.
-    if (dentro.length > 0) {
-      setMedindoDesvios(true);
-      const alvos = dentro.slice(0, MAX_DESVIOS);
+  useEffect(() => {
+    if (!rotaBase || !pontoA || !pontoB || !idsParaMedir) return;
+    let vivo = true;
+    const ctrl = new AbortController();
+    const timer = setTimeout(async () => {
+      const alvos = candidatas.slice(0, MAX_DESVIOS).filter(c => !desvios[c.empresa_id]);
+      if (alvos.length === 0) return;
+      setMedindo(true);
       for (const c of alvos) {
-        const via = await rotaOSRM([pontoA, { lat: c.lat, lng: c.lng }, pontoB], { overview: "simplified" });
+        if (!vivo) break;
+        const via = await rotaOSRM(
+          [pontoA, { lat: c.lat, lng: c.lng }, pontoB],
+          { overview: "simplified", signal: ctrl.signal });
+        if (!vivo) break;
         if (via) {
-          const extraKm = via.km - rota.km;
-          const extraMin = via.min - rota.min;
-          setCandidatas(prev => prev.map(p => p.empresa_id === c.empresa_id
-            ? { ...p, desvioRealKm: Math.max(0, extraKm), desvioMin: Math.max(0, extraMin) }
-            : p));
+          setDesvios(prev => ({
+            ...prev,
+            [c.empresa_id]: {
+              km: Math.max(0, via.km - rotaBase.km),
+              min: Math.max(0, via.min - rotaBase.min),
+            },
+          }));
         }
       }
-      setMedindoDesvios(false);
-    }
-  }, [pontoA, pontoB, raioKm, comGeo]);
+      if (vivo) setMedindo(false);
+    }, ESPERA_MEDICAO_MS);
+    return () => { vivo = false; ctrl.abort(); clearTimeout(timer); setMedindo(false); };
+    // `candidatas` e `desvios` entram pela closure de propósito: incluí-los nas
+    // dependências reiniciaria o laço a cada desvio medido, que é justamente o
+    // que ele acabou de mudar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idsParaMedir, rotaBase, pontoA, pontoB]);
 
   // ── Desenho ──
   useEffect(() => {
@@ -186,62 +239,60 @@ export default function PlanejadorRota({
     const g = camadaRef.current;
     g.clearLayers();
 
-    const marcador = (p: LatLng, c: string, texto: string, letra: string) =>
+    const pin = (p: LatLng, fundo: string, texto: string, dica: string) =>
       L.marker([p.lat, p.lng], {
         icon: L.divIcon({
-          className: "",
-          html: `<div style="background:${c};color:#0A2540;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:800 12px/1 sans-serif;box-shadow:0 2px 8px rgba(3,14,26,.5);border:2px solid #0F2E4B">${letra}</div>`,
-          iconSize: [26, 26], iconAnchor: [13, 13],
+          className: "", html: pinHtml(fundo, texto),
+          iconSize: [28, 36], iconAnchor: [14, 36], popupAnchor: [0, -34],
         }),
-      }).bindTooltip(texto).addTo(g);
-
-    if (pontoA) marcador(pontoA, cor.a, pontoA.rotulo, "A");
-    if (pontoB) marcador(pontoB, cor.b, pontoB.rotulo, "B");
+      }).bindTooltip(dica, { direction: "top", offset: [0, -32] }).addTo(g);
 
     if (rotaBase) {
-      L.polyline(rotaBase.coords, { color: cor.rota, weight: 5, opacity: 0.9 }).addTo(g);
-      // O corredor desenhado: sem ele o raio é um número abstrato e não se vê
-      // por que uma empresa entrou e a vizinha não.
-      L.polyline(rotaBase.coords, {
-        color: cor.rota, weight: 3, opacity: 0.10, lineCap: "round",
-      }).addTo(g);
+      L.polyline(rotaBase.coords, { color: cor.rota, weight: 6, opacity: 0.9 }).addTo(g);
     }
 
-    candidatas.forEach(c => {
-      const parada = paradas.some(p => p.empresa_id === c.empresa_id);
-      L.circleMarker([c.lat, c.lng], {
-        radius: parada ? 9 : 6,
-        color: parada ? cor.a : cor.desvio,
-        fillColor: parada ? cor.a : cor.desvio,
-        fillOpacity: 0.85, weight: parada ? 3 : 1.5,
-      })
-        .bindTooltip(
-          `${c.nome}${c.desvioRealKm !== null ? ` — +${c.desvioRealKm.toFixed(1)} km` : ""}`,
-          { direction: "top" }
-        )
-        .addTo(g);
+    // Cada candidata ganha pin numerado, e o número é o mesmo da lista abaixo —
+    // é o que deixa "qual desses é o +2 km?" ser respondido de relance.
+    candidatas.forEach((c, i) => {
+      const escolhida = paradas.includes(c.empresa_id);
+      const d = desvios[c.empresa_id];
+      pin(
+        { lat: c.lat, lng: c.lng },
+        escolhida ? cor.a : cor.desvio,
+        String(i + 1),
+        `${i + 1}. ${c.nome}${d ? ` — +${d.km.toFixed(1)} km` : ""}`
+      );
     });
+
+    // A e B por último: ficam por cima das candidatas quando coincidem na tela.
+    if (pontoA) pin(pontoA, cor.a, "A", `A · ${pontoA.rotulo}`);
+    if (pontoB) pin(pontoB, cor.b, "B", `B · ${pontoB.rotulo}`);
 
     const tudo = [
       ...(pontoA ? [[pontoA.lat, pontoA.lng]] : []),
       ...(pontoB ? [[pontoB.lat, pontoB.lng]] : []),
       ...candidatas.map(c => [c.lat, c.lng]),
     ];
-    if (tudo.length > 1) mapRef.current.fitBounds(tudo as any, { padding: [40, 40] });
+    if (tudo.length > 1) mapRef.current.fitBounds(tudo as any, { padding: [50, 50] });
     else if (tudo.length === 1) mapRef.current.setView(tudo[0] as any, 12);
-  }, [rotaBase, candidatas, paradas, pontoA, pontoB]);
+  }, [rotaBase, candidatas, paradas, desvios, pontoA, pontoB]);
 
-  // Rota final com as paradas escolhidas, na ordem em que aparecem no caminho.
-  const rotaComParadas = useMemo(() => {
+  // Total da viagem com as paradas escolhidas.
+  const totalComParadas = useMemo(() => {
     if (!rotaBase || paradas.length === 0) return null;
-    const somaKm = paradas.reduce((s, p) => s + (p.desvioRealKm ?? 0), 0);
-    return { km: rotaBase.km + somaKm, extra: somaKm };
-  }, [rotaBase, paradas]);
+    const extra = paradas.reduce((s, id) => s + (desvios[id]?.km ?? 0), 0);
+    return { km: rotaBase.km + extra, extra };
+  }, [rotaBase, paradas, desvios]);
 
-  const alternarParada = (c: Candidata) =>
-    setParadas(prev => prev.some(p => p.empresa_id === c.empresa_id)
-      ? prev.filter(p => p.empresa_id !== c.empresa_id)
-      : [...prev, c]);
+  const digitarRaio = (t: string) => {
+    setRaioTexto(t);
+    const n = Number(t);
+    if (Number.isFinite(n) && n >= RAIO_MIN && n <= RAIO_MAX) setRaioKm(n);
+  };
+  const escolherRaio = (r: number) => { setRaioKm(r); setRaioTexto(String(r)); };
+
+  const alternarParada = (id: string) =>
+    setParadas(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
 
   const rotulo = { fontSize: 10, fontWeight: 800, letterSpacing: "0.06em", color: "#9FD3EA", textTransform: "uppercase" } as const;
 
@@ -278,11 +329,44 @@ export default function PlanejadorRota({
             <SeletorPonto letra="B" corLetra={cor.b} valor={pontoB} onChange={setPontoB}
               empresas={comGeo} rotulo="Indo para" />
 
+            {carregandoRota && (
+              <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: "#9FD3EA" }}>
+                <Loader2 style={{ width: 13, height: 13, animation: "spin 1s linear infinite" }} />
+                Traçando o caminho…
+              </div>
+            )}
+
             <div>
               <div style={rotulo}>Raio de busca</div>
-              <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+
+              {/* Campo digitável: os atalhos cobrem o comum, mas o raio útil
+                  depende da viagem — 3 km dentro da cidade, 80 km numa estrada.
+                  Mexer aqui NÃO gasta requisição: o corredor é recalculado
+                  sobre a geometria que já está na memória. */}
+              <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 6 }}>
+                <input
+                  type="number" inputMode="numeric"
+                  min={RAIO_MIN} max={RAIO_MAX} step={1}
+                  value={raioTexto}
+                  onChange={e => digitarRaio(e.target.value)}
+                  // Texto inválido (vazio, 0, acima do teto) volta para o último
+                  // número válido em vez de ficar mentindo na tela.
+                  onBlur={() => setRaioTexto(String(raioKm))}
+                  aria-label="Raio de busca em quilômetros"
+                  style={{
+                    width: 84, height: 34, padding: "0 10px", borderRadius: 8,
+                    border: "1.5px solid rgba(159,211,234,0.28)", background: "#0F2E4B",
+                    color: "#EAF6FB", fontSize: 13, fontWeight: 800, fontFamily: "inherit",
+                    outline: "none", fontVariantNumeric: "tabular-nums",
+                  }}
+                />
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#9FD3EA" }}>km</span>
+              </div>
+
+              <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
                 {RAIOS.map(r => (
-                  <button key={r} onClick={() => setRaioKm(r)}
+                  <button key={r} onClick={() => escolherRaio(r)}
+                    aria-pressed={raioKm === r}
                     style={{
                       padding: "5px 12px", borderRadius: 16, fontSize: 11.5, fontWeight: 700, cursor: "pointer",
                       fontFamily: "inherit", transition: "all .14s",
@@ -294,34 +378,24 @@ export default function PlanejadorRota({
                   </button>
                 ))}
               </div>
-              <div style={{ fontSize: 10.5, color: "#8AA9C6", marginTop: 6, lineHeight: 1.5 }}>
+              <div style={{ fontSize: 10.5, color: "#8AA9C6", marginTop: 7, lineHeight: 1.5 }}>
                 Entra quem está a até {raioKm} km de qualquer ponto do caminho — inclusive
                 até {raioKm} km <strong>além</strong> do destino.
               </div>
             </div>
 
-            <button onClick={tracar} disabled={!pontoA || !pontoB || calculando}
-              style={{
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
-                height: 42, borderRadius: 10, border: "none", fontFamily: "inherit",
-                fontSize: 13, fontWeight: 800, color: "#EAF6FB",
-                cursor: !pontoA || !pontoB || calculando ? "not-allowed" : "pointer",
-                opacity: !pontoA || !pontoB || calculando ? 0.55 : 1,
-                background: "linear-gradient(135deg,#2E6F95,#2E6F95,#83DDA8,#2E6F95)",
-                backgroundSize: "200% 200%", animation: "gradientShift 4s ease infinite",
-              }}>
-              {calculando
-                ? <><Loader2 style={{ width: 14, height: 14, animation: "spin 1s linear infinite" }} /> Traçando…</>
-                : <><Navigation style={{ width: 14, height: 14 }} /> Traçar rota</>}
-            </button>
-
             {osrmForaDoAr && (
-              <div style={{ display: "flex", gap: 8, padding: "10px 12px", borderRadius: 10, background: "rgba(242,200,121,0.08)", border: "1px solid rgba(242,200,121,0.3)" }}>
-                <AlertTriangle style={{ width: 14, height: 14, color: "#F2C879", flexShrink: 0, marginTop: 1 }} />
-                <span style={{ fontSize: 11.5, color: "#EAF6FB", lineHeight: 1.5 }}>
-                  O serviço de rotas não respondeu. É um servidor público e cai às vezes —
-                  tente de novo em alguns instantes.
-                </span>
+              <div style={{ padding: "10px 12px", borderRadius: 10, background: "rgba(242,200,121,0.08)", border: "1px solid rgba(242,200,121,0.3)" }}>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <AlertTriangle style={{ width: 14, height: 14, color: "#F2C879", flexShrink: 0, marginTop: 1 }} />
+                  <span style={{ fontSize: 11.5, color: "#EAF6FB", lineHeight: 1.5 }}>
+                    O serviço de rotas não respondeu. É um servidor público e cai às vezes.
+                  </span>
+                </div>
+                <button onClick={() => setTentativa(t => t + 1)}
+                  style={{ marginTop: 9, display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", fontSize: 11.5, fontWeight: 700, border: "1px solid rgba(242,200,121,0.4)", background: "rgba(242,200,121,0.12)", color: "#F2C879" }}>
+                  <RefreshCw style={{ width: 12, height: 12 }} /> Tentar de novo
+                </button>
               </div>
             )}
 
@@ -334,14 +408,14 @@ export default function PlanejadorRota({
                 <div style={{ fontSize: 11, color: "#9FD3EA" }}>
                   ~{Math.round(rotaBase.min)} min sem paradas
                 </div>
-                {rotaComParadas && (
+                {totalComParadas && (
                   <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(159,211,234,0.18)" }}>
                     <div style={rotulo}>Com {paradas.length} parada{paradas.length !== 1 ? "s" : ""}</div>
                     <div style={{ fontSize: 20, fontWeight: 900, color: cor.a, marginTop: 3 }}>
-                      {rotaComParadas.km.toFixed(1).replace(".", ",")} km
+                      {totalComParadas.km.toFixed(1).replace(".", ",")} km
                     </div>
                     <div style={{ fontSize: 11, color: "#F2C879" }}>
-                      +{rotaComParadas.extra.toFixed(1).replace(".", ",")} km no total
+                      +{totalComParadas.extra.toFixed(1).replace(".", ",")} km no total
                     </div>
                   </div>
                 )}
@@ -374,8 +448,8 @@ export default function PlanejadorRota({
               {candidatas.length === 0 ? (
                 <div style={{ padding: "28px 16px", textAlign: "center", fontSize: 12.5, color: "#9FD3EA" }}>
                   {rotaBase
-                    ? `Nenhuma empresa da carteira a até ${raioKm} km deste caminho. Tente um raio maior.`
-                    : "Escolha os dois pontos e trace a rota para ver quem fica no caminho."}
+                    ? `Nenhuma empresa da carteira a até ${raioKm} km deste caminho. Aumente o raio.`
+                    : "Escolha os dois pontos — a rota é traçada sozinha."}
                 </div>
               ) : (
                 <>
@@ -383,19 +457,26 @@ export default function PlanejadorRota({
                     <span style={{ fontSize: 11.5, fontWeight: 800, color: "#EAF6FB" }}>
                       {candidatas.length} no caminho
                     </span>
-                    {medindoDesvios && (
+                    {medindo && (
                       <span style={{ fontSize: 10.5, color: "#9FD3EA", display: "inline-flex", alignItems: "center", gap: 5 }}>
                         <Loader2 style={{ width: 10, height: 10, animation: "spin 1s linear infinite" }} />
                         calculando o desvio de cada uma…
                       </span>
                     )}
                   </div>
-                  {candidatas.map(c => {
-                    const parada = paradas.some(p => p.empresa_id === c.empresa_id);
+                  {candidatas.map((c, i) => {
+                    const escolhida = paradas.includes(c.empresa_id);
+                    const d = desvios[c.empresa_id];
+                    const medivel = i < MAX_DESVIOS;
                     return (
                       <div key={c.empresa_id}
-                        style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", borderBottom: "1px solid rgba(159,211,234,0.12)" }}>
-                        <Building2 style={{ width: 14, height: 14, color: parada ? cor.a : "#9FD3EA", flexShrink: 0 }} />
+                        style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", borderBottom: "1px solid rgba(159,211,234,0.12)", background: escolhida ? "rgba(131,221,168,0.06)" : undefined }}>
+                        {/* O número casa com o pin no mapa. */}
+                        <span style={{
+                          width: 20, height: 20, flexShrink: 0, borderRadius: "50%", display: "grid", placeItems: "center",
+                          fontSize: 10, fontWeight: 900, color: "#0A2540",
+                          background: escolhida ? cor.a : cor.desvio,
+                        }}>{i + 1}</span>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 12.5, fontWeight: 700, color: "#EAF6FB", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {c.nome}
@@ -406,33 +487,31 @@ export default function PlanejadorRota({
                         </div>
                         {/* O número que decide: quantos km a MAIS a viagem fica. */}
                         <div style={{ textAlign: "right", flexShrink: 0, minWidth: 92 }}>
-                          {c.desvioRealKm === null ? (
-                            <span style={{ fontSize: 10.5, color: "#8AA9C6" }}>
-                              {medindoDesvios ? "medindo…" : "não medido"}
-                            </span>
-                          ) : (
+                          {d ? (
                             <>
-                              <div style={{ fontSize: 13.5, fontWeight: 900, color: c.desvioRealKm <= 5 ? cor.a : cor.desvio }}>
-                                +{c.desvioRealKm.toFixed(1).replace(".", ",")} km
+                              <div style={{ fontSize: 13.5, fontWeight: 900, color: d.km <= 5 ? cor.a : cor.desvio }}>
+                                +{d.km.toFixed(1).replace(".", ",")} km
                               </div>
-                              {c.desvioMin !== null && (
-                                <div style={{ fontSize: 10, color: "#8AA9C6" }}>
-                                  +{Math.round(c.desvioMin)} min
-                                </div>
-                              )}
+                              <div style={{ fontSize: 10, color: "#8AA9C6" }}>
+                                +{Math.round(d.min)} min
+                              </div>
                             </>
+                          ) : (
+                            <span style={{ fontSize: 10.5, color: "#8AA9C6" }}>
+                              {medivel ? (medindo ? "medindo…" : "aguardando") : "não medido"}
+                            </span>
                           )}
                         </div>
-                        <button onClick={() => alternarParada(c)}
-                          title={parada ? "Tirar da viagem" : "Incluir na viagem"}
+                        <button onClick={() => alternarParada(c.empresa_id)}
+                          title={escolhida ? "Tirar da viagem" : "Incluir na viagem"}
                           style={{
                             width: 28, height: 28, borderRadius: 8, cursor: "pointer", flexShrink: 0,
                             display: "grid", placeItems: "center", fontFamily: "inherit",
-                            border: `1px solid ${parada ? cor.a : "rgba(159,211,234,0.25)"}`,
-                            background: parada ? "rgba(131,221,168,0.18)" : "transparent",
-                            color: parada ? cor.a : "#9FD3EA",
+                            border: `1px solid ${escolhida ? cor.a : "rgba(159,211,234,0.25)"}`,
+                            background: escolhida ? "rgba(131,221,168,0.18)" : "transparent",
+                            color: escolhida ? cor.a : "#9FD3EA",
                           }}>
-                          {parada ? <Flag style={{ width: 13, height: 13 }} /> : <Plus style={{ width: 13, height: 13 }} />}
+                          {escolhida ? <Flag style={{ width: 13, height: 13 }} /> : <Plus style={{ width: 13, height: 13 }} />}
                         </button>
                         <button onClick={() => navigate(`/clientes/${c.empresa_id}`)}
                           title="Abrir a ficha"
@@ -474,19 +553,22 @@ function SeletorPonto({
   rotulo: string;
 }) {
   const [modo, setModo] = useState<TipoPonto>("empresa");
-  const [busca, setBusca] = useState("");
   const [endereco, setEndereco] = useState("");
   const [buscandoEndereco, setBuscandoEndereco] = useState(false);
   const [erroEndereco, setErroEndereco] = useState<string | null>(null);
   const [gpsCarregando, setGpsCarregando] = useState(false);
 
-  const achados = useMemo(() => {
-    const q = busca.trim().toLowerCase();
-    if (!q) return [];
-    return empresas
-      .filter(({ e }) => e.nome.toLowerCase().includes(q) || (e.cidade || "").toLowerCase().includes(q))
-      .slice(0, 6);
-  }, [busca, empresas]);
+  // Ordem alfabética: a lista abre inteira, e ordem de cadastro não ajuda
+  // ninguém a achar um nome.
+  const opcoes = useMemo(() => empresas
+    .map(({ e }) => ({
+      valor: e.empresa_id,
+      rotulo: e.nome,
+      detalhe: e.cidade || undefined,
+      icone: Building2,
+    }))
+    .sort((a, b) => a.rotulo.localeCompare(b.rotulo)),
+    [empresas]);
 
   const usarGps = () => {
     if (!navigator.geolocation) { setErroEndereco("Este navegador não informa a localização."); return; }
@@ -550,7 +632,7 @@ function SeletorPonto({
           <span style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 700, color: "#EAF6FB", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {valor.rotulo}
           </span>
-          <button onClick={() => { onChange(null); setBusca(""); setEndereco(""); }} aria-label="Trocar"
+          <button onClick={() => { onChange(null); setEndereco(""); }} aria-label="Trocar"
             style={{ border: "none", background: "none", cursor: "pointer", color: "#9FD3EA", display: "grid", placeItems: "center" }}>
             <X style={{ width: 13, height: 13 }} />
           </button>
@@ -574,18 +656,29 @@ function SeletorPonto({
           </div>
 
           {modo === "empresa" && (
-            <>
-              <input value={busca} onChange={e => setBusca(e.target.value)}
-                placeholder="Nome ou cidade…" aria-label="Buscar empresa" style={campo} />
-              {achados.map(({ e, lat, lng }) => (
-                <button key={e.empresa_id}
-                  onClick={() => { onChange({ lat, lng, rotulo: e.nome, tipo: "empresa", empresa_id: e.empresa_id }); setBusca(""); }}
-                  style={{ width: "100%", textAlign: "left", padding: "7px 10px", marginTop: 4, borderRadius: 7, border: "1px solid rgba(159,211,234,0.14)", background: "rgba(18,59,94,0.55)", cursor: "pointer", fontFamily: "inherit" }}>
-                  <div style={{ fontSize: 11.5, fontWeight: 700, color: "#EAF6FB", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.nome}</div>
-                  <div style={{ fontSize: 10, color: "#8AA9C6" }}>{e.cidade || "—"}</div>
-                </button>
-              ))}
-            </>
+            /* O Dropdown padrão do CRM: abre a carteira inteira já listada, com
+               campo de busca acima de 8 itens. Antes era um input que só
+               mostrava algo depois de digitar — quem não lembrava o nome exato
+               ficava olhando para um campo vazio. */
+            opcoes.length === 0 ? (
+              <div style={{ fontSize: 11, color: "#8AA9C6", lineHeight: 1.5 }}>
+                Nenhuma empresa da carteira tem coordenada cadastrada.
+              </div>
+            ) : (
+              <Dropdown
+                valor="" altura={34} busca={opcoes.length > 8}
+                ariaLabel={`Empresa do ponto ${letra}`}
+                placeholder={`Escolher entre ${opcoes.length} empresas…`}
+                opcoes={opcoes}
+                onChange={id => {
+                  const alvo = empresas.find(({ e }) => e.empresa_id === id);
+                  if (alvo) onChange({
+                    lat: alvo.lat, lng: alvo.lng, rotulo: alvo.e.nome,
+                    tipo: "empresa", empresa_id: alvo.e.empresa_id,
+                  });
+                }}
+              />
+            )
           )}
 
           {modo === "gps" && (
