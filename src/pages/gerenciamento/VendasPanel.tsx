@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, useId } from "react";
 import { createPortal } from "react-dom";
 import { getToken } from "../../services/auth";
 import useIsMobile from "../../hooks/useIsMobile";
@@ -76,6 +76,10 @@ const css = `
   .vp-tipo:hover { border-color:rgba(159,211,234,0.40); color:#EAF6FB; }
   .vp-tipo.on { background:rgba(46,111,149,0.34); border-color:rgba(159,211,234,0.50); color:#EAF6FB; }
   .vp-tipo:focus-visible { outline:2px solid rgba(159,211,234,0.45); outline-offset:2px; }
+  .vp-sug { width:100%; display:flex; align-items:center; gap:9px; padding:9px 12px; border:none; border-bottom:1px solid rgba(159,211,234,0.14); background:none; cursor:pointer; text-align:left; font-family:inherit; }
+  .vp-sug:last-child { border-bottom:0; }
+  .vp-sug:hover, .vp-sug.on { background:rgba(46,111,149,0.22); }
+  .vp-sug:focus-visible { outline:2px solid rgba(159,211,234,0.45); outline-offset:-2px; }
 `;
 
 type TipoCatalogo = "equipamento" | "servico";
@@ -126,7 +130,25 @@ interface Item {
   descricao: string;
   quantidade: number;
   preco_unitario: number;
+  // So do item AVULSO: com equipamento_id o tipo vem do catalogo. Sem este
+  // campo, servico digitado a mao caia no grafico de equipamentos.
+  tipo?: TipoCatalogo | null;
 }
+
+// GET /catalogo/sugestoes — catalogo + descricoes de avulsos ja usadas.
+interface Sugestao {
+  equipamento_id: string | null;
+  descricao: string;
+  tipo: TipoCatalogo;
+  ultimo_preco: number | null;
+  origem: "catalogo" | "historico";
+  /** 0..1 contra o texto digitado; alimenta o aviso de duplicata. */
+  similaridade: number;
+}
+
+// A partir daqui o texto digitado e parecido demais com algo que ja existe
+// para deixar passar calado. Espelha SIMILARIDADE_AVISO no backend.
+const SIMILARIDADE_AVISO = 0.85;
 interface Orcamento {
   orcamento_id: string;
   empresa_id: string;
@@ -1193,6 +1215,9 @@ function EditorOrcamento({
           descricao: i.descricao.trim() || "Item",
           quantidade: Math.max(1, Number(i.quantidade) || 1),
           preco_unitario: Number(i.preco_unitario) || 0,
+          // O backend ignora `tipo` quando ha equipamento_id -- o catalogo e a
+          // fonte da verdade la. Mandar assim mesmo mantem o payload uniforme.
+          tipo: i.tipo || null,
         })),
       });
       const res = novo
@@ -1323,9 +1348,31 @@ function EditorOrcamento({
                         ? <Package style={{ width: 12, height: 12, color:"#9FD3EA" }} />
                         : <Plus style={{ width: 11, height: 11, color:"#9FD3EA" }} />}
                     </span>
-                    <input value={it.descricao} onChange={e => mudarItem(idx, { descricao: e.target.value })}
-                      placeholder="Ex.: Gerador 15 kVA" aria-label="Descrição do item"
-                      style={{ ...field, marginTop: 0, flex: 1, minWidth: 0, height: 36, fontSize: 12 }} />
+                    {/* Item do catalogo ja tem nome padronizado -- campo simples.
+                        O avulso e onde a nomenclatura se perde, e e la que o
+                        typeahead entra. */}
+                    {it.equipamento_id ? (
+                      <input value={it.descricao} onChange={e => mudarItem(idx, { descricao: e.target.value })}
+                        placeholder="Ex.: Gerador 15 kVA" aria-label="Descrição do item"
+                        style={{ ...field, marginTop: 0, flex: 1, minWidth: 0, height: 36, fontSize: 12 }} />
+                    ) : (
+                      <AutocompleteDescricao
+                        valor={it.descricao}
+                        hdrs={hdrs}
+                        estilo={{ ...field, marginTop: 0, height: 36, fontSize: 12 }}
+                        onTexto={t => mudarItem(idx, { descricao: t })}
+                        onEscolher={sug => mudarItem(idx, {
+                          descricao: sug.descricao,
+                          tipo: sug.tipo,
+                          // Sugestao do catalogo vira item do catalogo: o
+                          // orcamento passa a apontar para a linha real, que e
+                          // o que faz o grafico agrupar sozinho.
+                          equipamento_id: sug.equipamento_id,
+                          ...(sug.ultimo_preco !== null && !it.preco_unitario
+                            ? { preco_unitario: sug.ultimo_preco } : {}),
+                        })}
+                      />
+                    )}
                     <input type="number" min={1} value={it.quantidade} aria-label="Quantidade"
                       onChange={e => mudarItem(idx, { quantidade: Number(e.target.value) })} className="vp-num"
                       style={{ ...field, marginTop: 0, width: 62, height: 36, fontSize: 12, textAlign: "center", padding: "0 6px" }} />
@@ -1371,6 +1418,197 @@ function EditorOrcamento({
       </div>
     </div>,
     document.body
+  );
+}
+
+
+// ── Autocomplete da descricao do item avulso ─────────────────────────────────
+//
+// O problema que ele resolve nao e de digitacao, e de RELATORIO: cada variacao
+// livre ("almoço", "almoco", "Almoço equipe", "refeição") vira uma entrada
+// distinta nos graficos de historico, e o ranking por item deixa de significar
+// nada. Padronizar na entrada e mais barato que deduplicar depois.
+//
+// Orienta, nao bloqueia: texto novo continua permitido, e o aviso de duplicata
+// tem "ignorar". Um autocomplete que impede cadastro novo vira obstaculo, e a
+// pessoa contorna escrevendo pior ainda.
+function AutocompleteDescricao({
+  valor, hdrs, estilo, onTexto, onEscolher,
+}: {
+  valor: string;
+  hdrs: () => Record<string, string>;
+  estilo: React.CSSProperties;
+  onTexto: (t: string) => void;
+  onEscolher: (s: Sugestao) => void;
+}) {
+  const [sugestoes, setSugestoes] = useState<Sugestao[]>([]);
+  const [aberto, setAberto] = useState(false);
+  const [buscando, setBuscando] = useState(false);
+  const [ativo, setAtivo] = useState(-1);
+  const [avisoIgnorado, setAvisoIgnorado] = useState(false);
+  const [caixaRect, setCaixaRect] = useState<DOMRect | null>(null);
+  const campo = useRef<HTMLInputElement>(null);
+  const painel = useRef<HTMLDivElement>(null);
+  // combobox exige aria-controls apontando para a lista. Cada linha do
+  // orcamento monta o proprio autocomplete, entao o id tem que ser unico por
+  // instancia -- id fixo faria N campos apontarem para o mesmo painel.
+  const idPainel = useId();
+
+  // Consulta com debounce. O AbortController importa porque a resposta lenta de
+  // "alm" chegando depois da de "almoco" repovoaria a lista com o resultado
+  // velho -- o classico bug de typeahead.
+  useEffect(() => {
+    const termo = valor.trim();
+    if (termo.length < 2) { setSugestoes([]); setBuscando(false); return; }
+    const ctrl = new AbortController();
+    setBuscando(true);
+    const t = setTimeout(async () => {
+      try {
+        const r = await fetch(
+          `${API}/catalogo/sugestoes?q=${encodeURIComponent(termo)}&limite=10`,
+          { headers: hdrs(), signal: ctrl.signal });
+        if (r.ok) { setSugestoes(await r.json()); setAtivo(-1); }
+      } catch { /* offline ou rota ausente: o campo continua texto livre */ }
+      setBuscando(false);
+    }, 250);
+    return () => { clearTimeout(t); ctrl.abort(); };
+  }, [valor, hdrs]);
+
+  // O painel e fixed em portal, nao absolute: a lista de itens agora rola
+  // (overflow:auto), e um filho posicionado seria cortado na primeira linha.
+  const posicionar = useCallback(() => {
+    if (campo.current) setCaixaRect(campo.current.getBoundingClientRect());
+  }, []);
+
+  useEffect(() => {
+    if (!aberto) return;
+    posicionar();
+    const fechar = (e: MouseEvent) => {
+      const alvo = e.target as Node;
+      if (campo.current?.contains(alvo) || painel.current?.contains(alvo)) return;
+      setAberto(false);
+    };
+    window.addEventListener("scroll", posicionar, true);
+    window.addEventListener("resize", posicionar);
+    document.addEventListener("mousedown", fechar);
+    return () => {
+      window.removeEventListener("scroll", posicionar, true);
+      window.removeEventListener("resize", posicionar);
+      document.removeEventListener("mousedown", fechar);
+    };
+  }, [aberto, posicionar]);
+
+  const escolher = (s: Sugestao) => {
+    onEscolher(s);
+    setAberto(false);
+    setAvisoIgnorado(false);
+  };
+
+  // Aviso de duplicata: so quando o texto NAO e exatamente a sugestao (ai nao
+  // ha nada a avisar) e a parecenca passa do piso.
+  const quaseIgual = sugestoes.find(
+    s => s.similaridade >= SIMILARIDADE_AVISO &&
+         s.descricao.trim().toLowerCase() !== valor.trim().toLowerCase());
+  const mostrarAviso = !!quaseIgual && !avisoIgnorado;
+
+  const aoTeclar = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!aberto || sugestoes.length === 0) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); setAtivo(i => Math.min(i + 1, sugestoes.length - 1)); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setAtivo(i => Math.max(i - 1, -1)); }
+    else if (e.key === "Enter" && ativo >= 0) { e.preventDefault(); escolher(sugestoes[ativo]); }
+    else if (e.key === "Escape") { setAberto(false); }
+  };
+
+  return (
+    <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
+      <input
+        ref={campo} value={valor}
+        onChange={e => { onTexto(e.target.value); setAberto(true); setAvisoIgnorado(false); }}
+        onFocus={() => setAberto(true)}
+        onKeyDown={aoTeclar}
+        placeholder="Ex.: Gerador 15 kVA" aria-label="Descrição do item"
+        aria-autocomplete="list" aria-expanded={aberto} aria-controls={idPainel} role="combobox"
+        style={{ ...estilo, width: "100%", borderColor: mostrarAviso ? "rgba(242,200,121,0.55)" : undefined }}
+      />
+
+      {aberto && caixaRect && (sugestoes.length > 0 || mostrarAviso || buscando) && createPortal(
+        <div ref={painel} id={idPainel} role="listbox" aria-label="Itens parecidos"
+          style={{
+            position: "fixed", top: caixaRect.bottom + 4, left: caixaRect.left,
+            width: Math.max(caixaRect.width, 260), zIndex: 70,
+            maxHeight: 260, overflowY: "auto", borderRadius: 10, background:"#12385C",
+            border:"1px solid rgba(159,211,234,0.45)", boxShadow: "0 18px 48px rgba(3,14,26,0.55)",
+          }}>
+
+          {mostrarAviso && quaseIgual && (
+            <div style={{ padding: "9px 12px", background:"rgba(242,200,121,0.10)", borderBottom:"1px solid rgba(242,200,121,0.28)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                <AlertTriangle style={{ width: 12, height: 12, color:"#F2C879", flexShrink: 0 }} />
+                <span style={{ fontSize: 11, color:"#EAF6FB", flex: 1, minWidth: 0 }}>
+                  Já existe “{quaseIgual.descricao}” no cadastro — usar esse?
+                </span>
+              </div>
+              <div style={{ display: "flex", gap: 6, marginTop: 7 }}>
+                <button type="button" onClick={() => escolher(quaseIgual)}
+                  style={{ padding: "4px 10px", borderRadius: 7, border:"none", cursor: "pointer", background:"#F2C879", color:"#0A2540", fontSize: 10.5, fontWeight: 800, fontFamily: "inherit" }}>
+                  Usar esse
+                </button>
+                {/* "Ignorar" existe para o caso legitimo de item novo com nome
+                    parecido. Sem ele o aviso vira ruido permanente. */}
+                <button type="button" onClick={() => setAvisoIgnorado(true)}
+                  style={{ padding: "4px 10px", borderRadius: 7, border:"1px solid rgba(159,211,234,0.28)", cursor: "pointer", background:"none", color:"#9FD3EA", fontSize: 10.5, fontWeight: 700, fontFamily: "inherit" }}>
+                  Ignorar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {sugestoes.map((sug, i) => (
+            <button
+              key={`${sug.origem}-${sug.descricao}`} type="button" role="option"
+              aria-selected={i === ativo}
+              onMouseEnter={() => setAtivo(i)}
+              onClick={() => escolher(sug)}
+              className={`vp-sug${i === ativo ? " on" : ""}`}
+            >
+              {sug.tipo === "servico"
+                ? <Wrench style={{ width: 13, height: 13, color:"#C9B6E4", flexShrink: 0 }} />
+                : <Package style={{ width: 13, height: 13, color:"#9FD3EA", flexShrink: 0 }} />}
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "block", fontSize: 12, fontWeight: 700, color:"#EAF6FB", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {sug.descricao}
+                </span>
+                <span style={{ display: "block", fontSize: 9.5, fontWeight: 700, color:"#9FD3EA", marginTop: 1 }}>
+                  {sug.tipo === "servico" ? "Serviço" : "Material/Equipamento"}
+                  {/* De onde veio importa: item do catalogo traz preco de
+                      tabela; do historico, o ultimo preco praticado. */}
+                  {sug.origem === "historico" ? " · já usado antes" : " · do catálogo"}
+                </span>
+              </span>
+              {sug.ultimo_preco !== null && (
+                <span className="vp-num" style={{ fontSize: 11.5, fontWeight: 800, color:"#83DDA8", whiteSpace: "nowrap", flexShrink: 0 }}>
+                  {brl(sug.ultimo_preco)}
+                </span>
+              )}
+            </button>
+          ))}
+
+          {/* "Nada encontrado" nao pode parecer erro: aqui nao achar e o caso
+              normal de cadastrar item novo, que e permitido. */}
+          {!buscando && sugestoes.length === 0 && !mostrarAviso && (
+            <div style={{ padding: "10px 12px", fontSize: 11, color:"#9FD3EA" }}>
+              Nenhum parecido — vai entrar como item novo.
+            </div>
+          )}
+          {buscando && sugestoes.length === 0 && (
+            <div style={{ padding: "10px 12px", fontSize: 11, color:"#9FD3EA", display: "flex", alignItems: "center", gap: 6 }}>
+              <Loader2 style={{ width: 11, height: 11, animation: "spin 1s linear infinite" }} /> procurando…
+            </div>
+          )}
+        </div>,
+        document.body
+      )}
+    </div>
   );
 }
 
