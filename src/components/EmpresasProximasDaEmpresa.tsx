@@ -88,6 +88,17 @@ export default function EmpresasProximasDaEmpresa({
     [todas, empresaId]
   );
 
+  // Memoizado porque o polling de /empresas re-renderiza este componente a cada
+  // ciclo: um objeto literal novo aqui é prop nova lá, e o planejador tratava
+  // isso como "a origem mudou". Junto com a correção do lado de lá, é o que
+  // impede o mapa de se recriar sozinho enquanto está em uso.
+  const origemPlanejador = useMemo(
+    () => (temLocalizacao
+      ? { lat, lng: lon, rotulo: nome, tipo: "empresa" as const, empresa_id: empresaId }
+      : null),
+    [temLocalizacao, lat, lon, nome, empresaId]
+  );
+
   // O hook espera uma posição {lat, lon}: passamos a da empresa de referência.
   const referencia = useMemo(
     () => (temLocalizacao ? { lat, lon } : null),
@@ -246,9 +257,7 @@ export default function EmpresasProximasDaEmpresa({
       {planejando && (
         <PlanejadorRota
           empresas={todas}
-          origemInicial={temLocalizacao
-            ? { lat, lng: lon, rotulo: nome, tipo: "empresa", empresa_id: empresaId }
-            : null}
+          origemInicial={origemPlanejador}
           onFechar={() => setPlanejando(false)}
         />
       )}

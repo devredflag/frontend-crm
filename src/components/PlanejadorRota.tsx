@@ -110,6 +110,15 @@ export default function PlanejadorRota({
 
   const [pronto, setPronto] = useState(false);
   const [erroMapa, setErroMapa] = useState(false);
+  // Centro inicial congelado na primeira renderizacao. `origemInicial` chega
+  // como objeto literal do componente pai, que re-renderiza sozinho a cada
+  // ciclo do polling de /empresas -- usar a prop direto numa dependencia de
+  // efeito faz o mapa ser destruido e recriado de 5 em 5 segundos.
+  const centroInicial = useRef(origemInicial);
+  // Muda quando o mapa e (re)criado. O efeito de desenho depende disto: sem
+  // ele, um mapa novo ficaria vazio, porque as dependencias do desenho nao
+  // mudaram e o efeito nao voltaria a rodar.
+  const [mapaVersao, setMapaVersao] = useState(0);
   const [pontoA, setPontoA] = useState<Ponto | null>(origemInicial);
   const [pontoB, setPontoB] = useState<Ponto | null>(null);
   const [raioKm, setRaioKm] = useState(25);
@@ -143,16 +152,20 @@ export default function PlanejadorRota({
   useEffect(() => {
     if (!pronto || !containerRef.current || mapRef.current) return;
     const L = window.L;
+    const inicio = centroInicial.current;
     const map = L.map(containerRef.current, { scrollWheelZoom: true });
-    map.setView(origemInicial ? [origemInicial.lat, origemInicial.lng] : [-15.78, -47.93], origemInicial ? 11 : 4);
+    map.setView(inicio ? [inicio.lat, inicio.lng] : [-15.78, -47.93], inicio ? 11 : 4);
     L.tileLayer(TILE_URL, { maxZoom: 19, attribution: TILE_ATTR }).addTo(map);
     camadaRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
+    setMapaVersao(v => v + 1);
     // O modal abre com o container ainda sem tamanho final; sem isto o mapa
     // renderiza um quarto de tela cinza até alguém redimensionar a janela.
     setTimeout(() => map.invalidateSize(), 60);
     return () => { map.remove(); mapRef.current = null; camadaRef.current = null; };
-  }, [pronto, origemInicial]);
+    // SÓ `pronto`: o mapa é criado uma vez e vive até o modal fechar. Qualquer
+    // outra dependência aqui significa destruir e recriar o mapa em pleno uso.
+  }, [pronto]);
 
   // ── Camada 1: a rota A→B, automática ──
   // Dispara sozinha ao ter as duas pontas: escolher os pontos e não ver nada
@@ -233,8 +246,37 @@ export default function PlanejadorRota({
   }, [idsParaMedir, rotaBase, pontoA, pontoB]);
 
   // ── Desenho ──
+  // Assinatura do que esta na tela. O polling do componente pai troca a
+  // identidade do array de empresas a cada ciclo, e sem esta comparacao o mapa
+  // limparia e redesenharia tudo de 5 em 5 segundos -- piscando os pins.
+  const assinaturaDesenho = useMemo(() => JSON.stringify([
+    rotaBase?.km ?? null,
+    candidatas.map(c => [c.empresa_id, desvios[c.empresa_id]?.km ?? null]),
+    paradas,
+    pontoA ? [pontoA.lat, pontoA.lng, pontoA.rotulo] : null,
+    pontoB ? [pontoB.lat, pontoB.lng, pontoB.rotulo] : null,
+  ]), [rotaBase, candidatas, desvios, paradas, pontoA, pontoB]);
+
+  // Enquadramento separado do desenho: refazer o fitBounds a cada desvio medido
+  // ou a cada parada marcada faria o mapa pular embaixo da mao de quem esta
+  // olhando. So reenquadra quando o conjunto de pontos muda.
+  const assinaturaEnquadre = useMemo(() => JSON.stringify([
+    rotaBase?.km ?? null,
+    candidatas.map(c => c.empresa_id),
+    pontoA ? [pontoA.lat, pontoA.lng] : null,
+    pontoB ? [pontoB.lat, pontoB.lng] : null,
+  ]), [rotaBase, candidatas, pontoA, pontoB]);
+
+  const ultimoDesenho = useRef("");
+  const ultimoEnquadre = useRef("");
+
   useEffect(() => {
     if (!mapRef.current || !camadaRef.current) return;
+    // A versao entra na chave: mapa recriado tem camada vazia e precisa ser
+    // repovoado mesmo que o conteudo seja identico ao de antes.
+    const chave = `${mapaVersao}|${assinaturaDesenho}`;
+    if (ultimoDesenho.current === chave) return;
+    ultimoDesenho.current = chave;
     const L = window.L;
     const g = camadaRef.current;
     g.clearLayers();
@@ -268,14 +310,20 @@ export default function PlanejadorRota({
     if (pontoA) pin(pontoA, cor.a, "A", `A · ${pontoA.rotulo}`);
     if (pontoB) pin(pontoB, cor.b, "B", `B · ${pontoB.rotulo}`);
 
-    const tudo = [
-      ...(pontoA ? [[pontoA.lat, pontoA.lng]] : []),
-      ...(pontoB ? [[pontoB.lat, pontoB.lng]] : []),
-      ...candidatas.map(c => [c.lat, c.lng]),
-    ];
-    if (tudo.length > 1) mapRef.current.fitBounds(tudo as any, { padding: [50, 50] });
-    else if (tudo.length === 1) mapRef.current.setView(tudo[0] as any, 12);
-  }, [rotaBase, candidatas, paradas, desvios, pontoA, pontoB]);
+    if (ultimoEnquadre.current !== assinaturaEnquadre) {
+      ultimoEnquadre.current = assinaturaEnquadre;
+      const tudo = [
+        ...(pontoA ? [[pontoA.lat, pontoA.lng]] : []),
+        ...(pontoB ? [[pontoB.lat, pontoB.lng]] : []),
+        ...candidatas.map(c => [c.lat, c.lng]),
+      ];
+      if (tudo.length > 1) mapRef.current.fitBounds(tudo as any, { padding: [50, 50] });
+      else if (tudo.length === 1) mapRef.current.setView(tudo[0] as any, 12);
+    }
+    // `mapaVersao` entra para que um mapa recriado seja repovoado: sem ele a
+    // camada nova ficaria vazia, porque o conteudo em si nao mudou.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assinaturaDesenho, assinaturaEnquadre, mapaVersao]);
 
   // Total da viagem com as paradas escolhidas.
   const totalComParadas = useMemo(() => {
