@@ -1214,7 +1214,11 @@ function EditorOrcamento({
     <div onClick={onFechar}
       style={{ position: "fixed", inset: 0, zIndex: 60, background:"rgba(10,31,51,0.42)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div onClick={e => e.stopPropagation()}
-        style={{ width: "100%", maxWidth: 660, maxHeight: "90vh", overflowY: "auto", background:"#143354", borderRadius: 18, padding: 24, boxShadow: "0 24px 64px rgba(10,31,51,0.32)" }}>
+        /* 960 e nao 660: com o catalogo crescendo, a lista de itens mostrava
+           4-5 linhas e obrigava a rolar o modal inteiro para conferir o total.
+           O maxWidth em px com width:100% mantem o responsivo -- em tela menor
+           que isso ele ocupa a viewport toda menos o padding de 20 do backdrop. */
+        style={{ width: "100%", maxWidth: 960, maxHeight: "92vh", overflowY: "auto", background:"#143354", borderRadius: 18, padding: 24, boxShadow: "0 24px 64px rgba(10,31,51,0.32)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
           <div style={{ width: 34, height: 34, borderRadius: 10, background:"rgba(46,111,149,0.12)", display: "grid", placeItems: "center" }}>
             <FileText style={{ width: 17, height: 17, color:"#9FD3EA" }} />
@@ -1289,11 +1293,14 @@ function EditorOrcamento({
                 </p>
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              /* A lista rola por dentro, com o cabecalho de colunas fixo: sem
+                 isto, orcamento de 20 itens empurrava o Total e os botoes para
+                 fora da tela e a rolagem do modal virava a unica saida. */
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: "42vh", overflowY: "auto", paddingRight: 2 }}>
                 {/* Cabeçalho das colunas. Sem ele, o item avulso entra como
                     "Descrição · 1 · 0" e não dá para saber qual campo é a
                     quantidade e qual é o preço. */}
-                <div style={{ display: "flex", gap: 6, alignItems: "center", padding: "0 2px 2px" }}>
+                <div style={{ display: "flex", gap: 6, alignItems: "center", padding: "0 2px 4px", position: "sticky", top: 0, background:"#143354", zIndex: 1 }}>
                   <span style={{ width: 24, flexShrink: 0 }} />
                   <span style={{ ...label, flex: 1, minWidth: 0 }}>Descrição</span>
                   <span style={{ ...label, width: 62, flexShrink: 0, textAlign: "center" }}>Qtd.</span>
@@ -1487,7 +1494,7 @@ function SeletorCatalogo({
         // baixo dos itens e a lista virava um borrão.
         <div role="listbox" aria-label="Itens do catálogo" style={{
           position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 20,
-          maxHeight: 300, overflowY: "auto", borderRadius: 12, background:"#12385C",
+          maxHeight: 420, overflowY: "auto", borderRadius: 12, background:"#12385C",
           border:"1px solid rgba(159,211,234,0.45)", boxShadow: "0 18px 48px rgba(3,14,26,0.55)",
         }}>
           <div style={{ position: "sticky", top: 0, background:"#12385C", padding: 8, borderBottom:"1px solid rgba(159,211,234,0.22)", zIndex: 1 }}>
