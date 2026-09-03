@@ -15,7 +15,7 @@ import useIsMobile from "../../../hooks/useIsMobile";
 
 // ── Import do modal de alterações não salvas ──────────────────
 import UnsavedChangesModal, { UnsavedChangesAction } from "../../../components/UnsavedChangesModal";
-import CardUsuario, { useUsuarioLogado } from "../../../components/CardUsuario";
+import CardUsuario, { useUsuarioLogado, podeVerInsights } from "../../../components/CardUsuario";
 import FundoAzul from "../../../components/FundoAzul";
 // Ajuste o caminho acima conforme onde você colocou o componente
 
@@ -648,7 +648,7 @@ function ContatoCard({ contato, index, onChange, onRemove }: {
 export default function NovaEmpresa() {
   const navigate = useNavigate();
   // Insights e tela de gestao: fica fora do menu de quem nao e gerente.
-  const ehGerenteMenu = !!useUsuarioLogado()?.is_gerente;
+  const podeInsights = podeVerInsights(useUsuarioLogado());
   const location = useLocation();
   const prefill = (location.state as any)?.prefill || null;
 
@@ -1002,7 +1002,7 @@ export default function NovaEmpresa() {
           </div>
         </div>
         <nav style={{flex:1,display:"flex",flexDirection:"column",gap:2}}>
-          {navItems.filter(nav => nav.label !== "Insights" || ehGerenteMenu).map(item=>(
+          {navItems.filter(nav => nav.label !== "Insights" || podeInsights).map(item=>(
             // ── handleNavigateAway protege a navegação do sidebar ──
             <div key={item.label} onClick={()=>item.path&&handleNavigateAway(item.path)} className={`nav-item${item.active?" active":""}`} style={{cursor:item.path?"pointer":"default"}}>
               <item.icon style={{width:16,height:16}}/>{item.label}

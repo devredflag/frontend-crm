@@ -1,5 +1,5 @@
 import { getToken } from "../../../../services/auth";
-import CardUsuario, { useUsuarioLogado } from "../../../../components/CardUsuario";
+import CardUsuario, { useUsuarioLogado, podeVerInsights } from "../../../../components/CardUsuario";
 import FundoAzul from "../../../../components/FundoAzul";
 import { FUNDO_AZUL } from "../../../../components/FundoAzul";
   import { useEffect, useMemo, useRef, useState } from "react";
@@ -288,7 +288,7 @@ import { FUNDO_AZUL } from "../../../../components/FundoAzul";
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
   // Insights e tela de gestao: fica fora do menu de quem nao e gerente.
-  const ehGerenteMenu = !!useUsuarioLogado()?.is_gerente;
+  const podeInsights = podeVerInsights(useUsuarioLogado());
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     // Empresa que chegou como rascunho (criada pela busca, em lote ou avulsa).
@@ -515,7 +515,7 @@ import { FUNDO_AZUL } from "../../../../components/FundoAzul";
             </div>
           </div>
           <nav style={{flex:1,display:"flex",flexDirection:"column",gap:2}}>
-            {navItems.filter(nav => nav.label !== "Insights" || ehGerenteMenu).map(item=>(
+            {navItems.filter(nav => nav.label !== "Insights" || podeInsights).map(item=>(
               <div key={item.label} className="nav-item" onClick={()=>item.path&&navigate(item.path)}>
                 <item.icon style={{width:16,height:16}}/>{item.label}
               </div>

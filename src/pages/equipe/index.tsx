@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import useIsMobile from "../../hooks/useIsMobile";
 import Dropdown from "../../components/Dropdown";
-import CardUsuario, { useUsuarioLogado } from "../../components/CardUsuario";
+import CardUsuario, { useUsuarioLogado, podeVerInsights } from "../../components/CardUsuario";
 
 import FundoAzul from "../../components/FundoAzul";
 import { FUNDO_AZUL } from "../../components/FundoAzul";
@@ -119,7 +119,7 @@ function money(v?: number | null) { return `R$ ${Number(v || 0).toLocaleString("
 export default function Equipe() {
   const navigate = useNavigate();
   // Insights e tela de gestao: fica fora do menu de quem nao e gerente.
-  const ehGerenteMenu = !!useUsuarioLogado()?.is_gerente;
+  const podeInsights = podeVerInsights(useUsuarioLogado());
   const isMobile = useIsMobile();
   const [menuOpen, setMenuOpen] = useState(false);
   const [me, setMe] = useState<Me | null>(null);
@@ -367,7 +367,7 @@ export default function Equipe() {
           </div>
         </div>
         <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
-          {navItems.filter(nav => nav.label !== "Insights" || ehGerenteMenu).map(item => (
+          {navItems.filter(nav => nav.label !== "Insights" || podeInsights).map(item => (
             <div key={item.label} className={`nav-item${item.path === "/equipe" ? " active" : ""}`} onClick={() => navigate(item.path)}>
               <item.icon style={{ width: 16, height: 16, flexShrink: 0 }} />{item.label}
             </div>

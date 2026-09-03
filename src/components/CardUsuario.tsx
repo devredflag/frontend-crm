@@ -58,6 +58,21 @@ export function temRecurso(u: UsuarioCard | null | undefined, nome: string): boo
   return u.recursos.includes(nome);
 }
 
+/**
+ * Quem enxerga a tela de Insights.
+ *
+ * Regra em UM lugar de propósito: a sidebar é remontada dentro de cada página
+ * (herança do projeto), e antes disso a condição estava copiada em 12 arquivos
+ * — com a checagem de plano em apenas um deles, o que já era divergência.
+ *
+ * Gerente e supervisor: os dois definem meta, cada um no seu escopo. O
+ * supervisor vê só o próprio ramo, e quem recorta isso é o backend
+ * (`escopo_vendedores`), não esta função.
+ */
+export function podeVerInsights(u?: UsuarioCard | null): boolean {
+  return !!(u?.is_gerente || u?.is_supervisor) && temRecurso(u, "insights");
+}
+
 export function initials(n?: string) {
   return n?.split(" ").filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase() || "?";
 }

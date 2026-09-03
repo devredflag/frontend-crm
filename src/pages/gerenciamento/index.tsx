@@ -14,7 +14,7 @@ import useValoresOrcamento from "../../hooks/useValoresOrcamento";
 import useEmpresasAoVivo, { notificarEmpresas, patchLocalEmpresa } from "../../hooks/useEmpresasAoVivo";
 import { dataLocal, formatarData, diasDesde, diasAte, inicioDoDia } from "../../utils/data";
 import VendasPanel from "./VendasPanel";
-import CardUsuario, { useUsuarioLogado } from "../../components/CardUsuario";
+import CardUsuario, { useUsuarioLogado, podeVerInsights } from "../../components/CardUsuario";
 import AbasGerenciamento, { cssAbasGerenciamento } from "../../components/AbasGerenciamento";
 
 import FundoAzul from "../../components/FundoAzul";
@@ -351,7 +351,7 @@ function uniqueOptions(values: Array<string | null | undefined>) {
 export default function Gerenciamento() {
   const navigate = useNavigate();
   // Insights e tela de gestao: fica fora do menu de quem nao e gerente.
-  const ehGerenteMenu = !!useUsuarioLogado()?.is_gerente;
+  const podeInsights = podeVerInsights(useUsuarioLogado());
   const isMobile = useIsMobile();
   const [menuOpen, setMenuOpen] = useState(false);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
@@ -588,7 +588,7 @@ export default function Gerenciamento() {
           </div>
         </div>
         <nav style={{flex:1,display:"flex",flexDirection:"column",gap:2}}>
-          {navItems.filter(nav => nav.label !== "Insights" || ehGerenteMenu).map(item=>(
+          {navItems.filter(nav => nav.label !== "Insights" || podeInsights).map(item=>(
             <div key={item.label} className={`nav-item${item.active?" active":""}`} onClick={()=>{
               if(item.label==="Dashboards")navigate("/dashboard");
               if(item.label==="Insights")navigate("/insights");

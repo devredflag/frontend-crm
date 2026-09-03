@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 
 import { getToken } from "../../services/auth";
-import CardUsuario, { useUsuarioLogado, temRecurso } from "../../components/CardUsuario";
+import CardUsuario, { useUsuarioLogado, podeVerInsights } from "../../components/CardUsuario";
 import FundoAzul from "../../components/FundoAzul";
 import EvolucaoDaBase from "../../components/EvolucaoDaBase";
 import PrecisamDeAtencao from "../../components/PrecisamDeAtencao";
@@ -97,7 +97,7 @@ interface UsuarioRow { usuario_id: string; nome: string; role: string; ativo: bo
 interface Me {
   nome: string; email: string; is_gerente?: boolean; is_supervisor?: boolean;
   conta_nome?: string;
-  /** Recursos do plano (GET /me). Insights é recurso pago — ver temRecurso. */
+  /** Recursos do plano (GET /me). Insights é recurso pago — ver podeVerInsights. */
   recursos?: string[];
 }
 
@@ -167,9 +167,9 @@ function VazioBloco({ texto }: { texto: string }) {
 export default function Insights() {
   const navigate = useNavigate();
   // Insights e tela de gestao E recurso pago: fica fora do menu de quem nao e
-  // gerente, e de quem esta num plano que nao inclui.
+  // gerente nem supervisor, e de quem esta num plano que nao inclui.
   const usuarioMenu = useUsuarioLogado();
-  const ehGerenteMenu = !!usuarioMenu?.is_gerente && temRecurso(usuarioMenu, "insights");
+  const podeInsights = podeVerInsights(usuarioMenu);
   const isMobile = useIsMobile();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -198,7 +198,8 @@ export default function Insights() {
 
   useEffect(() => { carregar(); }, [carregar]);
 
-  // Tela de gestao e recurso pago. Esconder o item do menu nao fecha o caminho:
+  // Tela de gestao (gerente e supervisor) e recurso pago. Esconder o item do
+  // menu nao fecha o caminho:
   // /insights digitado direto abriria assim mesmo. So redireciona depois do /me
   // responder -- enquanto `me` e null nao da para saber a funcao, e chutar
   // expulsaria o gerente na propria carga da pagina.
@@ -207,9 +208,7 @@ export default function Insights() {
   // backend (exigir_recurso no main.py). Bundle editado nao pode virar acesso.
   useEffect(() => {
     if (!me) return;
-    if (!me.is_gerente || !temRecurso(me, "insights")) {
-      navigate("/dashboard", { replace: true });
-    }
+    if (!podeVerInsights(me)) navigate("/dashboard", { replace: true });
   }, [me, navigate]);
 
   // A lista de usuários é rota de gestor: pedir como vendedor volta 403 e
@@ -405,7 +404,7 @@ export default function Insights() {
           </div>
         </div>
         <nav style={{flex:1,display:"flex",flexDirection:"column",gap:2}}>
-          {navItems.filter(nav => nav.label !== "Insights" || ehGerenteMenu).map(item => (
+          {navItems.filter(nav => nav.label !== "Insights" || podeInsights).map(item => (
             <div key={item.label} className={`nav-item${item.path === "/insights" ? " active" : ""}`} onClick={() => navigate(item.path)}>
               <item.icon style={{width:16,height:16,flexShrink:0}}/>{item.label}
             </div>
