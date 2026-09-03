@@ -1,32 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-// ── Leaflet via CDN (custo zero: OpenStreetMap, sem API key) ──────────
-// Carregado dinamicamente para não exigir npm install nem mexer no build.
-declare global {
-  interface Window { L: any }
-}
-
-let leafletPromise: Promise<any> | null = null;
-function loadLeaflet(): Promise<any> {
-  if (window.L) return Promise.resolve(window.L);
-  if (leafletPromise) return leafletPromise;
-  leafletPromise = new Promise((resolve, reject) => {
-    if (!document.querySelector('link[data-leaflet]')) {
-      const css = document.createElement("link");
-      css.rel = "stylesheet";
-      css.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-      css.setAttribute("data-leaflet", "1");
-      document.head.appendChild(css);
-    }
-    const script = document.createElement("script");
-    script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-    script.async = true;
-    script.onload = () => resolve(window.L);
-    script.onerror = () => reject(new Error("Falha ao carregar o mapa"));
-    document.body.appendChild(script);
-  });
-  return leafletPromise;
-}
+// Leaflet, tiles e roteamento vivem em utils/mapa: o planejador de rota usa
+// os mesmos, e duas copias do carregador significariam duas tags <script>
+// disputando a global window.L.
+import {
+  loadLeaflet, rotaOSRM, haversineKm, TILE_URL, TILE_ATTR,
+} from "../utils/mapa";
 
 export interface EmpresaGeo {
   empresa_id: string;
@@ -49,32 +28,6 @@ export interface GeocodeProgresso {
   rodando: boolean;
   feitas: number;
   restantes: number | null;
-}
-
-// Distância em km entre dois pontos (Haversine) — puro cálculo, sem API.
-function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
-  const R = 6371;
-  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
-  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
-  const la1 = (a.lat * Math.PI) / 180;
-  const la2 = (b.lat * Math.PI) / 180;
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(h));
-}
-
-// Rota real seguindo ruas via OSRM (open source, grátis, sem API key).
-async function rotaOSRM(a: Ponto, b: Ponto): Promise<{ coords: [number, number][]; km: number; min: number } | null> {
-  try {
-    const url = `https://router.project-osrm.org/route/v1/driving/${a.lng},${a.lat};${b.lng},${b.lat}?overview=full&geometries=geojson`;
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const d = await res.json();
-    if (d.code !== "Ok" || !d.routes?.length) return null;
-    const coords = d.routes[0].geometry.coordinates.map((c: [number, number]) => [c[1], c[0]] as [number, number]);
-    return { coords, km: d.routes[0].distance / 1000, min: d.routes[0].duration / 60 };
-  } catch {
-    return null;
-  }
 }
 
 function tempCor(t?: string) {
@@ -130,10 +83,7 @@ export default function MapaProximidade({
     const L = window.L;
     const map = L.map(containerRef.current, { scrollWheelZoom: true, attributionControl: true });
     map.setView([-15.78, -47.93], 4);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    }).addTo(map);
+    L.tileLayer(TILE_URL, { maxZoom: 19, attribution: TILE_ATTR }).addTo(map);
     rotasRef.current = L.layerGroup().addTo(map);
     layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
@@ -180,7 +130,10 @@ export default function MapaProximidade({
       setRotando(true);
       const destinos: { nome: string; km: number; min: number }[] = [];
       for (const v of vz) {
-        const rota = await rotaOSRM(origem, v.pt);
+        const rota = await rotaOSRM([
+          { lat: origem.lat, lng: origem.lng },
+          { lat: v.pt.lat, lng: v.pt.lng },
+        ]);
         if (rota && rotasRef.current) {
           window.L.polyline(rota.coords, { color:"#9FD3EA", weight: 5, opacity: 0.85 }).addTo(rotasRef.current);
           destinos.push({ nome: v.pt.emp.nome, km: rota.km, min: rota.min });

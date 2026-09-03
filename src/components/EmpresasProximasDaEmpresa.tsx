@@ -2,7 +2,9 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   MapPin, Navigation, Building2, Search, AlertTriangle, Edit3, Loader2, Filter,
+  Route as RouteIcon,
 } from "lucide-react";
+import PlanejadorRota from "./PlanejadorRota";
 import { getToken } from "../services/auth";
 import { formatarDistancia } from "../utils/distancia";
 import useEmpresasProximas, { EmpresaComGeo } from "../hooks/useEmpresasProximas";
@@ -39,6 +41,9 @@ export default function EmpresasProximasDaEmpresa({
   const [calculando, setCalculando] = useState(false);
   const [semResultado, setSemResultado] = useState(false);
   const [soMesmoSegmento, setSoMesmoSegmento] = useState(false);
+  // O planejador abre por cima, sob demanda: ele carrega Leaflet de um CDN e
+  // calcula rota, e nada disso deve acontecer para quem só queria a lista.
+  const [planejando, setPlanejando] = useState(false);
 
   const lat = Number(latitude);
   const lon = Number(longitude);
@@ -220,8 +225,33 @@ export default function EmpresasProximasDaEmpresa({
               {segmento}
             </button>
           )}
+
+          {/* Rotas — a outra pergunta desta aba. "Quem está perto daqui" a lista
+              acima responde; "quem dá para encaixar numa viagem que eu já vou
+              fazer" precisa da rota por ruas, e por isso abre em tela cheia. */}
+          <button onClick={() => setPlanejando(true)}
+            title="Planejar uma viagem e ver quem fica no caminho"
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "5px 13px", borderRadius: 20, cursor: "pointer", fontFamily: "inherit",
+              fontSize: 11, fontWeight: 800, color: "#EAF6FB",
+              border: "1.5px solid rgba(86,164,245,0.45)",
+              background: "rgba(86,164,245,0.16)",
+            }}>
+            <RouteIcon style={{ width: 12, height: 12 }} /> Rotas
+          </button>
         </div>
       </div>
+
+      {planejando && (
+        <PlanejadorRota
+          empresas={todas}
+          origemInicial={temLocalizacao
+            ? { lat, lng: lon, rotulo: nome, tipo: "empresa", empresa_id: empresaId }
+            : null}
+          onFechar={() => setPlanejando(false)}
+        />
+      )}
 
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
         <span style={{ fontSize: 12, fontWeight: 700, color:"#EAF6FB" }}>
