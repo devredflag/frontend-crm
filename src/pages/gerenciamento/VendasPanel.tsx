@@ -69,6 +69,13 @@ const css = `
   .vp-pag:hover:not(:disabled) { color:#EAF6FB; border-color:rgba(159,211,234,0.30); }
   .vp-pag:disabled { opacity:0.35; cursor:default; }
   .vp-pag.on { background:rgba(46,111,149,0.30); border-color:rgba(159,211,234,0.45); color:#EAF6FB; }
+  /* Chips de tipo dentro do seletor de catalogo. Menores que o .vp-chip da
+     lista de orcamentos: ali sao filtro de tela, aqui vivem dentro de um
+     dropdown e competem por espaco com o campo de busca. */
+  .vp-tipo { padding:4px 10px; border-radius:16px; border:1.5px solid rgba(159,211,234,0.22); background:#0F2E4B; font-size:10.5px; font-weight:700; cursor:pointer; transition:all 0.14s; color:#9FD3EA; font-family:inherit; white-space:nowrap; display:inline-flex; align-items:center; gap:5px; }
+  .vp-tipo:hover { border-color:rgba(159,211,234,0.40); color:#EAF6FB; }
+  .vp-tipo.on { background:rgba(46,111,149,0.34); border-color:rgba(159,211,234,0.50); color:#EAF6FB; }
+  .vp-tipo:focus-visible { outline:2px solid rgba(159,211,234,0.45); outline-offset:2px; }
 `;
 
 type TipoCatalogo = "equipamento" | "servico";
@@ -1373,6 +1380,9 @@ function SeletorCatalogo({
 }) {
   const [aberto, setAberto] = useState(false);
   const [busca, setBusca] = useState("");
+  // "todos" e o padrao: com o catalogo pequeno, abrir ja filtrado esconderia
+  // metade dos itens de quem so quer olhar a lista.
+  const [filtroTipo, setFiltroTipo] = useState<TipoCatalogo | "todos">("todos");
   const caixa = useRef<HTMLDivElement>(null);
 
   // Fecha ao clicar fora ou apertar Esc.
@@ -1387,15 +1397,21 @@ function SeletorCatalogo({
     return () => { document.removeEventListener("mousedown", fora); document.removeEventListener("keydown", esc); };
   }, [aberto]);
 
+  // Tipo e busca se combinam: buscar DENTRO do tipo escolhido. Filtrar so por
+  // um dos dois faria o contador e a lista discordarem.
+  const doTipo = useMemo(
+    () => filtroTipo === "todos" ? equipamentos : equipamentos.filter(e => tipoDe(e) === filtroTipo),
+    [equipamentos, filtroTipo]);
+
   const filtrados = useMemo(() => {
     const q = busca.trim().toLowerCase();
-    if (!q) return equipamentos;
-    return equipamentos.filter(e =>
+    if (!q) return doTipo;
+    return doTipo.filter(e =>
       e.nome.toLowerCase().includes(q) ||
       (e.descricao || "").toLowerCase().includes(q) ||
       (e.codigo || "").toLowerCase().includes(q)
     );
-  }, [equipamentos, busca]);
+  }, [doTipo, busca]);
 
   // Agrupado por tipo, na ordem em que a venda acontece: o equipamento primeiro,
   // o servico que vai junto com ele depois. Misturado, "Instalação" no meio de
@@ -1407,12 +1423,33 @@ function SeletorCatalogo({
 
   const vazio = equipamentos.length === 0;
   const qtdServicos = equipamentos.filter(e => tipoDe(e) === "servico").length;
+  const qtdEquipamentos = equipamentos.length - qtdServicos;
+
+  // O subtitulo do botao conta o RECORTE ATIVO, nao o catalogo inteiro: com o
+  // filtro em "Servicos", dizer "12 itens disponiveis" contradiz a lista logo
+  // abaixo, que mostra 2.
+  const resumo = (() => {
+    if (vazio) return "Nenhum item cadastrado ainda";
+    const n = doTipo.length;
+    const unidade = n === 1 ? "item" : "itens";
+    if (filtroTipo === "servico") return `${n} ${n === 1 ? "serviço" : "serviços"} — preço já preenchido`;
+    if (filtroTipo === "equipamento") return `${n} ${unidade} — preço já preenchido`;
+    return `${n} ${unidade} ${n === 1 ? "disponível" : "disponíveis"}`
+      + (qtdServicos > 0 ? `, ${qtdServicos} serviço${qtdServicos === 1 ? "" : "s"}` : "")
+      + " — preço já preenchido";
+  })();
+
+  const ABAS_TIPO: { chave: TipoCatalogo | "todos"; rotulo: string; qtd: number }[] = [
+    { chave: "todos", rotulo: "Todos", qtd: equipamentos.length },
+    { chave: "equipamento", rotulo: "Materiais/Equipamentos", qtd: qtdEquipamentos },
+    { chave: "servico", rotulo: "Serviços", qtd: qtdServicos },
+  ];
 
   return (
     <div ref={caixa} style={{ position: "relative", flex: 1, minWidth: 230 }}>
       <button
         type="button"
-        onClick={() => { if (!vazio) { setAberto(a => !a); setBusca(""); } }}
+        onClick={() => { if (!vazio) { setAberto(a => !a); setBusca(""); setFiltroTipo("todos"); } }}
         disabled={vazio}
         aria-haspopup="listbox"
         aria-expanded={aberto}
@@ -1439,11 +1476,7 @@ function SeletorCatalogo({
           </span>
           {/* era rgba(21,84,127,0.62) — azul escuro sobre fundo naval, ilegível */}
           <span style={{ display: "block", fontSize: 10.5, fontWeight: 600, color:"#9FD3EA", marginTop: 1 }}>
-            {vazio
-              ? "Nenhum item cadastrado ainda"
-              : `${equipamentos.length} ${equipamentos.length === 1 ? "item disponível" : "itens disponíveis"}`
-                + (qtdServicos > 0 ? `, ${qtdServicos} serviço${qtdServicos === 1 ? "" : "s"}` : "")
-                + " — preço já preenchido"}
+            {resumo}
           </span>
         </span>
         <ChevronDown style={{ width: 15, height: 15, color:"#9FD3EA", flexShrink: 0, transform: aberto ? "rotate(180deg)" : "none", transition: "transform 0.16s" }} />
@@ -1457,7 +1490,23 @@ function SeletorCatalogo({
           maxHeight: 300, overflowY: "auto", borderRadius: 12, background:"#12385C",
           border:"1px solid rgba(159,211,234,0.45)", boxShadow: "0 18px 48px rgba(3,14,26,0.55)",
         }}>
-          <div style={{ position: "sticky", top: 0, background:"#12385C", padding: 8, borderBottom:"1px solid rgba(159,211,234,0.22)" }}>
+          <div style={{ position: "sticky", top: 0, background:"#12385C", padding: 8, borderBottom:"1px solid rgba(159,211,234,0.22)", zIndex: 1 }}>
+            {/* Segmentacao por tipo ACIMA da busca: primeiro se escolhe onde
+                procurar, depois o que procurar. O contador de cada chip mostra
+                o tamanho do recorte antes de entrar nele. */}
+            <div role="tablist" aria-label="Tipo de item" style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
+              {ABAS_TIPO.map(t => (
+                <button
+                  key={t.chave} type="button" role="tab"
+                  aria-selected={filtroTipo === t.chave}
+                  onClick={() => setFiltroTipo(t.chave)}
+                  className={`vp-tipo${filtroTipo === t.chave ? " on" : ""}`}
+                >
+                  {t.rotulo}
+                  <span style={{ opacity: 0.75, fontWeight: 800 }}>{t.qtd}</span>
+                </button>
+              ))}
+            </div>
             <input
               autoFocus value={busca} onChange={e => setBusca(e.target.value)}
               placeholder="Buscar no catálogo…" aria-label="Buscar no catálogo"
@@ -1470,7 +1519,13 @@ function SeletorCatalogo({
           </div>
           {filtrados.length === 0 ? (
             <div style={{ padding: "22px 14px", textAlign: "center", fontSize: 12, fontWeight: 600, color:"#9FD3EA" }}>
-              Nenhum item encontrado para “{busca}”.
+              {/* Sem esta distincao, filtrar em "Servicos" num catalogo so de
+                  equipamentos dizia 'nenhum item para ""' e parecia bug. */}
+              {busca.trim()
+                ? <>Nenhum item encontrado para “{busca}”{filtroTipo !== "todos" ? " neste tipo" : ""}.</>
+                : filtroTipo === "servico" ? "Nenhum serviço no catálogo."
+                : filtroTipo === "equipamento" ? "Nenhum equipamento no catálogo."
+                : "Nenhum item no catálogo."}
             </div>
           ) : grupos.map(g => (
             <div key={g.tipo}>
