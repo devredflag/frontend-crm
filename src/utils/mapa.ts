@@ -50,17 +50,49 @@ export function loadLeaflet(): Promise<any> {
 // tile com chave ou domínio autorizado, e a chave é de quem tem a conta.
 //
 //   REACT_APP_TILE_URL   template do provedor; `{key}` é substituído
-//   REACT_APP_TILE_KEY   a chave
-//   REACT_APP_TILE_ATTR  atribuição exigida pelo provedor
+//   REACT_APP_TILE_KEY   a chave, quando o provedor exigir uma na URL
 //
-// Exemplo (MapTiler):
-//   REACT_APP_TILE_URL=https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key={key}
+// Exemplo (Stadia, autenticado por domínio — não leva chave nenhuma):
+//   REACT_APP_TILE_URL=https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png
 //
-// ATENÇÃO: em CRA toda REACT_APP_* vai no bundle público. A chave precisa ser
-// restrita por domínio no painel do provedor — sem isso ela é utilizável por
-// qualquer um que abrir o DevTools, e a cota gratuita é de quem tiver pressa.
+// ATENÇÃO: em CRA toda REACT_APP_* vai no bundle público. Se o provedor exigir
+// chave na URL, ela precisa ser restrita por domínio no painel dele — sem isso
+// é utilizável por qualquer um que abrir o DevTools. Provedor com autenticação
+// por domínio (Stadia) dispensa a chave e é preferível por isso.
 const OSM_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+
+/**
+ * Atribuição por provedor, deduzida da própria URL dos tiles.
+ *
+ * Mora no código e NÃO em variável de ambiente, de propósito. É texto fixo que
+ * a licença de cada provedor obriga a exibir, cheio de aspas, `&` e HTML —
+ * exatamente o tipo de valor que chega corrompido ao passar por um campo de
+ * painel (já chegou: `&copy;` virou `copy;` e `<a href=` virou `<ahref=`).
+ * Atribuição quebrada é descumprimento de licença, não defeito de estilo, e
+ * não pode depender de alguém colar HTML certo num formulário.
+ */
+const ATRIBUICOES: { provedor: RegExp; texto: string }[] = [
+  {
+    provedor: /stadiamaps\.com/i,
+    texto:
+      '&copy; <a href="https://stadiamaps.com/" target="_blank" rel="noopener">Stadia Maps</a> ' +
+      '&copy; <a href="https://openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> ' +
+      '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
+  },
+  {
+    provedor: /maptiler\.com/i,
+    texto:
+      '&copy; <a href="https://www.maptiler.com/copyright/" target="_blank" rel="noopener">MapTiler</a> ' +
+      '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
+  },
+  {
+    provedor: /cartocdn\.com/i,
+    texto:
+      '&copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a> ' +
+      '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
+  },
+];
 
 const tileTemplate = process.env.REACT_APP_TILE_URL;
 const tileKey = process.env.REACT_APP_TILE_KEY;
@@ -75,7 +107,7 @@ export const TILE_URL = tilePronto
   : OSM_URL;
 
 export const TILE_ATTR = tilePronto
-  ? (process.env.REACT_APP_TILE_ATTR || OSM_ATTR)
+  ? (ATRIBUICOES.find(a => a.provedor.test(TILE_URL))?.texto ?? OSM_ATTR)
   : OSM_ATTR;
 
 export interface LatLng { lat: number; lng: number }
