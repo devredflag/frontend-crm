@@ -494,6 +494,53 @@ export function useVerNumeros(): [boolean, () => void] {
 // Escala
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Varredura
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Converte a posição horizontal do ponteiro para coordenadas do `viewBox`.
+ *
+ * O viewBox é fixo e o SVG escala por `width:100%` com a proporção preservada,
+ * então a caixa renderizada mapeia linearmente no viewBox. O valor sai preso
+ * entre as margens: com o cursor sobre a área do eixo, apontar para fora do
+ * gráfico daria um índice inválido.
+ */
+export function posicaoNoViewBox(
+  clientX: number, caixa: { left: number; width: number },
+  larguraViewBox: number, margemEsquerda: number, margemDireita: number,
+): number | null {
+  if (!caixa.width) return null;
+  const vx = ((clientX - caixa.left) / caixa.width) * larguraViewBox;
+  return Math.min(Math.max(vx, margemEsquerda), larguraViewBox - margemDireita);
+}
+
+/**
+ * Mês mais próximo, para série de LINHA.
+ *
+ * Os pontos ficam EM cima de `x(i)`, com o primeiro colado na margem esquerda e
+ * o último na direita — então o mais próximo é o arredondamento, e as duas
+ * pontas têm meia faixa de alcance. Usar `floor` aqui daria o mês anterior em
+ * toda a metade esquerda de cada ponto.
+ */
+export function mesMaisProximo(vx: number, margemEsquerda: number, faixa: number, total: number): number {
+  if (total <= 1 || faixa <= 0) return 0;
+  return Math.min(Math.max(Math.round((vx - margemEsquerda) / faixa), 0), total - 1);
+}
+
+/**
+ * Mês sob o cursor, para série de COLUNA.
+ *
+ * Aqui o mês ocupa uma faixa `[L + passo*i, L + passo*(i+1))`, e não um ponto —
+ * então é `floor`, não `round`. Trocar um pelo outro acende a coluna vizinha em
+ * metade do percurso, e o erro passa despercebido porque o desenho continua
+ * plausível.
+ */
+export function mesSobCursor(vx: number, margemEsquerda: number, passo: number, total: number): number {
+  if (total <= 0 || passo <= 0) return 0;
+  return Math.min(Math.max(Math.floor((vx - margemEsquerda) / passo), 0), total - 1);
+}
+
 /** Marcas do eixo Y em números redondos, ~4 divisões. */
 export function marcasEixo(maximo: number): number[] {
   if (maximo <= 0) return [0, 1];

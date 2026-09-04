@@ -16,7 +16,7 @@ import {
   taxaConversao, cicloMedio, ticketMedio, valorAprovado, valorPerdido,
   pipelineEm, novosLeads, taxaAprovacaoProposta, tempoRespostaCliente,
   tempoAteEnvio, coberturaFollowUp, coberturaContato,
-  calcularKpi, serieMensal, porCategoria, motivosRecusa,
+  calcularKpi, serieKpi, serieMensal, porCategoria, motivosRecusa,
   retratoFunil, agingPropostas, porVendedor, porEquipe, equipesComparaveis,
   atividadesPorTipo, esforcoPorFechamento, ativasSemAgenda, taxaAceiteConvite,
   KPIS, KPIS_DESTAQUE, diasEntre,
@@ -499,6 +499,21 @@ describe("séries mensais", () => {
   it("a série de fechados usa a data do desfecho, não a do cadastro", () => {
     const s = serieMensal("fechados", "Fechados", "#000", d, 6, BASE);
     expect(s.valores).toEqual([0, 0, 0, 0, 1, 0]);    // maio
+  });
+
+  it("a série sabe se subir é bom, para o balão pintar a variação certo", () => {
+    // Sem isto, um mês com mais negócios PERDIDOS apareceria em verde.
+    expect(serieMensal("leads", "Leads", "#000", d, 6, BASE).subirEBom).toBe(true);
+    expect(serieMensal("perdidos", "Perdidos", "#000", d, 6, BASE).subirEBom).toBe(false);
+    expect(serieMensal("recusado", "Recusado", "#000", d, 6, BASE).subirEBom).toBe(false);
+  });
+
+  it("serieKpi herda a direção do próprio indicador", () => {
+    // "Ciclo de fechamento" cai para melhorar: subir tem de sair em vermelho.
+    const ciclo = KPIS.filter(k => k.chave === "ciclo")[0];
+    expect(serieKpi(ciclo, d, 6, BASE).subirEBom).toBe(false);
+    const valor = KPIS.filter(k => k.chave === "valor")[0];
+    expect(serieKpi(valor, d, 6, BASE).subirEBom).toBe(true);
   });
 
   it("chave desconhecida devolve série vazia em vez de quebrar", () => {

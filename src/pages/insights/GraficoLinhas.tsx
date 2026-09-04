@@ -16,13 +16,13 @@
  */
 
 import { useState } from "react";
-import { motion } from "framer-motion";
 
 import useIsMobile from "../../hooks/useIsMobile";
 import { brl } from "../../utils/moeda";
 import type { Balde, Serie } from "../../utils/metricas";
 import {
-  caminhoComBuracos, marcasEixo, rotuloEixo, Tabela, Num, VerNumeros, useVerNumeros,
+  caminhoComBuracos, marcasEixo, mesMaisProximo, posicaoNoViewBox, rotuloEixo,
+  Tabela, Num, VerNumeros, useVerNumeros,
 } from "./pecas";
 
 const CINZA_ANTERIOR = "#7E9DBB";
@@ -66,6 +66,19 @@ export default function GraficoLinhas({
 }: Props) {
   const isMobile = useIsMobile();
   const [ativo, setAtivo] = useState<number | null>(null);
+  /**
+   * Posição do cursor em coordenadas do viewBox, não o mês.
+   *
+   * São duas coisas separadas de propósito: a linha-guia acompanha o cursor de
+   * forma CONTÍNUA (é o que dá a sensação de varredura), mas o valor lido é
+   * sempre o do mês mais próximo. Interpolar o valor no meio do caminho — "7,4
+   * leads em 12 de março" — seria inventar um número que não existe: a série é
+   * mensal, e o ponto entre dois meses não foi medido por ninguém.
+   *
+   * O que amarra os dois é o marcador: ele fica em cima do ponto que está sendo
+   * lido, então dá para ver de onde o número do balão está saindo.
+   */
+  const [cursor, setCursor] = useState<number | null>(null);
   const [tabela, trocarTabela] = useVerNumeros();
 
   const comAnterior = mostrarAnterior && series.some(s => !!s.anterior);
@@ -103,6 +116,24 @@ export default function GraficoLinhas({
   const faixa = pw / Math.max(n - 1, 1);
 
   const caminho = (vals: (number | null)[]) => caminhoComBuracos(vals, x, y);
+
+  /**
+   * Converte a posição do ponteiro para o viewBox e acha o mês mais próximo.
+   *
+   * O `viewBox` é fixo e o SVG escala por `width:100%` com a proporção
+   * preservada, então a caixa renderizada mapeia linearmente no viewBox e uma
+   * regra de três basta. Preso entre as margens para o cursor na área do eixo
+   * não apontar para fora do gráfico.
+   */
+  const varrer = (clientX: number, svg: SVGSVGElement | null) => {
+    if (!svg) return;
+    const vx = posicaoNoViewBox(clientX, svg.getBoundingClientRect(), W, L, R);
+    if (vx === null) return;
+    setCursor(vx);
+    setAtivo(mesMaisProximo(vx, L, faixa, n));
+  };
+
+  const sair = () => { setCursor(null); setAtivo(null); };
   const serieInteira = series.length === 1 && series[0].valores.every(v => v !== null);
 
   /** Índice do último mês com amostra — onde ficam o marcador e o rótulo. */
@@ -164,6 +195,17 @@ export default function GraficoLinhas({
         <div style={{ position: "relative" }}>
           <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }}
                role="img"
+               // A varredura fica no SVG inteiro, e não em faixas por mês: assim
+               // o gráfico responde ao movimento, e não a entrar e sair de uma
+               // caixa invisível. Passar o mouse em qualquer lugar do desenho já
+               // mostra o mês debaixo do cursor.
+               onMouseMove={e => varrer(e.clientX, e.currentTarget)}
+               onMouseLeave={sair}
+               // Toque: sem `preventDefault`, para a página continuar rolando —
+               // arrastar o dedo na horizontal lê o gráfico, na vertical rola.
+               onTouchStart={e => varrer(e.touches[0].clientX, e.currentTarget)}
+               onTouchMove={e => varrer(e.touches[0].clientX, e.currentTarget)}
+               onTouchEnd={sair}
                aria-label={series.map(s =>
                  `${s.rotulo}: ${baldes.map((b, i) => `${b.rotulo} ${fmt(s.valores[i] ?? null, moeda)}`).join(", ")}`
                ).join(". ")}>
@@ -237,9 +279,16 @@ export default function GraficoLinhas({
               </text>
             ))}
 
-            {ativo !== null && (
-              <line x1={x(ativo)} x2={x(ativo)} y1={T} y2={T + ph}
+            {/* A guia acompanha o cursor; o traço curto embaixo marca o mês
+                que está sendo lido. Os dois juntos deixam claro que o valor vem
+                de um ponto medido, e não da posição exata do dedo. */}
+            {cursor !== null && (
+              <line x1={cursor} x2={cursor} y1={T} y2={T + ph}
                     stroke="rgba(126,176,219,0.45)" strokeWidth="1" />
+            )}
+            {ativo !== null && (
+              <line x1={x(ativo)} x2={x(ativo)} y1={T + ph} y2={T + ph + 5}
+                    stroke="#FFFFFF" strokeWidth="1.5" strokeOpacity="0.75" />
             )}
 
             {baldes.map((b, i) => (
@@ -250,28 +299,37 @@ export default function GraficoLinhas({
               </text>
             ))}
 
-            {/* Alvo de mouse e de teclado: a COLUNA inteira do mês, não o
-                ponto. Acertar um círculo de 4px é sofrimento, e com teclado
-                seria impossível. */}
+            {/* Alvos de TECLADO, um por mês. O mouse não passa por aqui
+                (`pointerEvents:none`) — quem cuida dele é a varredura do SVG —,
+                mas o foco por Tab continua funcionando, e é o único caminho para
+                quem não usa ponteiro. Ao focar, a guia vai para o mês exato. */}
             {baldes.map((b, i) => (
               <rect key={`h-${i}`} x={x(i) - faixa / 2} y={T} width={faixa} height={ph}
-                    fill="transparent" tabIndex={0} role="button"
+                    fill="transparent" style={{ pointerEvents: "none" }} tabIndex={0} role="button"
                     aria-label={`${b.rotulo} de ${b.ano}: ${series.map(s =>
                       `${s.rotulo} ${fmt(s.valores[i] ?? null, moeda)}`).join(", ")}`}
-                    onMouseEnter={() => setAtivo(i)} onMouseLeave={() => setAtivo(null)}
-                    onFocus={() => setAtivo(i)} onBlur={() => setAtivo(null)} />
+                    onFocus={() => { setAtivo(i); setCursor(x(i)); }}
+                    onBlur={sair} />
             ))}
           </svg>
 
           {ativo !== null && (
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.12 }}
+            <div
               style={{
                 position: "absolute", pointerEvents: "none", zIndex: 5,
-                left: `${(x(ativo) / W) * 100}%`,
+                // Segue o CURSOR, não o mês: pular de mês em mês faria o balão
+                // saltar durante a varredura e a leitura viraria um piscar.
+                left: `${((cursor ?? x(ativo)) / W) * 100}%`,
                 top: 6,
-                // Vira o balão para dentro nas pontas, senão ele sai do card.
-                transform: `translateX(${ativo === 0 ? "0%" : ativo === n - 1 ? "-100%" : "-50%"})`,
+                // Vira o balão para dentro perto das bordas, senão ele sai do
+                // card — pela posição do cursor, que é o que manda agora.
+                transform: `translateX(${
+                  (cursor ?? x(ativo)) < W * 0.22 ? "0%"
+                  : (cursor ?? x(ativo)) > W * 0.78 ? "-100%" : "-50%"})`,
+                // Sem animação de entrada: durante a varredura ela reiniciaria a
+                // cada quadro e o balão ficaria tremendo. A transição de posição
+                // é curta só para o salto entre meses não ser seco.
+                transition: "left 0.08s linear",
                 background: "#0A1F33", border: "1px solid rgba(126,176,219,0.30)", borderRadius: 9,
                 padding: "8px 11px", fontSize: 12, whiteSpace: "nowrap", color: "#FFFFFF",
                 boxShadow: "0 8px 24px rgba(3,14,26,0.55)",
@@ -279,16 +337,29 @@ export default function GraficoLinhas({
               <div style={{ color: "#B6CFE4", fontSize: 11, marginBottom: 5 }}>
                 {baldes[ativo].rotulo} de {baldes[ativo].ano}
               </div>
-              {series.map((s, si) => (
-                <div key={s.chave} style={{ display: "flex", alignItems: "center", gap: 7,
-                                            marginTop: si ? 3 : 0 }}>
-                  <span style={{ width: 8, height: 3, borderRadius: 2, background: s.cor, flexShrink: 0 }} />
-                  <span style={{ color: "#B6CFE4" }}>{s.rotulo}</span>
-                  <strong style={{ marginLeft: "auto", paddingLeft: 10 }}>
-                    {fmt(s.valores[ativo] ?? null, moeda)}
-                  </strong>
-                </div>
-              ))}
+              {series.map((s, si) => {
+                const v = s.valores[ativo] ?? null;
+                const antesNoMes = ativo > 0 ? (s.valores[ativo - 1] ?? null) : null;
+                // Só compara quando os DOIS meses têm amostra. Tratar buraco
+                // como zero inventaria uma queda que não aconteceu.
+                const delta = v !== null && antesNoMes !== null ? v - antesNoMes : null;
+                return (
+                  <div key={s.chave} style={{ display: "flex", alignItems: "center", gap: 7,
+                                              marginTop: si ? 3 : 0 }}>
+                    <span style={{ width: 8, height: 3, borderRadius: 2, background: s.cor, flexShrink: 0 }} />
+                    <span style={{ color: "#B6CFE4" }}>{s.rotulo}</span>
+                    <strong style={{ marginLeft: "auto", paddingLeft: 10 }}>{fmt(v, moeda)}</strong>
+                    {delta !== null && (
+                      <span style={{ fontSize: 10.5, fontWeight: 700, minWidth: 46, textAlign: "right",
+                                     color: Math.abs(delta) < 1e-9 ? "#8AA9C6"
+                                          : (delta > 0) === (s.subirEBom !== false) ? "#2CCD93" : "#F87171" }}>
+                        {Math.abs(delta) < 1e-9 ? "—"
+                          : `${delta > 0 ? "▲" : "▼"} ${fmt(Math.abs(delta), moeda)}`}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
               {comAnterior && series.map(s => s.anterior && (
                 <div key={`t-${s.chave}`} style={{ display: "flex", alignItems: "center", gap: 7,
                                                    marginTop: 3, opacity: 0.75 }}>
@@ -300,7 +371,13 @@ export default function GraficoLinhas({
                   </strong>
                 </div>
               ))}
-            </motion.div>
+              {/* Diz de onde vem o número: o balão anda com o cursor, mas o
+                  valor é sempre de um mês medido. Sem isto, parar entre dois
+                  meses parece dar um valor daquele ponto do meio. */}
+              <div style={{ color: "#7E9DBB", fontSize: 10, marginTop: 6 }}>
+                {ativo > 0 ? "▲▼ é a variação contra o mês anterior" : "primeiro mês do período"}
+              </div>
+            </div>
           )}
 
           {semDesenho && (

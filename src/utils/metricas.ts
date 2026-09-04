@@ -601,9 +601,26 @@ export interface Serie {
   valores: (number | null)[];
   /** Mesma série na janela anterior, alinhada mês a mês, para sobrepor. */
   anterior?: (number | null)[];
+  /**
+   * Subir é bom NESTA série? Decide a cor da variação mês a mês no balão.
+   *
+   * Não dá para deduzir do gráfico: "negócios perdidos" e "ciclo de fechamento"
+   * sobem para o lado errado, e pintar toda alta de verde diria que piorar é
+   * melhorar. Padrão `true` porque é o caso da maioria.
+   */
+  subirEBom?: boolean;
 }
 
 type ContaMes = (d: Dados, b: Janela) => number;
+
+/**
+ * Séries em que SUBIR é piorar. Decide a cor da variação no balão do gráfico.
+ *
+ * Lista explícita e não uma regra esperta: "perdidos" e "recusado" são os dois
+ * casos hoje, e adivinhar pelo nome (algo como "contém 'perd'") quebraria em
+ * silêncio no dia em que alguém criar "recuperados".
+ */
+const SUBIR_E_RUIM: Record<string, true> = { perdidos: true, recusado: true };
 
 const CONTAS: Record<string, ContaMes> = {
   leads:     (d, b) => d.empresas.filter(e => ehReal(e) && em(e.criado_em, b)).length,
@@ -629,13 +646,14 @@ export function serieMensal(
   d: Dados, meses: number, base: Date = new Date(), comAnterior = false,
 ): Serie {
   const conta = CONTAS[chave];
-  if (!conta) return { chave, rotulo, cor, valores: [] };
+  if (!conta) return { chave, rotulo, cor, valores: [], subirEBom: true };
+  const subirEBom = !SUBIR_E_RUIM[chave];
   const valores = baldesMensais(meses, base).map(b => conta(d, b));
-  if (!comAnterior) return { chave, rotulo, cor, valores };
+  if (!comAnterior) return { chave, rotulo, cor, valores, subirEBom };
   // Os `meses` meses anteriores: a mesma grade recuada `meses` posições.
   const recuo = new Date(base.getFullYear(), base.getMonth() - meses, 1, 12, 0, 0, 0);
   const anterior = baldesMensais(meses, recuo).map(b => conta(d, b));
-  return { chave, rotulo, cor, valores, anterior };
+  return { chave, rotulo, cor, valores, anterior, subirEBom };
 }
 
 /**
@@ -654,7 +672,10 @@ export function serieKpi(
   const anterior = def.comparavel
     ? baldesMensais(meses, recuo).map(b => def.medir(d, b).valor)
     : undefined;
-  return { chave: def.chave, rotulo: def.rotulo, cor: def.cor, valores, anterior };
+  return {
+    chave: def.chave, rotulo: def.rotulo, cor: def.cor, valores, anterior,
+    subirEBom: def.subirEBom,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

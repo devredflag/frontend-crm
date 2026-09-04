@@ -19,11 +19,12 @@
  */
 
 import { useState } from "react";
-import { motion } from "framer-motion";
 
 import { brl, brlEixo } from "../../utils/moeda";
 import type { Balde } from "../../utils/metricas";
-import { marcasEixo, Tabela, Num, VerNumeros, useVerNumeros } from "./pecas";
+import {
+  marcasEixo, mesSobCursor, posicaoNoViewBox, Tabela, Num, VerNumeros, useVerNumeros,
+} from "./pecas";
 
 const VERDE = "#2CCD93", VERMELHO = "#F87171";
 
@@ -36,6 +37,8 @@ export default function GraficoDivergente({ baldes, ganhos, perdas, vazio }: {
   vazio: string;
 }) {
   const [ativo, setAtivo] = useState<number | null>(null);
+  /** Posição do cursor no viewBox — mesma ideia do gráfico de linhas. */
+  const [cursor, setCursor] = useState<number | null>(null);
   const [tabela, trocarTabela] = useVerNumeros();
 
   const n = baldes.length;
@@ -58,6 +61,23 @@ export default function GraficoDivergente({ baldes, ganhos, perdas, vazio }: {
   // em volta da marca engorda o desenho e some no tema escuro.
   const larguraBarra = Math.max(6, Math.min(34, passo * 0.5));
   const centro = (i: number) => L + passo * i + passo / 2;
+
+  /**
+   * Varredura contínua: a coluna sob o cursor acende enquanto o mouse anda.
+   *
+   * Aqui não há guia vertical — a barra realçada já diz onde se está, e uma
+   * linha por cima das colunas competiria com a linha do zero, que é a
+   * referência de leitura deste desenho.
+   */
+  const varrer = (clientX: number, svg: SVGSVGElement | null) => {
+    if (!svg) return;
+    const vx = posicaoNoViewBox(clientX, svg.getBoundingClientRect(), W, L, R);
+    if (vx === null) return;
+    setCursor(vx);
+    setAtivo(mesSobCursor(vx, L, passo, n));
+  };
+
+  const sair = () => { setCursor(null); setAtivo(null); };
 
   const colunas = [
     { chave: "mes", rotulo: "Mês", largura: "1fr", alinha: "left" as const,
@@ -102,6 +122,11 @@ export default function GraficoDivergente({ baldes, ganhos, perdas, vazio }: {
         <div style={{ position: "relative" }}>
           <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }}
                role="img"
+               onMouseMove={e => varrer(e.clientX, e.currentTarget)}
+               onMouseLeave={sair}
+               onTouchStart={e => varrer(e.touches[0].clientX, e.currentTarget)}
+               onTouchMove={e => varrer(e.touches[0].clientX, e.currentTarget)}
+               onTouchEnd={sair}
                aria-label={baldes.map((b, i) =>
                  `${b.rotulo}: aprovado ${brl(ganhos[i], 0)}, perdido ${brl(perdas[i], 0)}`).join(". ")}>
 
@@ -153,24 +178,29 @@ export default function GraficoDivergente({ baldes, ganhos, perdas, vazio }: {
               </text>
             ))}
 
+            {/* Alvos de TECLADO. O mouse é atendido pela varredura do SVG; sem
+                `pointerEvents:none` estes retângulos comeriam o `mousemove` e a
+                varredura só reagiria ao trocar de coluna. */}
             {baldes.map((b, i) => (
               <rect key={`h-${i}`} x={L + passo * i} y={T} width={passo} height={ph}
-                    fill="transparent" tabIndex={0} role="button"
+                    fill="transparent" style={{ pointerEvents: "none" }} tabIndex={0} role="button"
                     aria-label={`${b.rotulo} de ${b.ano}: aprovado ${brl(ganhos[i], 0)}, perdido ${brl(perdas[i], 0)}, saldo ${brl(ganhos[i] - perdas[i], 0)}`}
-                    onMouseEnter={() => setAtivo(i)} onMouseLeave={() => setAtivo(null)}
-                    onFocus={() => setAtivo(i)} onBlur={() => setAtivo(null)} />
+                    onFocus={() => { setAtivo(i); setCursor(centro(i)); }}
+                    onBlur={sair} />
             ))}
           </svg>
 
           {ativo !== null && (() => {
             const saldo = ganhos[ativo] - perdas[ativo];
             return (
-              <motion.div
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.12 }}
+              <div
                 style={{
                   position: "absolute", pointerEvents: "none", zIndex: 5, top: 4,
-                  left: `${(centro(ativo) / W) * 100}%`,
-                  transform: `translateX(${ativo === 0 ? "0%" : ativo === n - 1 ? "-100%" : "-50%"})`,
+                  left: `${((cursor ?? centro(ativo)) / W) * 100}%`,
+                  transform: `translateX(${
+                    (cursor ?? centro(ativo)) < W * 0.22 ? "0%"
+                    : (cursor ?? centro(ativo)) > W * 0.78 ? "-100%" : "-50%"})`,
+                  transition: "left 0.08s linear",
                   background: "#0A1F33", border: "1px solid rgba(126,176,219,0.30)", borderRadius: 9,
                   padding: "8px 11px", fontSize: 12, whiteSpace: "nowrap", color: "#FFFFFF",
                   boxShadow: "0 8px 24px rgba(3,14,26,0.55)",
@@ -187,7 +217,7 @@ export default function GraficoDivergente({ baldes, ganhos, perdas, vazio }: {
                     {brl(saldo, 0)}
                   </strong>
                 </div>
-              </motion.div>
+              </div>
             );
           })()}
 
