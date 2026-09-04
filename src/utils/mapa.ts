@@ -52,8 +52,13 @@ export function loadLeaflet(): Promise<any> {
 //   REACT_APP_TILE_URL   template do provedor; `{key}` é substituído
 //   REACT_APP_TILE_KEY   a chave, quando o provedor exigir uma na URL
 //
-// Exemplo (Stadia, autenticado por domínio — não leva chave nenhuma):
-//   REACT_APP_TILE_URL=https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png
+// O padrão já é o Stadia OSM Bright (ver TILE_PADRAO abaixo); a variável só é
+// necessária para FUGIR dele. Exemplo, trocando para o estilo claro discreto:
+//   REACT_APP_TILE_URL=https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png
+//
+// ATENÇÃO: se esta variável existir no painel, ela VENCE o padrão do código.
+// Um valor antigo esquecido lá continua mandando mesmo depois de o código
+// mudar — para voltar ao padrão, apague a variável, não basta editar o código.
 //
 // ATENÇÃO: em CRA toda REACT_APP_* vai no bundle público. Se o provedor exigir
 // chave na URL, ela precisa ser restrita por domínio no painel dele — sem isso
