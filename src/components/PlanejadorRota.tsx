@@ -139,7 +139,7 @@ type Acao =
   | { tipo: "restaurarDestino" }
   | { tipo: "adicionarParada"; ponto: Ponto; posicao: number }
   | { tipo: "removerParada"; chave: string }
-  | { tipo: "reordenar"; de: number; para: number }
+  | { tipo: "reordenarTrajeto"; de: number; para: number }
   | { tipo: "aplicarOrdem"; paradas: Ponto[] }
   | { tipo: "voltarAoDireto" };
 
@@ -190,8 +190,31 @@ function reduzir(estado: Trajeto, acao: Acao): Trajeto {
     case "removerParada":
       return { ...estado, paradas: estado.paradas.filter(p => chaveDoPonto(p) !== acao.chave) };
 
-    case "reordenar":
-      return { ...estado, paradas: mover(estado.paradas, acao.de, acao.para), ordemManual: true };
+    case "reordenarTrajeto": {
+      // Arrasta sobre a viagem INTEIRA, pontas incluídas. Mover o destino para
+      // o meio faz dele uma parada e promove a destino quem sobrar no fim; com
+      // a origem é simétrico.
+      //
+      // O número de paradas não muda nunca: a sequência tem tamanho fixo, e o
+      // meio é sempre `tamanho - 2`. Uma entra exatamente quando outra sai, o
+      // que é o motivo de não haver checagem de MAX_PARADAS aqui.
+      if (!estado.origem || !estado.destino) return estado;
+      const seq = [estado.origem, ...estado.paradas, estado.destino];
+      const nova = mover(seq, acao.de, acao.para);
+      if (nova === seq) return estado;
+      return {
+        ...estado,
+        origem: nova[0],
+        destino: nova[nova.length - 1],
+        paradas: nova.slice(1, -1),
+        ordemManual: true,
+        // `destinoAnterior` fica intocado de propósito. Ele existe para desfazer
+        // um destino que foi DESCARTADO pela ação "Definir como destino"; num
+        // arrasto nada é descartado — o antigo destino continua na viagem, à
+        // vista, e o desfazer é arrastar de volta. Marcá-lo aqui poria um pino
+        // riscado no mapa sobre um ponto que ainda faz parte da rota.
+      };
+    }
 
     case "aplicarOrdem":
       return { ...estado, paradas: acao.paradas, ordemManual: false };
@@ -282,6 +305,8 @@ export default function PlanejadorRota({
   const [pairado, setPairado] = useState<string | null>(null);
   const [previa, setPrevia] = useState<Coord[] | null>(null);
   const [arrastando, setArrastando] = useState<number | null>(null);
+  /** Sobre qual linha do trajeto o item arrastado está pairando. */
+  const [alvoArrasto, setAlvoArrasto] = useState<number | null>(null);
 
   // Empresas com coordenada válida — as únicas que podem entrar no corredor.
   const comGeo = useMemo(() => empresas
@@ -682,8 +707,14 @@ export default function PlanejadorRota({
     // Elas ficam visualmente distintas de propósito — adicionar parada e
     // trocar o destino são coisas diferentes, e confundi-las reescreve a
     // viagem inteira sem o usuário ter pedido.
+    const chaveAnterior = trajeto.destinoAnterior ? chaveDoPonto(trajeto.destinoAnterior) : null;
+
     candidatasOrdenadas.forEach((c, i) => {
       const k = chaveDoPonto({ lat: c.lat, lng: c.lng, empresa_id: c.empresa_id });
+      // O destino anterior volta para a LISTA de candidatos, mas no mapa ele
+      // aparece só como pino riscado. Desenhar os dois poria dois marcadores
+      // exatamente na mesma coordenada, um por cima do outro.
+      if (k === chaveAnterior) return;
       const d = desvios[k];
       const m = pin({ lat: c.lat, lng: c.lng }, cor.desvio, String(i + 1),
         `${i + 1}. ${c.nome}${d ? ` — +${d.km.toFixed(1)} km` : ""}`, k);
@@ -691,10 +722,10 @@ export default function PlanejadorRota({
     });
 
     // O destino anterior: riscado, clicável, desfaz a troca.
-    if (trajeto.destinoAnterior) {
+    if (trajeto.destinoAnterior && chaveAnterior) {
       const da = trajeto.destinoAnterior;
       const m = pin(da, cor.b, "B", `Destino anterior · ${da.rotulo} — clique para restaurar`,
-        chaveDoPonto(da), true);
+        chaveAnterior, true);
       m.on("click", () => acoesRef.current.restaurarDestino());
     }
 
@@ -709,9 +740,15 @@ export default function PlanejadorRota({
       m.bindPopup(popupDeParada(p, i + 1, acoesRef));
     });
 
-    // A e B por último: ficam por cima quando coincidem na tela.
-    if (trajeto.origem) pin(trajeto.origem, cor.a, "A", `A · ${trajeto.origem.rotulo}`, "__a");
-    if (trajeto.destino) pin(trajeto.destino, cor.b, "B", `B · ${trajeto.destino.rotulo}`, "__b");
+    // A e B por último: ficam por cima quando coincidem na tela. A chave é a do
+    // próprio ponto, não um rótulo fixo, para o hover na lista do trajeto
+    // achar o marcador — A e B agora são linhas arrastáveis como as outras.
+    if (trajeto.origem) {
+      pin(trajeto.origem, cor.a, "A", `A · ${trajeto.origem.rotulo}`, chaveDoPonto(trajeto.origem));
+    }
+    if (trajeto.destino) {
+      pin(trajeto.destino, cor.b, "B", `B · ${trajeto.destino.rotulo}`, chaveDoPonto(trajeto.destino));
+    }
 
     if (ultimoEnquadre.current !== assinaturaEnquadre) {
       ultimoEnquadre.current = assinaturaEnquadre;
@@ -891,14 +928,16 @@ export default function PlanejadorRota({
               </div>
             )}
 
-            {/* Paradas confirmadas: arrastáveis, porque a ordem é decisão de
-                quem dirige — o ótimo por quilometragem ignora horário
-                comercial, agenda e quem já avisou que só atende de manhã. */}
-            {trajeto.paradas.length > 0 && (
+            {/* O trajeto inteiro, arrastável — pontas incluídas.
+                A ordem é decisão de quem dirige: o ótimo por quilometragem
+                ignora horário comercial, agenda e quem só atende de manhã.
+                Arrastar o destino para o meio o transforma em parada e promove
+                a destino quem sobrar no fim; com a origem é simétrico. */}
+            {sequencia.length >= 2 && (
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={rotulo}>Paradas na ordem</span>
-                  {trajeto.ordemManual && (
+                  <span style={rotulo}>Trajeto</span>
+                  {trajeto.ordemManual && trajeto.paradas.length > 1 && (
                     <button onClick={otimizarAgora} disabled={!matrizValida}
                       title="Voltar à ordem de menor distância"
                       style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 14, cursor: matrizValida ? "pointer" : "not-allowed", fontFamily: "inherit", fontSize: 10, fontWeight: 700, border: "1px solid rgba(159,211,234,0.25)", background: "transparent", color: "#9FD3EA", opacity: matrizValida ? 1 : 0.5 }}>
@@ -906,42 +945,92 @@ export default function PlanejadorRota({
                     </button>
                   )}
                 </div>
+
                 <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 4 }}>
-                  {trajeto.paradas.map((p, i) => (
-                    <div key={chaveDoPonto(p)}
-                      draggable
-                      onDragStart={() => setArrastando(i)}
-                      onDragOver={e => e.preventDefault()}
-                      onDrop={() => {
-                        if (arrastando != null && arrastando !== i) {
-                          despachar({ tipo: "reordenar", de: arrastando, para: i });
-                        }
-                        setArrastando(null);
-                      }}
-                      onDragEnd={() => setArrastando(null)}
-                      onMouseEnter={() => setPairado(chaveDoPonto(p))}
-                      onMouseLeave={() => setPairado(null)}
-                      style={{
-                        display: "flex", alignItems: "center", gap: 7, padding: "6px 8px",
-                        borderRadius: 8, cursor: "grab",
-                        background: arrastando === i ? "rgba(154,214,245,0.18)" : "rgba(18,59,94,0.55)",
-                        border: "1px solid rgba(159,211,234,0.18)",
-                      }}>
-                      <GripVertical style={{ width: 12, height: 12, color: "#8AA9C6", flexShrink: 0 }} />
-                      <span style={{ width: 18, height: 18, flexShrink: 0, borderRadius: "50%", display: "grid", placeItems: "center", fontSize: 9.5, fontWeight: 900, color: "#0A2540", background: cor.parada }}>
-                        {i + 1}
-                      </span>
-                      <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, fontWeight: 700, color: "#EAF6FB", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {p.rotulo}
-                      </span>
-                      <button onClick={() => despachar({ tipo: "removerParada", chave: chaveDoPonto(p) })}
-                        title="Tirar da viagem" aria-label={`Tirar ${p.rotulo} da viagem`}
-                        style={{ width: 22, height: 22, flexShrink: 0, borderRadius: 6, cursor: "pointer", display: "grid", placeItems: "center", border: "1px solid rgba(247,184,177,0.35)", background: "transparent", color: cor.b }}>
-                        <Minus style={{ width: 11, height: 11 }} />
-                      </button>
-                    </div>
-                  ))}
+                  {sequencia.map((p, i) => {
+                    const ehOrigem = i === 0;
+                    const ehDestino = i === sequencia.length - 1;
+                    const meio = !ehOrigem && !ehDestino;
+                    const chave = chaveDoPonto(p);
+                    const alvo = alvoArrasto === i && arrastando != null && arrastando !== i;
+                    return (
+                      <div key={chave}
+                        draggable
+                        onDragStart={() => setArrastando(i)}
+                        onDragOver={e => { e.preventDefault(); setAlvoArrasto(i); }}
+                        onDragLeave={() => setAlvoArrasto(a => (a === i ? null : a))}
+                        onDrop={e => {
+                          e.preventDefault();
+                          if (arrastando != null && arrastando !== i) {
+                            despachar({ tipo: "reordenarTrajeto", de: arrastando, para: i });
+                          }
+                          setArrastando(null); setAlvoArrasto(null);
+                        }}
+                        onDragEnd={() => { setArrastando(null); setAlvoArrasto(null); }}
+                        onMouseEnter={() => setPairado(chave)}
+                        onMouseLeave={() => setPairado(null)}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 7, padding: "6px 8px",
+                          borderRadius: 8, cursor: "grab",
+                          opacity: arrastando === i ? 0.45 : 1,
+                          background: alvo ? "rgba(154,214,245,0.22)" : "rgba(18,59,94,0.55)",
+                          // A borda marca onde o item cairia. Sem isso, arrastar
+                          // numa lista de 7 vira adivinhação.
+                          border: `1px solid ${alvo ? cor.parada : "rgba(159,211,234,0.18)"}`,
+                          transition: "background .12s, border-color .12s",
+                        }}>
+                        {/* O punho é um botão de verdade: com ele focado, as
+                            setas do teclado movem o item. É o único caminho de
+                            reordenar sem mouse — o arrasto HTML5 não dispara em
+                            toque nem responde a teclado. */}
+                        <button
+                          aria-label={`Mover ${p.rotulo} na ordem do trajeto`}
+                          title="Arraste, ou use ↑ e ↓ com o foco aqui"
+                          onKeyDown={e => {
+                            if (e.key === "ArrowUp" && i > 0) {
+                              e.preventDefault();
+                              despachar({ tipo: "reordenarTrajeto", de: i, para: i - 1 });
+                            } else if (e.key === "ArrowDown" && i < sequencia.length - 1) {
+                              e.preventDefault();
+                              despachar({ tipo: "reordenarTrajeto", de: i, para: i + 1 });
+                            }
+                          }}
+                          style={{ display: "grid", placeItems: "center", flexShrink: 0, width: 14, height: 18, padding: 0, border: "none", background: "none", cursor: "grab", color: "#8AA9C6" }}>
+                          <GripVertical style={{ width: 12, height: 12 }} />
+                        </button>
+
+                        <span style={{
+                          width: 18, height: 18, flexShrink: 0, borderRadius: "50%",
+                          display: "grid", placeItems: "center", fontSize: 9.5, fontWeight: 900,
+                          color: "#0A2540",
+                          background: ehOrigem ? cor.a : ehDestino ? cor.b : cor.parada,
+                        }}>
+                          {ehOrigem ? "A" : ehDestino ? "B" : i}
+                        </span>
+
+                        <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, fontWeight: 700, color: "#EAF6FB", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {p.rotulo}
+                        </span>
+
+                        {/* Só o meio some por aqui: tirar A ou B não é "remover
+                            da viagem", é trocar a ponta — que se faz no seletor
+                            lá em cima. */}
+                        {meio ? (
+                          <button onClick={() => despachar({ tipo: "removerParada", chave })}
+                            title="Tirar da viagem" aria-label={`Tirar ${p.rotulo} da viagem`}
+                            style={{ width: 22, height: 22, flexShrink: 0, borderRadius: 6, cursor: "pointer", display: "grid", placeItems: "center", border: "1px solid rgba(247,184,177,0.35)", background: "transparent", color: cor.b }}>
+                            <Minus style={{ width: 11, height: 11 }} />
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: 9, fontWeight: 700, color: "#8AA9C6", flexShrink: 0, letterSpacing: ".04em" }}>
+                            {ehOrigem ? "SAÍDA" : "CHEGADA"}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
+
                 {cheio && (
                   <div style={{ fontSize: 10, color: "#F2C879", marginTop: 6 }}>
                     Máximo de {MAX_PARADAS} paradas na rota.
