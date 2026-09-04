@@ -94,7 +94,26 @@ const ATRIBUICOES: { provedor: RegExp; texto: string }[] = [
   },
 ];
 
-const tileTemplate = process.env.REACT_APP_TILE_URL;
+/**
+ * Provedor padrão: Stadia OSM Bright.
+ *
+ * Fica no código, e não só em variável de ambiente, por dois motivos. O
+ * primeiro é que a variável não comprava nada: em CRA ela é embutida no build,
+ * então trocá-la já exigia um deploy — o mesmo que trocar esta linha. O
+ * segundo é que o `tile.openstreetmap.org` não deveria ser o padrão de um
+ * produto comercial: a política dele não cobre este uso, e o bloqueio chega
+ * como HTTP 200 com uma imagem escrita "Access blocked", sem erro nenhum para
+ * o código perceber.
+ *
+ * Não leva chave: o Stadia autentica pelo domínio, lendo Origin/Referer que o
+ * navegador manda sozinho. `localhost` e `127.0.0.1` são liberados por padrão.
+ *
+ * A variável de ambiente continua valendo como override, para trocar de estilo
+ * ou de provedor sem mexer em código.
+ */
+const TILE_PADRAO = "https://tiles.stadiamaps.com/tiles/osm_bright/{z}/{x}/{y}{r}.png";
+
+const tileTemplate = process.env.REACT_APP_TILE_URL || TILE_PADRAO;
 const tileKey = process.env.REACT_APP_TILE_KEY;
 
 // Template que pede chave sem chave configurada volta ao OSM em vez de montar
@@ -109,6 +128,34 @@ export const TILE_URL = tilePronto
 export const TILE_ATTR = tilePronto
   ? (ATRIBUICOES.find(a => a.provedor.test(TILE_URL))?.texto ?? OSM_ATTR)
   : OSM_ATTR;
+
+/**
+ * Adiciona a camada de tiles ao mapa, com retorno ao OSM se o provedor falhar.
+ *
+ * Existe porque autenticação por domínio recusa origem não cadastrada, e o
+ * caso concreto é o preview da Vercel: cada deploy ganha um subdomínio novo,
+ * nenhum deles autorizado no painel do provedor. Sem isto, preview abriria com
+ * o mapa em branco. Cobre também o provedor fora do ar.
+ *
+ * O Leaflet não distingue 401 de servidor caído — nos dois casos o tile
+ * simplesmente não carrega —, e nem precisa: a resposta é a mesma. Espera
+ * alguns erros antes de trocar porque um tile perdido em rede ruim é normal, e
+ * trocar de provedor no primeiro soluço faria o mapa piscar à toa.
+ */
+export function criarCamadaDeTiles(L: any, map: any) {
+  const camada = L.tileLayer(TILE_URL, { maxZoom: 19, attribution: TILE_ATTR }).addTo(map);
+  if (TILE_URL === OSM_URL) return camada;
+
+  let erros = 0;
+  camada.on("tileerror", () => {
+    if (++erros < 4) return;
+    camada.off("tileerror");
+    if (map.hasLayer(camada)) map.removeLayer(camada);
+    L.tileLayer(OSM_URL, { maxZoom: 19, attribution: OSM_ATTR }).addTo(map);
+    console.warn("[mapa] provedor de tiles nao respondeu; voltando para o OpenStreetMap");
+  });
+  return camada;
+}
 
 export interface LatLng { lat: number; lng: number }
 

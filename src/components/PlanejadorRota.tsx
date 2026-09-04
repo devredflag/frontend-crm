@@ -10,7 +10,7 @@ import {
 import { getToken } from "../services/auth";
 import {
   loadLeaflet, rotaOSRM, matrizOSRM, distanciaAteRotaKm,
-  TILE_URL, TILE_ATTR, MAX_PONTOS_MATRIZ,
+  criarCamadaDeTiles, MAX_PONTOS_MATRIZ,
   type LatLng, type Coord, type Rota, type Matriz,
 } from "../utils/mapa";
 import {
@@ -549,7 +549,7 @@ export default function PlanejadorRota({
     const inicio = centroInicial.current;
     const map = L.map(containerRef.current, { scrollWheelZoom: true });
     map.setView(inicio ? [inicio.lat, inicio.lng] : [-15.78, -47.93], inicio ? 11 : 4);
-    L.tileLayer(TILE_URL, { maxZoom: 19, attribution: TILE_ATTR }).addTo(map);
+    criarCamadaDeTiles(L, map);
     // Ordem de criação = ordem de empilhamento: a rota por baixo, a prévia no
     // meio, os pins por cima. Trocar isso esconde marcador atrás de linha.
     camadaRotaRef.current = L.layerGroup().addTo(map);

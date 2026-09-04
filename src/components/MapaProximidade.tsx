@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 // os mesmos, e duas copias do carregador significariam duas tags <script>
 // disputando a global window.L.
 import {
-  loadLeaflet, rotaOSRM, haversineKm, TILE_URL, TILE_ATTR,
+  loadLeaflet, rotaOSRM, haversineKm, criarCamadaDeTiles,
 } from "../utils/mapa";
 
 export interface EmpresaGeo {
@@ -83,7 +83,7 @@ export default function MapaProximidade({
     const L = window.L;
     const map = L.map(containerRef.current, { scrollWheelZoom: true, attributionControl: true });
     map.setView([-15.78, -47.93], 4);
-    L.tileLayer(TILE_URL, { maxZoom: 19, attribution: TILE_ATTR }).addTo(map);
+    criarCamadaDeTiles(L, map);
     rotasRef.current = L.layerGroup().addTo(map);
     layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
