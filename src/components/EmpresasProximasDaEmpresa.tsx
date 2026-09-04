@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   MapPin, Navigation, Building2, Search, AlertTriangle, Edit3, Loader2, Filter,
-  Route as RouteIcon,
+  Route as RouteIcon, Check,
 } from "lucide-react";
 import PlanejadorRota from "./PlanejadorRota";
 import { getToken } from "../services/auth";
@@ -223,16 +223,28 @@ export default function EmpresasProximasDaEmpresa({
               </button>
             );
           })}
+          {/* Filtro de segmento — o mesmo problema que os chips de raio já
+              tiveram: ligado ele mudava só 10% de fundo e trocava um azul
+              claro por um lilás claro, então não dava para saber se estava
+              valendo. Agora ligado é fundo cheio, texto branco e um visto,
+              que é o que faz o clique seguinte parecer "desligar". */}
           {segmento && (
             <button onClick={() => setSoMesmoSegmento(v => !v)}
               aria-pressed={soMesmoSegmento}
+              title={soMesmoSegmento
+                ? `Mostrando só empresas de ${segmento}. Clique para ver todos os segmentos.`
+                : `Ver só empresas do segmento ${segmento}`}
               style={{
-                padding: "4px 11px", borderRadius: 20, cursor: "pointer", fontFamily: "inherit",
-                fontSize: 11, fontWeight: 700,
-                border:`1.5px solid ${soMesmoSegmento ? "rgba(142,68,173,0.5)" : "rgba(159,211,234,0.18)"}`,
-                background:soMesmoSegmento ? "rgba(142,68,173,0.1)" : "rgba(18,59,94,0.55)",
-                color:soMesmoSegmento ? "#C9B6E4" : "#9FD3EA",
+                display: "inline-flex", alignItems: "center", gap: 5,
+                padding: "5px 12px", borderRadius: 20, cursor: "pointer", fontFamily: "inherit",
+                fontSize: 11, fontWeight: soMesmoSegmento ? 800 : 600,
+                border:`1.5px solid ${soMesmoSegmento ? "#B57EDC" : "rgba(159,211,234,0.18)"}`,
+                background:soMesmoSegmento ? "#7D3C98" : "rgba(18,59,94,0.55)",
+                color:soMesmoSegmento ? "#FFFFFF" : "#9FD3EA",
+                boxShadow:soMesmoSegmento ? "0 0 0 3px rgba(142,68,173,0.25)" : "none",
+                transition:"all 0.15s",
               }}>
+              {soMesmoSegmento && <Check style={{ width: 11, height: 11 }} />}
               {segmento}
             </button>
           )}
@@ -240,16 +252,23 @@ export default function EmpresasProximasDaEmpresa({
           {/* Rotas — a outra pergunta desta aba. "Quem está perto daqui" a lista
               acima responde; "quem dá para encaixar numa viagem que eu já vou
               fazer" precisa da rota por ruas, e por isso abre em tela cheia. */}
+          {/* Fundo cheio, e não contorno com 16% de tinta: com o mesmo peso
+              visual dos chips de filtro, o cliente lia isto como mais um
+              filtro desligado e não como a ação que abre outra tela. É azul
+              claro com texto escuro de propósito — o chip de raio ativo é
+              azul ESCURO com texto branco, e os dois não podem se confundir. */}
           <button onClick={() => setPlanejando(true)}
             title="Planejar uma viagem e ver quem fica no caminho"
             style={{
               display: "inline-flex", alignItems: "center", gap: 6,
-              padding: "5px 13px", borderRadius: 20, cursor: "pointer", fontFamily: "inherit",
-              fontSize: 11, fontWeight: 800, color: "#EAF6FB",
-              border: "1.5px solid rgba(86,164,245,0.45)",
-              background: "rgba(86,164,245,0.16)",
+              padding: "6px 15px", borderRadius: 20, cursor: "pointer", fontFamily: "inherit",
+              fontSize: 11.5, fontWeight: 800, color: "#0A2540",
+              border: "1.5px solid #56A4F5",
+              background: "#56A4F5",
+              boxShadow: "0 2px 8px rgba(86,164,245,0.35)",
+              transition: "all 0.15s",
             }}>
-            <RouteIcon style={{ width: 12, height: 12 }} /> Rotas
+            <RouteIcon style={{ width: 13, height: 13 }} /> Rotas
           </button>
         </div>
       </div>

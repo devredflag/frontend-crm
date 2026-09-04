@@ -601,8 +601,13 @@ export default function EmpresaDetalhe() {
                     <button key={t.key} onClick={() => setTab(t.key)} style={{ display:"flex", alignItems:"center", gap:6, padding:"10px 14px", fontSize:13, fontWeight: on ? 700 : 600, color:on ? "#9FD3EA" : "#9FD3EA", background:"none", border:"none", borderBottom:`2px solid ${on ? "rgba(159,211,234,0.30)" : "transparent"}`, cursor:"pointer", whiteSpace:"nowrap", fontFamily:"'Plus Jakarta Sans',sans-serif", transition:"color 0.15s" }}>
                       <t.icon style={{ width:14, height:14 }} />
                       {t.label}
+                      {/* Contador da aba. Era o bug recorrente da paleta
+                          escura: o texto vinha em azul-marinho quase preto
+                          (`rgba(10,37,64,0.92)`) sobre 15% de cinza num card
+                          escuro — sumia. Branco nos dois estados; o que
+                          diferencia aba ativa de inativa é o fundo. */}
                       {badge !== null && (
-                        <span style={{ fontSize:10, fontWeight:700, padding:"1px 6px", borderRadius:20, background:on ? "rgba(46,111,149,0.12)" : "rgba(149,165,166,0.15)", color: on ? "#2E6F95" : "rgba(10,37,64,0.92)" }}>{badge}</span>
+                        <span style={{ fontSize:10, fontWeight:800, padding:"1px 6px", borderRadius:20, background:on ? "rgba(86,164,245,0.32)" : "rgba(159,211,234,0.18)", color:"#FFFFFF" }}>{badge}</span>
                       )}
                     </button>
                   );
