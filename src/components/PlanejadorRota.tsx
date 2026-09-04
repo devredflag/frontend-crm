@@ -660,20 +660,34 @@ export default function PlanejadorRota({
   }, [pairado, assinaturaSequencia, desvios]);
 
   // ── Pins ──
+  /**
+   * Os pontos que existem AGORA, com a viagem completa ou não.
+   *
+   * Diferente de `sequencia`, que é vazia até haver origem E destino. Usar
+   * `sequencia` aqui fazia escolher só a origem — "usar minha localização", por
+   * exemplo — não mudar assinatura nenhuma: o efeito de pinos saía cedo e o
+   * mapa ficava vazio até a pessoa escolher também o destino.
+   */
+  const pontosDaViagem = useMemo<Ponto[]>(() => [
+    ...(trajeto.origem ? [trajeto.origem] : []),
+    ...trajeto.paradas,
+    ...(trajeto.destino ? [trajeto.destino] : []),
+  ], [trajeto.origem, trajeto.paradas, trajeto.destino]);
+
   const assinaturaPins = useMemo(() => JSON.stringify([
-    sequencia.map(p => [chaveDoPonto(p), p.rotulo]),
+    pontosDaViagem.map(p => [chaveDoPonto(p), p.rotulo]),
     candidatasOrdenadas.map(c => {
       const k = chaveDoPonto({ lat: c.lat, lng: c.lng, empresa_id: c.empresa_id });
       return [k, desvios[k]?.km ?? null];
     }),
     trajeto.destinoAnterior ? chaveDoPonto(trajeto.destinoAnterior) : null,
     trajeto.paradas.length >= MAX_PARADAS,
-  ]), [sequencia, candidatasOrdenadas, desvios, trajeto.destinoAnterior, trajeto.paradas.length]);
+  ]), [pontosDaViagem, candidatasOrdenadas, desvios, trajeto.destinoAnterior, trajeto.paradas.length]);
 
   const assinaturaEnquadre = useMemo(() => JSON.stringify([
-    sequencia.map(p => [p.lat, p.lng]),
+    pontosDaViagem.map(p => [p.lat, p.lng]),
     candidatasOrdenadas.map(c => c.empresa_id),
-  ]), [sequencia, candidatasOrdenadas]);
+  ]), [pontosDaViagem, candidatasOrdenadas]);
 
   const ultimoPins = useRef("");
   const ultimoEnquadre = useRef("");
@@ -753,11 +767,14 @@ export default function PlanejadorRota({
     if (ultimoEnquadre.current !== assinaturaEnquadre) {
       ultimoEnquadre.current = assinaturaEnquadre;
       const tudo = [
-        ...sequencia.map(p => [p.lat, p.lng]),
+        ...pontosDaViagem.map(p => [p.lat, p.lng]),
         ...candidatasOrdenadas.map(c => [c.lat, c.lng]),
       ];
       if (tudo.length > 1) mapRef.current.fitBounds(tudo as any, { padding: [50, 50] });
-      else if (tudo.length === 1) mapRef.current.setView(tudo[0] as any, 12);
+      // Ponto unico -- tipicamente so a origem recem-escolhida. Zoom de rua, e
+      // nao os 12 de antes: quem acabou de mandar "usar minha localizacao"
+      // quer se ver na quadra, nao na regiao.
+      else if (tudo.length === 1) mapRef.current.setView(tudo[0] as any, 14);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assinaturaPins, assinaturaEnquadre, mapaVersao]);
