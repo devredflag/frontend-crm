@@ -626,10 +626,10 @@ export default function Perfil() {
                             { mode:"web" as const, label:"Outlook Web",  sub:"outlook.live.com", Icon:Globe },
                             { mode:"app" as const, label:"App instalado", sub:"Protocolo mailto:", Icon:Monitor },
                           ].map(({ mode, label, sub, Icon: Ic }) => (
-                            <div key={mode} onClick={() => setOutlookMode(outlookMode===mode ? null : mode)} style={{ padding:"10px 12px", borderRadius:10, border:`1.5px solid ${outlookMode===mode ? "#9FD3EA" : "rgba(159,211,234,0.18)"}`, background:outlookMode===mode ? "rgba(0,120,212,0.06)" : "rgba(18,59,94,0.55)", cursor:"pointer", display:"flex", alignItems:"center", gap:10, transition:"all 0.18s" }}>
-                              <Ic style={{ width:14, height:14, color:outlookMode===mode ? "#9FD3EA" : "#9FD3EA", flexShrink:0 }}/>
+                            <div key={mode} onClick={() => setOutlookMode(outlookMode===mode ? null : mode)} style={{ padding:"10px 12px", borderRadius:10, border:`1.5px solid ${outlookMode===mode ? "#9FD3EA" : "rgba(159,211,234,0.18)"}`, background:outlookMode===mode ? "rgba(0,120,212,0.22)" : "rgba(18,59,94,0.55)", cursor:"pointer", display:"flex", alignItems:"center", gap:10, transition:"all 0.18s" }}>
+                              <Ic style={{ width:14, height:14, color:outlookMode===mode ? "#FFFFFF" : "#9FD3EA", flexShrink:0 }}/>
                               <div>
-                                <div style={{ fontSize:12, fontWeight:700, color:outlookMode===mode ? "#9FD3EA" : "#EAF6FB" }}>{label}</div>
+                                <div style={{ fontSize:12, fontWeight:700, color:outlookMode===mode ? "#FFFFFF" : "#EAF6FB" }}>{label}</div>
                                 <div style={{ fontSize:10, color:"#9FD3EA" }}>{sub}</div>
                               </div>
                               {outlookMode === mode && <Check style={{ width:12, height:12, color:"#9FD3EA", marginLeft:"auto" }}/>}

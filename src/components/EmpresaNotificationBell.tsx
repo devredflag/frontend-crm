@@ -103,11 +103,15 @@ export default function EmpresaNotificationBell({ empresaId, empresaNome, onVerC
       {/* Botão sino */}
       <button
         onClick={() => { setOpen(o => !o); if (!open) fetchNotifs(); }}
+        aria-expanded={open}
         style={{
           display: "flex", alignItems: "center", gap: 6,
           padding: "6px 12px", borderRadius: 10, cursor: "pointer",
-          border:"1px solid rgba(159,211,234,0.18)",
-          background:open ? "rgba(18,59,94,0.55)" : "rgba(18,59,94,0.55)",
+          // Aberto tem que PARECER aberto: antes o fundo era o mesmo nos dois
+          // estados, entao o botao nao dava sinal de que o painel abaixo dele
+          // tinha sido aberto por ele.
+          border:`1px solid ${open ? "rgba(159,211,234,0.45)" : "rgba(159,211,234,0.18)"}`,
+          background:open ? "rgba(46,111,149,0.55)" : "rgba(18,59,94,0.55)",
           position: "relative", transition: "all 0.15s",
         }}
       >

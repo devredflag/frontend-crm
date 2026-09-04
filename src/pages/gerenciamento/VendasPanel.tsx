@@ -475,7 +475,7 @@ export default function VendasPanel({ empresas, statusInicial }: {
           const on = sub === t.key;
           return (
             <button key={t.key} onClick={() => setSub(t.key)} className="vp-tab"
-              style={{ color:on ? "#9FD3EA" : "#9FD3EA", fontWeight: on ? 800 : 600, borderBottomColor: on ? "#9FD3EA" : "transparent" }}>
+              style={{ color:on ? "#FFFFFF" : "#9FD3EA", fontWeight: on ? 800 : 600, borderBottomColor: on ? "#9FD3EA" : "transparent" }}>
               <t.icon style={{ width: 15, height: 15 }} />
               {t.label}
             </button>
