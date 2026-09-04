@@ -171,6 +171,12 @@ export const TILE_ATTR = tilePronto
 // Versões fixadas, e não faixas: é dependência carregada de CDN em tempo de
 // execução, onde uma versão nova quebrando algo chega sem passar por build,
 // teste ou deploy nosso.
+// ⚠️ TROCAR DE PROVEDOR EXIGE MEXER NO CSP. O host novo precisa entrar em
+// `connect-src` no `vercel.json`. Tiles RASTER passam despercebidos porque o
+// `img-src` libera qualquer https:, mas o vetorial baixa estilo, fontes,
+// sprites e tiles por fetch — e fetch cai em `connect-src`. O sintoma é o mapa
+// sumir inteiro com "violates the following Content Security Policy" no
+// console, o que não parece problema de mapa.
 const MAPLIBRE_JS = "https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js";
 const MAPLIBRE_CSS = "https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css";
 const MAPLIBRE_LEAFLET = "https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.1.4/leaflet-maplibre-gl.js";

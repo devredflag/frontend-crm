@@ -27,6 +27,7 @@ Olhe a tela e o console (F12) antes de mexer em qualquer coisa.
 | Mapa com quadrados escritos "Access blocked" | tiles, no fallback OSM | [seção 1](#1-tiles--o-desenho-do-mapa) |
 | Linha reta entre empresas em vez de rota por ruas | OSRM | [seção 2](#2-osrm--rota-e-matriz) |
 | "Endereço não encontrado" para endereço que existe | Nominatim | [seção 3](#3-nominatim--endereço-digitado) |
+| Console: `violates ... Content Security Policy` | **CSP**, não o mapa | [seção 1.5](#15-csp--o-host-precisa-estar-liberado) |
 | Console: `[mapa] MapLibre nao carregou` | tiles (vetorial) | [seção 1](#1-tiles--o-desenho-do-mapa) |
 | Console: `[mapa] provedor de tiles nao respondeu` | tiles (raster) | [seção 1](#1-tiles--o-desenho-do-mapa) |
 | Log do backend: `[OSRM] status 403` / `429` | OSRM | [seção 2](#2-osrm--rota-e-matriz) |
@@ -114,6 +115,40 @@ com o mesmo conteúdo é bloqueio, sem margem para dúvida.
 > curl -sI -A "Mozilla/5.0" -e "https://frontend-crm-xi-plum.vercel.app/" \
 >   "https://tile.openstreetmap.org/13/2973/4691.png" | grep -i x-blocked
 > ```
+
+---
+
+## 1.5. CSP — o host precisa estar liberado
+
+Se o mapa some por inteiro e o console mostra `violates the following Content Security
+Policy`, **o problema não é o mapa: é o `vercel.json`.**
+
+Todo host externo novo precisa entrar em `connect-src`. Aconteceu na estreia do
+OpenFreeMap: o mapa sumiu em produção porque o host não estava na lista.
+
+> ⚠️ **Por que isso passa despercebido:** o `img-src` libera qualquer `https:`, então tiles
+> **raster** funcionam sem tocar no CSP. Já o **vetorial** baixa estilo, fontes, sprites e
+> tiles por `fetch`, e fetch cai em `connect-src`. Trocar de raster para vetorial é
+> exatamente o momento em que o CSP passa a importar.
+
+O que o OpenFreeMap precisa (tudo no mesmo host, já liberado):
+
+```
+https://tiles.openfreemap.org/styles/bright              estilo
+https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf   glyphs
+https://tiles.openfreemap.org/sprites/ofm_f384/ofm       sprites
+https://tiles.openfreemap.org/planet                     tiles vetoriais
+https://tiles.openfreemap.org/natural_earth/...          relevo (img-src)
+```
+
+Já satisfeitos por outras diretivas e que **não** devem ser removidos: `worker-src 'self'
+blob:` (o MapLibre roda workers em blob), `script-src ... unpkg.com` e `style-src ...
+unpkg.com` (a biblioteca vem do CDN).
+
+Nota: `router.project-osrm.org`, `nominatim.openstreetmap.org` e `*.openstreetmap.org`
+continuam em `connect-src` mas **não são mais usados pelo navegador** — o roteamento e o
+geocoding passam pelo backend desde o proxy. São permissões mortas, candidatas a limpeza
+numa hora calma (não durante um incidente).
 
 ---
 
