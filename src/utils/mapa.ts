@@ -38,9 +38,45 @@ export function loadLeaflet(): Promise<any> {
   return leafletPromise;
 }
 
-export const TILE_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
-export const TILE_ATTR =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+// ── Tiles ───────────────────────────────────────────────────────────────────
+//
+// `tile.openstreetmap.org` proíbe uso comercial pesado e bloqueia por
+// User-Agent/Referer sem aviso. É o ponto de falha mais brusco da tela: quando
+// cai, derruba o mapa inteiro de uma vez, sem degradar aos poucos — diferente
+// do OSRM, que só deixa de traçar a rota.
+//
+// A troca de provedor fica por variável de ambiente porque MapTiler e Stadia
+// (os dois com tier gratuito para uso comercial leve, sem cartão) só servem
+// tile com chave ou domínio autorizado, e a chave é de quem tem a conta.
+//
+//   REACT_APP_TILE_URL   template do provedor; `{key}` é substituído
+//   REACT_APP_TILE_KEY   a chave
+//   REACT_APP_TILE_ATTR  atribuição exigida pelo provedor
+//
+// Exemplo (MapTiler):
+//   REACT_APP_TILE_URL=https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key={key}
+//
+// ATENÇÃO: em CRA toda REACT_APP_* vai no bundle público. A chave precisa ser
+// restrita por domínio no painel do provedor — sem isso ela é utilizável por
+// qualquer um que abrir o DevTools, e a cota gratuita é de quem tiver pressa.
+const OSM_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+
+const tileTemplate = process.env.REACT_APP_TILE_URL;
+const tileKey = process.env.REACT_APP_TILE_KEY;
+
+// Template que pede chave sem chave configurada volta ao OSM em vez de montar
+// uma URL quebrada. Um mapa cinza por variável meio preenchida seria a mesma
+// falha que a troca de provedor existe para evitar.
+const tilePronto = !!tileTemplate && (!tileTemplate.includes("{key}") || !!tileKey);
+
+export const TILE_URL = tilePronto
+  ? tileTemplate!.replace("{key}", tileKey || "")
+  : OSM_URL;
+
+export const TILE_ATTR = tilePronto
+  ? (process.env.REACT_APP_TILE_ATTR || OSM_ATTR)
+  : OSM_ATTR;
 
 export interface LatLng { lat: number; lng: number }
 
