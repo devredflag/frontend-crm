@@ -7,6 +7,8 @@
 // global `window.L` — e este projeto já tem histórico de bug por lógica
 // duplicada (a tabela repetida de /clientes e /cadastro).
 
+import { API_BASE, getToken } from "../services/auth";
+
 declare global {
   interface Window { L: any }
 }
@@ -111,7 +113,18 @@ export function distanciaAteRotaKm(p: LatLng, rota: Coord[], passo = 1): number 
   return menor;
 }
 
-// ── Rota por ruas (OSRM) ────────────────────────────────────────────────────
+// ── Rota por ruas (OSRM, pelo nosso backend) ────────────────────────────────
+//
+// Estas funções falavam direto com `router.project-osrm.org`. Passaram a sair
+// pelo backend por um motivo que não é organização de código: o demo público do
+// OSRM aceita 1 req/s e bloqueia por ENDEREÇO IP, não por aba. Throttle no
+// cliente não garante nada — duas abas abertas já são 2 req/s. Com tudo saindo
+// do backend existe uma torneira só, e ela é de verdade (main.py, /geo/rota e
+// /geo/matriz).
+//
+// Consequência a conhecer: rota agora exige sessão válida. Sem token a chamada
+// volta 401, estas funções devolvem null, e quem chama já trata null caindo
+// para linha reta — o mesmo caminho de quando o OSRM está fora do ar.
 
 export interface Rota {
   coords: Coord[];
@@ -119,21 +132,83 @@ export interface Rota {
   min: number;
 }
 
-const OSRM = "https://router.project-osrm.org/route/v1/driving";
+/**
+ * Matriz de distância/tempo entre todos os pontos, numa chamada só.
+ *
+ * `distanciasKm[i][j]` é de i até j, e **não é simétrica** — mão única faz a
+ * ida diferir da volta. `null` numa célula é par sem rota, não distância zero.
+ */
+export interface Matriz {
+  distanciasKm: (number | null)[][];
+  duracoesMin: (number | null)[][];
+}
+
+const pontosParam = (pontos: LatLng[]) =>
+  pontos.map(p => `${p.lng},${p.lat}`).join(";");
+
+// ── Cache de sessão ─────────────────────────────────────────────────────────
+// O backend também tem cache, mas ele só evita a chamada ao OSRM; a viagem até
+// o Railway continua acontecendo. Este aqui evita a viagem inteira, que é o que
+// o usuário sente ao mexer no raio ou repor uma parada que acabou de tirar.
+//
+// A chave arredonda a 5 casas (~1 m) pelo mesmo motivo do backend: GPS e hover
+// trazem ruído nas últimas casas e gerariam chave nova a cada passada.
+const chaveDe = (pontos: LatLng[], sufixo: string) =>
+  sufixo + "|" + pontos.map(p => `${p.lng.toFixed(5)},${p.lat.toFixed(5)}`).join(";");
+
+const cache = new Map<string, any>();
+const emVoo = new Map<string, Promise<any>>();
+
+/** Zera o cache de sessão. Existe para o "limpar rota" não continuar servindo
+ *  geometria de uma viagem que o usuário já descartou. */
+export function limparCacheDeRotas() {
+  cache.clear();
+}
+
+/**
+ * Busca com cache, deduplicação e proteção contra resposta obsoleta.
+ *
+ * Sobre o `signal`: ele NÃO é repassado ao fetch, de propósito. Duas chamadas
+ * iguais compartilham uma requisição só, e se o sinal de uma fosse para o fetch
+ * compartilhado, o cancelamento de um componente derrubaria o resultado do
+ * outro. O que o item de "cancelar requisições obsoletas" precisa garantir é
+ * que uma resposta velha não sobrescreva a rota certa — e isso é garantido
+ * aqui, no retorno: quem já foi cancelado recebe null e não escreve nada. É
+ * mais confiável do que depender do cancelamento chegar a tempo, porque uma
+ * resposta já em trânsito no momento do abort ainda seria entregue.
+ */
+async function pedir<T>(chave: string, url: string, signal?: AbortSignal): Promise<T | null> {
+  if (cache.has(chave)) return signal?.aborted ? null : (cache.get(chave) as T);
+
+  let voo = emVoo.get(chave);
+  if (!voo) {
+    voo = (async () => {
+      try {
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${getToken()}` } });
+        if (!res.ok) return null;
+        return await res.json();
+      } catch {
+        return null;
+      }
+    })().finally(() => emVoo.delete(chave));
+    emVoo.set(chave, voo);
+  }
+
+  const dados = await voo;
+  if (dados !== null && dados !== undefined) cache.set(chave, dados);
+  return signal?.aborted ? null : (dados as T | null);
+}
 
 /**
  * Rota viária passando por todos os pontos, na ordem dada.
  *
- * Dois ou mais pontos: com três, o do meio vira parada — é assim que sai o
- * custo do desvio (`A→C→B` menos `A→B`).
- *
  * `overview` fica em "full" só para a rota que vai ser DESENHADA. Para medir
  * quilometragem, "simplified" devolve a mesma distância com uma fração dos
- * vértices, e é o que se usa ao avaliar candidatos em série.
+ * vértices.
  *
- * Devolve null em qualquer falha em vez de lançar: é um servidor público de
- * demonstração, sem SLA, e a tela precisa continuar de pé com o resultado
- * aproximado (linha reta) quando ele não responde.
+ * Devolve null em qualquer falha em vez de lançar: o OSRM é servidor público
+ * sem SLA, e a tela precisa continuar de pé com o resultado aproximado (linha
+ * reta) quando ele não responde.
  */
 export async function rotaOSRM(
   pontos: LatLng[],
@@ -141,22 +216,33 @@ export async function rotaOSRM(
 ): Promise<Rota | null> {
   if (pontos.length < 2) return null;
   const { overview = "full", signal } = opcoes;
-  try {
-    const caminho = pontos.map(p => `${p.lng},${p.lat}`).join(";");
-    const res = await fetch(
-      `${OSRM}/${caminho}?overview=${overview}&geometries=geojson`,
-      { signal }
-    );
-    if (!res.ok) return null;
-    const d = await res.json();
-    if (d.code !== "Ok" || !d.routes?.length) return null;
-    const r = d.routes[0];
-    return {
-      coords: (r.geometry?.coordinates || []).map((c: [number, number]) => [c[1], c[0]] as Coord),
-      km: r.distance / 1000,
-      min: r.duration / 60,
-    };
-  } catch {
-    return null;
-  }
+  const url = `${API_BASE}/geo/rota?pontos=${encodeURIComponent(pontosParam(pontos))}&overview=${overview}`;
+  const d = await pedir<any>(chaveDe(pontos, `rota:${overview}`), url, signal);
+  if (!d || !Array.isArray(d.coords)) return null;
+  return { coords: d.coords as Coord[], km: d.km, min: d.min };
+}
+
+/**
+ * Matriz entre todos os pontos — uma chamada no lugar de N.
+ *
+ * É o que permite medir o desvio de cada candidato do corredor sem uma
+ * requisição por candidato: com a matriz em mãos, tanto o desvio quanto a
+ * melhor posição de inserção saem de aritmética local.
+ *
+ * O teto de 100 coordenadas é do próprio OSRM demo (verificado: 100 passa, 120
+ * volta `TooBig`). Quem chama precisa cortar antes — aqui só devolvemos null,
+ * porque truncar por conta própria devolveria uma matriz que não corresponde à
+ * lista que o chamador acha que mandou.
+ */
+export const MAX_PONTOS_MATRIZ = 100;
+
+export async function matrizOSRM(
+  pontos: LatLng[],
+  opcoes: { signal?: AbortSignal } = {}
+): Promise<Matriz | null> {
+  if (pontos.length < 2 || pontos.length > MAX_PONTOS_MATRIZ) return null;
+  const url = `${API_BASE}/geo/matriz?pontos=${encodeURIComponent(pontosParam(pontos))}`;
+  const d = await pedir<any>(chaveDe(pontos, "matriz"), url, opcoes.signal);
+  if (!d || !Array.isArray(d.distancias_km)) return null;
+  return { distanciasKm: d.distancias_km, duracoesMin: d.duracoes_min };
 }
