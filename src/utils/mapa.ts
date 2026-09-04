@@ -13,28 +13,48 @@ declare global {
   interface Window { L: any }
 }
 
-// ── Leaflet via CDN ─────────────────────────────────────────────────────────
+// ── Carregadores via CDN ────────────────────────────────────────────────────
 // Carregado sob demanda para não exigir npm install nem entrar no bundle.
+
+/** Injeta uma tag <script> uma única vez, resolvendo quando ela carrega. */
+function injetarScript(src: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const existente = document.querySelector(`script[src="${src}"]`);
+    if (existente) {
+      if (existente.getAttribute("data-pronto")) return resolve();
+      existente.addEventListener("load", () => resolve());
+      existente.addEventListener("error", () => reject(new Error(src)));
+      return;
+    }
+    const tag = document.createElement("script");
+    tag.src = src;
+    tag.async = true;
+    tag.onload = () => { tag.setAttribute("data-pronto", "1"); resolve(); };
+    tag.onerror = () => reject(new Error(src));
+    document.body.appendChild(tag);
+  });
+}
+
+function injetarCss(href: string): void {
+  if (document.querySelector(`link[href="${href}"]`)) return;
+  const css = document.createElement("link");
+  css.rel = "stylesheet";
+  css.href = href;
+  document.head.appendChild(css);
+}
+
+const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+
 let leafletPromise: Promise<any> | null = null;
 
 export function loadLeaflet(): Promise<any> {
   if (window.L) return Promise.resolve(window.L);
   if (leafletPromise) return leafletPromise;
-  leafletPromise = new Promise((resolve, reject) => {
-    if (!document.querySelector("link[data-leaflet]")) {
-      const css = document.createElement("link");
-      css.rel = "stylesheet";
-      css.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-      css.setAttribute("data-leaflet", "1");
-      document.head.appendChild(css);
-    }
-    const script = document.createElement("script");
-    script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-    script.async = true;
-    script.onload = () => resolve(window.L);
-    script.onerror = () => reject(new Error("Falha ao carregar o mapa"));
-    document.body.appendChild(script);
-  });
+  injetarCss(LEAFLET_CSS);
+  leafletPromise = injetarScript(LEAFLET_JS)
+    .then(() => window.L)
+    .catch(() => { throw new Error("Falha ao carregar o mapa"); });
   return leafletPromise;
 }
 
@@ -134,32 +154,110 @@ export const TILE_ATTR = tilePronto
   ? (ATRIBUICOES.find(a => a.provedor.test(TILE_URL))?.texto ?? OSM_ATTR)
   : OSM_ATTR;
 
+// ── Camada vetorial: OpenFreeMap ────────────────────────────────────────────
+//
+// É o único provedor dos três em uso que resolve o problema de licença de
+// verdade: uso comercial permitido de forma explícita, sem chave, sem cadastro,
+// sem cota, cobrindo o planeta — e portanto o Brasil inteiro. Os tiers
+// gratuitos do Stadia e do MapTiler são não comerciais, e a política do
+// `tile.openstreetmap.org` não cobre produto comercial.
+//
+// O custo é o formato: são tiles VETORIAIS, que o `L.tileLayer` não consome.
+// Renderizar exige MapLibre GL, carregado do CDN junto com o plugin que o
+// encaixa dentro do Leaflet. A biblioteca de mapa continua sendo o Leaflet —
+// marcadores, linha da rota, popups e controles não mudam; só o desenho do
+// fundo passa a ser WebGL.
+//
+// Versões fixadas, e não faixas: é dependência carregada de CDN em tempo de
+// execução, onde uma versão nova quebrando algo chega sem passar por build,
+// teste ou deploy nosso.
+const MAPLIBRE_JS = "https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js";
+const MAPLIBRE_CSS = "https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css";
+const MAPLIBRE_LEAFLET = "https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.1.4/leaflet-maplibre-gl.js";
+
+/** Estilo do OpenFreeMap. `bright` é o mais próximo do OSM clássico escolhido.
+ *  Outros: `liberty`, `positron`, `dark`. Vazio desliga o vetorial e volta ao
+ *  raster — a escotilha para o caso de WebGL dar problema em alguma máquina. */
+const ESTILO_VETORIAL =
+  process.env.REACT_APP_TILE_STYLE ?? "https://tiles.openfreemap.org/styles/bright";
+
+const OFM_ATTR =
+  '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> ' +
+  '<a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">&copy; OpenMapTiles</a> ' +
+  'Data from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
+
+let vetorialPromise: Promise<boolean> | null = null;
+
+/** Carrega MapLibre + o plugin do Leaflet. Resolve false — nunca rejeita — se
+ *  qualquer coisa falhar, porque quem chama trata isso como "usa raster". */
+function carregarVetorial(): Promise<boolean> {
+  if (vetorialPromise) return vetorialPromise;
+  vetorialPromise = (async () => {
+    try {
+      injetarCss(MAPLIBRE_CSS);
+      // Em série de propósito: o plugin só se registra em `L` se o global
+      // `maplibregl` já existir quando ele executa.
+      await injetarScript(MAPLIBRE_JS);
+      await injetarScript(MAPLIBRE_LEAFLET);
+      return typeof (window.L as any)?.maplibreGL === "function";
+    } catch {
+      return false;
+    }
+  })();
+  return vetorialPromise;
+}
+
 /**
- * Adiciona a camada de tiles ao mapa, com retorno ao OSM se o provedor falhar.
+ * Põe o fundo do mapa no lugar, preferindo o vetorial e caindo para raster.
  *
- * Existe porque autenticação por domínio recusa origem não cadastrada, e o
- * caso concreto é o preview da Vercel: cada deploy ganha um subdomínio novo,
- * nenhum deles autorizado no painel do provedor. Sem isto, preview abriria com
- * o mapa em branco. Cobre também o provedor fora do ar.
+ * A ordem é: tenta OpenFreeMap (vetorial); se o MapLibre não carregar, se o
+ * navegador não tiver WebGL, ou se o estilo não vier, usa a camada raster de
+ * `TILE_URL`; e se ESSA falhar também, termina no OpenStreetMap.
  *
- * O Leaflet não distingue 401 de servidor caído — nos dois casos o tile
- * simplesmente não carrega —, e nem precisa: a resposta é a mesma. Espera
- * alguns erros antes de trocar porque um tile perdido em rede ruim é normal, e
- * trocar de provedor no primeiro soluço faria o mapa piscar à toa.
+ * Dois níveis de queda porque cada um cobre uma falha diferente: o vetorial
+ * cai por WebGL ausente ou CDN fora, e o raster cai por origem não autorizada
+ * — o caso concreto é o preview da Vercel, que ganha um subdomínio novo a cada
+ * deploy e não está no painel do provedor. O mapa não pode abrir em branco em
+ * nenhum dos dois.
  */
 export function criarCamadaDeTiles(L: any, map: any) {
-  const camada = L.tileLayer(TILE_URL, { maxZoom: 19, attribution: TILE_ATTR }).addTo(map);
-  if (TILE_URL === OSM_URL) return camada;
+  const raster = () => {
+    const camada = L.tileLayer(TILE_URL, { maxZoom: 19, attribution: TILE_ATTR }).addTo(map);
+    if (TILE_URL === OSM_URL) return camada;
+    // O Leaflet não distingue 401 de servidor caído — nos dois casos o tile
+    // simplesmente não carrega —, e nem precisa: a resposta é a mesma. Espera
+    // alguns erros porque tile perdido em rede ruim é normal, e trocar de
+    // provedor no primeiro soluço faria o mapa piscar à toa.
+    let erros = 0;
+    camada.on("tileerror", () => {
+      if (++erros < 4) return;
+      camada.off("tileerror");
+      if (map.hasLayer(camada)) map.removeLayer(camada);
+      L.tileLayer(OSM_URL, { maxZoom: 19, attribution: OSM_ATTR }).addTo(map);
+      console.warn("[mapa] provedor de tiles nao respondeu; voltando para o OpenStreetMap");
+    });
+    return camada;
+  };
 
-  let erros = 0;
-  camada.on("tileerror", () => {
-    if (++erros < 4) return;
-    camada.off("tileerror");
-    if (map.hasLayer(camada)) map.removeLayer(camada);
-    L.tileLayer(OSM_URL, { maxZoom: 19, attribution: OSM_ATTR }).addTo(map);
-    console.warn("[mapa] provedor de tiles nao respondeu; voltando para o OpenStreetMap");
+  if (!ESTILO_VETORIAL) return raster();
+
+  carregarVetorial().then(ok => {
+    // O modal pode ter fechado enquanto o MapLibre baixava; sem esta guarda,
+    // addTo() cairia num mapa já destruído.
+    if (!map.getContainer?.()) return;
+    if (!ok) {
+      console.warn("[mapa] MapLibre nao carregou; usando tiles raster");
+      raster();
+      return;
+    }
+    try {
+      (L as any).maplibreGL({ style: ESTILO_VETORIAL, attribution: OFM_ATTR }).addTo(map);
+    } catch (e) {
+      console.warn("[mapa] camada vetorial falhou; usando tiles raster", e);
+      raster();
+    }
   });
-  return camada;
+  return null;
 }
 
 export interface LatLng { lat: number; lng: number }
