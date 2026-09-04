@@ -175,11 +175,23 @@ const MAPLIBRE_JS = "https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js";
 const MAPLIBRE_CSS = "https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css";
 const MAPLIBRE_LEAFLET = "https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.1.4/leaflet-maplibre-gl.js";
 
-/** Estilo do OpenFreeMap. `bright` é o mais próximo do OSM clássico escolhido.
- *  Outros: `liberty`, `positron`, `dark`. Vazio desliga o vetorial e volta ao
- *  raster — a escotilha para o caso de WebGL dar problema em alguma máquina. */
-const ESTILO_VETORIAL =
+/**
+ * Estilo do OpenFreeMap. `bright` é o mais próximo do OSM clássico escolhido.
+ * Outros: `liberty`, `positron`, `dark`.
+ *
+ * A escotilha: qualquer valor que NÃO comece com `http` desliga o vetorial e
+ * volta ao raster — `off`, `nao`, `-`, `{}`, o que for. É deliberadamente
+ * permissivo porque o painel da Vercel não aceita valor vazio, e porque a
+ * pessoa que precisar desligar isto vai estar com o mapa quebrado na tela, sem
+ * paciência para descobrir a palavra mágica certa.
+ *
+ * Exigir `http` também evita o pior caso: um valor digitado errado ser aceito
+ * como URL de estilo, o MapLibre tentar buscá-lo, falhar, e só então cair no
+ * raster — funcionando por acidente, com atraso e erro no console.
+ */
+const estiloBruto =
   process.env.REACT_APP_TILE_STYLE ?? "https://tiles.openfreemap.org/styles/bright";
+const ESTILO_VETORIAL = /^https?:\/\//i.test(estiloBruto.trim()) ? estiloBruto.trim() : "";
 
 const OFM_ATTR =
   '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> ' +
