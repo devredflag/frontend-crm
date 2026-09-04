@@ -254,18 +254,20 @@ export default function EmpresasProximasDaEmpresa({
               fazer" precisa da rota por ruas, e por isso abre em tela cheia. */}
           {/* Fundo cheio, e não contorno com 16% de tinta: com o mesmo peso
               visual dos chips de filtro, o cliente lia isto como mais um
-              filtro desligado e não como a ação que abre outra tela. É azul
-              claro com texto escuro de propósito — o chip de raio ativo é
-              azul ESCURO com texto branco, e os dois não podem se confundir. */}
+              filtro desligado e não como a ação que abre outra tela.
+              O azul é mais saturado que o `#2E6F95` do chip de raio ativo,
+              e não mais escuro: os dois precisam continuar distinguíveis, ou
+              o Rotas passa a parecer um filtro ligado. Contraste do branco
+              sobre este fundo ~4,9:1 — o azul claro de antes daria 2,3:1. */}
           <button onClick={() => setPlanejando(true)}
             title="Planejar uma viagem e ver quem fica no caminho"
             style={{
               display: "inline-flex", alignItems: "center", gap: 6,
               padding: "6px 15px", borderRadius: 20, cursor: "pointer", fontFamily: "inherit",
-              fontSize: 11.5, fontWeight: 800, color: "#0A2540",
+              fontSize: 11.5, fontWeight: 800, color: "#FFFFFF",
               border: "1.5px solid #56A4F5",
-              background: "#56A4F5",
-              boxShadow: "0 2px 8px rgba(86,164,245,0.35)",
+              background: "#2472C8",
+              boxShadow: "0 2px 10px rgba(86,164,245,0.40)",
               transition: "all 0.15s",
             }}>
             <RouteIcon style={{ width: 13, height: 13 }} /> Rotas

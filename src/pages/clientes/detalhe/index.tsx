@@ -598,7 +598,7 @@ export default function EmpresaDetalhe() {
                               : t.key === "timeline"   && atividades.length ? atividades.length
                               : null;
                   return (
-                    <button key={t.key} onClick={() => setTab(t.key)} style={{ display:"flex", alignItems:"center", gap:6, padding:"10px 14px", fontSize:13, fontWeight: on ? 700 : 600, color:on ? "#9FD3EA" : "#9FD3EA", background:"none", border:"none", borderBottom:`2px solid ${on ? "rgba(159,211,234,0.30)" : "transparent"}`, cursor:"pointer", whiteSpace:"nowrap", fontFamily:"'Plus Jakarta Sans',sans-serif", transition:"color 0.15s" }}>
+                    <button key={t.key} onClick={() => setTab(t.key)} style={{ display:"flex", alignItems:"center", gap:6, padding:"10px 14px", fontSize:13, fontWeight: on ? 700 : 600, color:on ? "#FFFFFF" : "#9FD3EA", background:"none", border:"none", borderBottom:`2px solid ${on ? "rgba(159,211,234,0.30)" : "transparent"}`, cursor:"pointer", whiteSpace:"nowrap", fontFamily:"'Plus Jakarta Sans',sans-serif", transition:"color 0.15s" }}>
                       <t.icon style={{ width:14, height:14 }} />
                       {t.label}
                       {/* Contador da aba. Era o bug recorrente da paleta
