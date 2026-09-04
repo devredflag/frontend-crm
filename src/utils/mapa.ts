@@ -159,12 +159,6 @@ const chaveDe = (pontos: LatLng[], sufixo: string) =>
 const cache = new Map<string, any>();
 const emVoo = new Map<string, Promise<any>>();
 
-/** Zera o cache de sessão. Existe para o "limpar rota" não continuar servindo
- *  geometria de uma viagem que o usuário já descartou. */
-export function limparCacheDeRotas() {
-  cache.clear();
-}
-
 /**
  * Busca com cache, deduplicação e proteção contra resposta obsoleta.
  *
