@@ -53,6 +53,33 @@ export function diasDesde(valor?: string | null): number {
 }
 
 /**
+ * Dias desde o último TOQUE real com a empresa.
+ *
+ * `ultima_interacao` é digitada: um <input type="date"> no cadastro, que nasce
+ * com a data da criação e congela ali. Criar um compromisso na agenda não a
+ * atualiza; registrar uma observação não a atualiza. Contar os dias por ela
+ * media disciplina de preenchimento, não atividade comercial — e ao contrário:
+ * quem trabalha a empresa e não volta ao formulário aparecia como carteira
+ * abandonada, e quem só mexeu no formulário aparecia como ativo.
+ *
+ * `ultimo_contato` vem derivado do backend: o maior entre a data digitada, o
+ * último compromisso JÁ ACONTECIDO e a última observação. Ele nunca é mais
+ * antigo que o campo digitado, porque o inclui.
+ *
+ * ⚠️ O fallback existe para a janela de deploy. Vercel e Railway sobem separado;
+ * enquanto o backend novo não está no ar, o campo não vem, e cair no valor
+ * digitado devolve exatamente o comportamento antigo em vez de mostrar "nunca
+ * teve contato" para a base inteira.
+ */
+export function diasSemContato(e: {
+  ultimo_contato?: string | null;
+  ultima_interacao?: string | null;
+}): number {
+  const derivado = e.ultimo_contato;
+  return diasDesde(derivado === undefined || derivado === null ? e.ultima_interacao : derivado);
+}
+
+/**
  * Data no formato brasileiro (dd/mm/aaaa).
  *
  * Não serve para "tempo atrás" de notificação: ali o que importa é o instante

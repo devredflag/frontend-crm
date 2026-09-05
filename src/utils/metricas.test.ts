@@ -22,7 +22,7 @@ import {
   KPIS, KPIS_DESTAQUE, diasEntre,
   baldesDiarios, ritmoDoMes, conversaoDiaria, marcosConversao, resumoConversao,
   porDiaDaSemana, destaquesDaSemana, clientesForaDoPadrao, porEquipeDetalhado,
-  serieEquipeMensal,
+  serieEquipeMensal, alertasDeAtencao,
 } from "./metricas";
 import type {
   Dados, EmpresaMetrica, OrcamentoMetrica, EventoMetrica, UsuarioMetrica,
@@ -1393,5 +1393,106 @@ describe("serieEquipeMensal", () => {
     expect(ana.valores).toHaveLength(6);
     expect(ana.valores[4]).toBe(5_000);   // maio é o 5º dos 6 meses
     expect(ana.valores[5]).toBe(0);
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Contato derivado
+//
+// Estes testes NÃO usam `BASE`. Tudo que passa por `diasDesde` lê o relógio
+// real — a função não aceita data injetada —, então a única forma de fixar o
+// cenário é montar as datas a partir de hoje. É por isso que `alertasDeAtencao`
+// não tinha teste nenhum até aqui.
+// ═════════════════════════════════════════════════════════════════════════════
+
+/** "YYYY-MM-DD" de N dias atrás, contra o relógio real. */
+const diasAtras = (n: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+describe("contato derivado", () => {
+  const parados = (es: EmpresaMetrica[]) =>
+    alertasDeAtencao(dados({ empresas: es }))
+      .filter(a => a.chave === "parado")[0].valor;
+
+  it("compromisso recente na agenda tira a empresa de 'sem contato', com o cadastro velho", () => {
+    // O caso que justifica a mudança inteira: o vendedor visitou a empresa
+    // anteontem e não voltou ao formulário. Pelo campo digitado ela estava
+    // abandonada há 60 dias; pelo trabalho que existe, foi tocada anteontem.
+    expect(parados([empresa({
+      ultima_interacao: diasAtras(60),
+      ultimo_contato: diasAtras(2),
+    })])).toBe(0);
+  });
+
+  it("cadastro recente e agenda velha continuam contando como contato recente", () => {
+    // `ultimo_contato` é o MAIOR dos dois, então o digitado nunca é ignorado —
+    // ele só deixou de ser a única fonte.
+    expect(parados([empresa({
+      ultima_interacao: diasAtras(1),
+      ultimo_contato: diasAtras(1),
+    })])).toBe(0);
+  });
+
+  it("nada em lugar nenhum continua sendo carteira parada", () => {
+    expect(parados([empresa({
+      ultima_interacao: diasAtras(40),
+      ultimo_contato: diasAtras(40),
+    })])).toBe(1);
+  });
+
+  it("SEM o campo derivado, cai no cadastro — o comportamento antigo", () => {
+    // A janela entre o deploy da Vercel e o do Railway: o backend velho não
+    // manda o campo. Sem este fallback, a base inteira apareceria como "nunca
+    // teve contato" justamente quando ninguém entenderia por quê.
+    expect(parados([empresa({ ultima_interacao: diasAtras(40) })])).toBe(1);
+    expect(parados([empresa({ ultima_interacao: diasAtras(2) })])).toBe(0);
+  });
+
+  it("`null` no derivado também cai no cadastro, e não vira 'hoje'", () => {
+    expect(parados([empresa({ ultima_interacao: diasAtras(40), ultimo_contato: null })])).toBe(1);
+  });
+
+  it("empresa sem nenhuma data segue como parada — nunca contatada é o pior caso", () => {
+    expect(parados([empresa({})])).toBe(1);
+  });
+
+  it("'quentes esfriando' usa a mesma fonte", () => {
+    const esfriando = (es: EmpresaMetrica[]) =>
+      alertasDeAtencao(dados({ empresas: es })).filter(a => a.chave === "esfriando")[0].valor;
+    expect(esfriando([empresa({
+      temperatura: "Quente", ultima_interacao: diasAtras(30), ultimo_contato: diasAtras(1),
+    })])).toBe(0);
+    expect(esfriando([empresa({
+      temperatura: "Quente", ultima_interacao: diasAtras(30), ultimo_contato: diasAtras(9),
+    })])).toBe(1);
+  });
+
+  it("`porVendedor.paradas` usa a mesma fonte", () => {
+    const v = usuario({ nome: "V" });
+    const comAgenda = empresa({
+      vendedor_id: v.usuario_id, ultima_interacao: diasAtras(60), ultimo_contato: diasAtras(3),
+    });
+    const abandonada = empresa({
+      vendedor_id: v.usuario_id, ultima_interacao: diasAtras(60), ultimo_contato: diasAtras(60),
+    });
+    const linhas = porVendedor(dados({ empresas: [comAgenda, abandonada] }), [v], 6, BASE);
+    expect(linhas[0].carteira).toBe(2);
+    expect(linhas[0].paradas).toBe(1);
+  });
+
+  it("`clientesForaDoPadrao` reporta os dias pela mesma fonte", () => {
+    const e = empresa({ nome: "Cliente", ultima_interacao: diasAtras(90), ultimo_contato: diasAtras(4) });
+    const orcs = [
+      orcamento({ empresa_id: e.empresa_id, status: "aprovado", total: 20_000,
+                  data_decisao: "2025-10-10" }),
+      orcamento({ empresa_id: e.empresa_id, status: "aprovado", total: 5_000,
+                  data_decisao: "2026-03-10" }),
+    ];
+    const d = clientesForaDoPadrao(dados({ empresas: [e], orcamentos: orcs }), 6, BASE);
+    expect(d).toHaveLength(1);
+    expect(d[0].diasSemContato).toBe(4);
   });
 });

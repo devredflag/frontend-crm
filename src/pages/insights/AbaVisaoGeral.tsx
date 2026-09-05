@@ -190,6 +190,14 @@ export default function AbaVisaoGeral({
             Conta só empresa ainda no funil — fechada, perdida e rascunho não têm follow-up a
             cobrar, e incluí-las derrubaria os números sem ninguém ter errado nada.
           </Nota>
+          <Nota cor="#56A4F5">
+            “Sem contato” agora olha o <strong style={{ color: "#DCE9F5" }}>último toque de
+            verdade</strong>: o compromisso já cumprido na agenda, a última observação registrada
+            ou a data preenchida no cadastro — o que for mais recente. Antes olhava só o campo do
+            cadastro, que é digitado à mão e congela: quem trabalhava a empresa sem voltar ao
+            formulário aparecia aqui como abandonada. Se estes números caíram, não foi o time que
+            melhorou de ontem para hoje — é a conta que passou a enxergar o trabalho que já existia.
+          </Nota>
         </Bloco>
       </Grade>
 

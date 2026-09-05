@@ -36,7 +36,7 @@
  * chamar isso de passado.
  */
 
-import { dataLocal, inicioDoDia, diasDesde } from "./data";
+import { dataLocal, inicioDoDia, diasDesde, diasSemContato } from "./data";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tipos de entrada — o recorte que a tela usa de cada rota, nada além
@@ -52,7 +52,23 @@ export interface EmpresaMetrica {
   temperatura: string | null;
   origem_lead: string | null;
   motivo_perdido: string | null;
+  /**
+   * O campo DIGITADO no cadastro. Continua existindo e continua sendo do
+   * usuário — mas não use para medir atividade: veja `ultimo_contato`.
+   */
   ultima_interacao: string | null;
+  /**
+   * Derivados no backend (ver o bloco "Contato derivado" antes de `/empresas`
+   * no `main.py`): o maior entre a data digitada, o último compromisso já
+   * acontecido e a última observação; a primeira dessas duas últimas; e quantos
+   * toques a empresa recebeu.
+   *
+   * Opcionais porque o backend pode ainda não ter deployado — `diasSemContato`
+   * cai no campo digitado nesse caso.
+   */
+  ultimo_contato?: string | null;
+  primeiro_contato?: string | null;
+  contatos?: number;
   criado_em: string | null;
   status_atualizado_em: string | null;
   data_proxima_acao: string | null;
@@ -724,13 +740,13 @@ export function alertasDeAtencao(d: Dados, hoje: Date = new Date()): Alerta[] {
       cor: "#8FC4FA", ruim: false,
     },
     {
-      chave: "parado", titulo: "Sem contato há 15+ dias", sub: "Risco de perder o vínculo",
-      valor: ativas.filter(e => diasDesde(e.ultima_interacao) >= DIAS_PARADA).length,
+      chave: "parado", titulo: "Sem contato há 15+ dias", sub: "Agenda, observação ou cadastro",
+      valor: ativas.filter(e => diasSemContato(e) >= DIAS_PARADA).length,
       cor: "#F0A05A", ruim: true,
     },
     {
       chave: "esfriando", titulo: "Quentes esfriando", sub: "Lead quente sem contato há 5+ dias",
-      valor: ativas.filter(e => e.temperatura === "Quente" && diasDesde(e.ultima_interacao) >= 5).length,
+      valor: ativas.filter(e => e.temperatura === "Quente" && diasSemContato(e) >= 5).length,
       cor: "#F87171", ruim: true,
     },
     {
@@ -1023,7 +1039,7 @@ export function porVendedor(
         atividades: d.eventos.filter(ev =>
           !!ev.empresa_id && idsEmpresa[ev.empresa_id] && em(ev.data, j)).length,
         paradas: carteira.filter(e =>
-          ehAtiva(e) && diasDesde(e.ultima_interacao) >= DIAS_PARADA).length,
+          ehAtiva(e) && diasSemContato(e) >= DIAS_PARADA).length,
       };
     });
 
@@ -1875,7 +1891,7 @@ export function clientesForaDoPadrao(
       recusado: g.recusado,
       motivoRecusa: g.motivo ? g.motivo.texto : null,
       aberto: g.aberto,
-      diasSemContato: diasDesde(e.ultima_interacao),
+      diasSemContato: diasSemContato(e),
       direcao: delta < 0 ? "caiu" : "cresceu",
     });
   });
