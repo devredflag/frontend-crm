@@ -20,6 +20,9 @@ import {
   retratoFunil, agingPropostas, porVendedor, porEquipe, equipesComparaveis,
   atividadesPorTipo, esforcoPorFechamento, ativasSemAgenda, taxaAceiteConvite,
   KPIS, KPIS_DESTAQUE, diasEntre,
+  baldesDiarios, ritmoDoMes, conversaoDiaria, marcosConversao, resumoConversao,
+  porDiaDaSemana, destaquesDaSemana, clientesForaDoPadrao, porEquipeDetalhado,
+  serieEquipeMensal,
 } from "./metricas";
 import type {
   Dados, EmpresaMetrica, OrcamentoMetrica, EventoMetrica, UsuarioMetrica,
@@ -860,5 +863,535 @@ describe("atividades", () => {
     const m = taxaAceiteConvite(dd, janelaMeses(6, BASE));
     expect(m.valor).toBe(50);
     expect(m.base).toBe("1 de 2 convites");
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Grade diária, ritmo dentro do mês e padrões
+//
+// Toda esta metade do arquivo é mais frágil que a mensal por um motivo só: ela
+// afirma COISAS EM PALAVRAS ("acelerando", "melhor dia", "caiu por ticket"), e
+// palavra errada sobre número certo é o defeito que ninguém percebe olhando a
+// tela. O que os testes travam, então, não é só o valor — é a fronteira em que
+// a função se recusa a afirmar.
+// ═════════════════════════════════════════════════════════════════════════════
+
+describe("baldesDiarios", () => {
+  it("um balde por dia, inclusive as duas pontas", () => {
+    const dias = baldesDiarios(new Date(2026, 4, 1), new Date(2026, 4, 31, 23, 59), BASE);
+    expect(dias).toHaveLength(31);
+    expect(dias[0].dia).toBe(1);
+    expect(dias[30].dia).toBe(31);
+    expect(dias[0].rotulo).toBe("01/05");
+  });
+
+  it("PARA em hoje: o mês corrente não ganha os dias que ainda não aconteceram", () => {
+    // Sem este corte, os 15 dias futuros de junho entrariam como zero e
+    // afundariam qualquer média calculada sobre o mês corrente.
+    const dias = baldesDiarios(new Date(2026, 5, 1), new Date(2026, 5, 30, 23, 59), BASE);
+    expect(dias).toHaveLength(15);
+    expect(dias[14].dia).toBe(15);
+  });
+
+  it("guarda o dia da semana de cada dia", () => {
+    // 01/05/2026 é uma sexta-feira.
+    const dias = baldesDiarios(new Date(2026, 4, 1), new Date(2026, 4, 3), BASE);
+    expect(dias.map(d => d.diaSemana)).toEqual([5, 6, 0]);
+  });
+});
+
+describe("ritmoDoMes", () => {
+  const maio = baldesMensais(2, BASE)[0];   // maio/2026, mês inteiro
+
+  const comLeads = (diasDoMes: number[]) => dados({
+    empresas: diasDoMes.map(d =>
+      empresa({ criado_em: `2026-05-${String(d).padStart(2, "0")}` })),
+  });
+
+  it("reparte o mês em duas metades e mede a segunda contra a primeira", () => {
+    const r = ritmoDoMes("leads", comLeads([2, 3, 20, 21, 22, 23]), maio, BASE);
+    expect(r.dias).toBe(31);
+    expect(r.total).toBe(6);
+    expect(r.primeiraMetade).toBe(2);
+    expect(r.segundaMetade).toBe(4);
+    expect(r.variacao).toBeCloseTo(1, 5);
+    expect(r.direcao).toBe("acelerando");
+  });
+
+  it("metades parecidas são ESTÁVEL, não uma direção qualquer", () => {
+    const r = ritmoDoMes("leads", comLeads([2, 3, 4, 5, 20, 21, 22, 23]), maio, BASE);
+    expect(r.primeiraMetade).toBe(4);
+    expect(r.segundaMetade).toBe(4);
+    expect(r.direcao).toBe("estável");
+  });
+
+  it("a segunda metade cair abaixo da margem vira DESACELERANDO", () => {
+    const r = ritmoDoMes("leads", comLeads([2, 3, 4, 5, 6, 20]), maio, BASE);
+    expect(r.primeiraMetade).toBe(5);
+    expect(r.segundaMetade).toBe(1);
+    expect(r.direcao).toBe("desacelerando");
+  });
+
+  it("amostra pequena NÃO ganha direção — é o ponto do null", () => {
+    // Três leads, todos na segunda quinzena, dariam "acelerando 100%". Com esse
+    // volume o mês seguinte inverte o veredito sozinho, e a frase perde valor.
+    const r = ritmoDoMes("leads", comLeads([20, 21, 22]), maio, BASE);
+    expect(r.total).toBe(3);
+    expect(r.direcao).toBeNull();
+  });
+
+  it("o dia do meio pertence à SEGUNDA metade — o presente pesa mais", () => {
+    const r = ritmoDoMes("leads", comLeads([16]), maio, BASE);
+    expect(r.primeiraMetade).toBe(0);
+    expect(r.segundaMetade).toBe(1);
+  });
+
+  it("marca o mês corrente como parcial e conta só os dias decorridos", () => {
+    const junho = baldesMensais(1, BASE)[0];
+    const r = ritmoDoMes("leads", dados({
+      empresas: [empresa({ criado_em: "2026-06-10" })],
+    }), junho, BASE);
+    expect(r.parcial).toBe(true);
+    expect(r.dias).toBe(15);
+    expect(r.media).toBeCloseTo(1 / 15, 5);
+  });
+
+  it("mês inteiro sem registro não vira direção nem pico", () => {
+    const r = ritmoDoMes("leads", dados(), maio, BASE);
+    expect(r.total).toBe(0);
+    expect(r.diaPico).toBeNull();
+    expect(r.direcao).toBeNull();
+  });
+});
+
+describe("conversaoDiaria", () => {
+  const j = janelaMeses(6, BASE);
+  const base = dados({
+    empresas: [
+      empresa({ status: "Fechado", status_atualizado_em: "2026-02-10" }),
+      empresa({ status: "Perdido", status_atualizado_em: "2026-03-05" }),
+      empresa({ status: "Fechado", status_atualizado_em: "2026-03-05" }),
+      empresa({ status: "Fechado", status_atualizado_em: "2026-05-20" }),
+    ],
+  });
+
+  it("antes do primeiro desfecho a taxa é NULL, não zero", () => {
+    const p = conversaoDiaria(base, j, BASE);
+    expect(p[0].rotulo).toBe("01/01");
+    expect(p[0].taxaAcum).toBeNull();
+    // 10/02 é o dia do primeiro fechamento: 40 dias depois de 01/01.
+    const primeiro = p.filter(x => x.taxaAcum !== null)[0];
+    expect(primeiro.rotulo).toBe("10/02");
+    expect(primeiro.taxaAcum).toBe(100);
+  });
+
+  it("é ACUMULADA: cada ponto é a conversão do período até ali", () => {
+    const p = conversaoDiaria(base, j, BASE);
+    const em = (r: string) => p.filter(x => x.rotulo === r)[0];
+    expect(em("05/03").fechadosAcum).toBe(2);
+    expect(em("05/03").perdidosAcum).toBe(1);
+    expect(em("05/03").taxaAcum).toBeCloseTo((2 / 3) * 100, 5);
+  });
+
+  it("o último ponto é EXATAMENTE o número grande do card", () => {
+    // Se estes dois divergirem, a tela mostra dois números diferentes para a
+    // mesma coisa — o modo clássico de um painel perder a confiança de quem lê.
+    const p = conversaoDiaria(base, j, BASE);
+    const ultima = p[p.length - 1];
+    expect(ultima.taxaAcum).toBeCloseTo(taxaConversao(base, j).valor as number, 6);
+  });
+
+  it("dia sem decisão mantém a taxa, e a contagem do dia fica zerada", () => {
+    const p = conversaoDiaria(base, j, BASE);
+    const i = p.findIndex(x => x.rotulo === "06/03");
+    expect(p[i].fechadosDia).toBe(0);
+    expect(p[i].perdidosDia).toBe(0);
+    expect(p[i].taxaAcum).toBe(p[i - 1].taxaAcum);
+  });
+
+  it("sem desfecho nenhum, todos os pontos ficam sem taxa", () => {
+    const p = conversaoDiaria(dados({ empresas: [empresa()] }), j, BASE);
+    expect(p.filter(x => x.taxaAcum !== null)).toHaveLength(0);
+  });
+});
+
+describe("marcosConversao", () => {
+  const j = janelaMeses(6, BASE);
+  const p = conversaoDiaria(dados({
+    empresas: [
+      empresa({ status: "Fechado", status_atualizado_em: "2026-02-10" }),
+      empresa({ status: "Perdido", status_atualizado_em: "2026-03-05" }),
+      empresa({ status: "Fechado", status_atualizado_em: "2026-04-02" }),
+      empresa({ status: "Perdido", status_atualizado_em: "2026-05-20" }),
+    ],
+  }), j, BASE);
+
+  it("o dia em que a taxa nasce entra sempre, e é o primeiro da lista", () => {
+    const m = marcosConversao(p);
+    expect(m[0].rotulo).toBe("10/02");
+    expect(m[0].variacao).toBe(0);
+  });
+
+  it("sai em ordem cronológica, mesmo escolhendo por tamanho do movimento", () => {
+    const m = marcosConversao(p);
+    const tempos = m.map(x => x.data.getTime());
+    expect(tempos.slice()).toEqual(tempos.slice().sort((a, b) => a - b));
+  });
+
+  it("só entra dia em que a taxa MEXEU — dia parado não vira marco", () => {
+    const m = marcosConversao(p);
+    expect(m.every(x => x.fechadosDia + x.perdidosDia > 0)).toBe(true);
+    expect(m).toHaveLength(4);   // quatro desfechos, quatro movimentos
+  });
+
+  it("respeita o limite pedido", () => {
+    expect(marcosConversao(p, 2)).toHaveLength(2);
+  });
+
+  it("sem desfecho, não há marco nenhum", () => {
+    expect(marcosConversao(conversaoDiaria(dados(), j, BASE))).toHaveLength(0);
+  });
+});
+
+describe("resumoConversao", () => {
+  const j = janelaMeses(6, BASE);
+  const resumoDe = (empresas: EmpresaMetrica[]) =>
+    resumoConversao(conversaoDiaria(dados({ empresas }), j, BASE));
+
+  it("sem desfecho, não escreve frase nenhuma", () => {
+    expect(resumoDe([]).frases).toHaveLength(0);
+  });
+
+  it("com amostra pequena, a frase DIZ que é pequena em vez de cravar a taxa", () => {
+    const r = resumoDe([
+      empresa({ status: "Fechado", status_atualizado_em: "2026-02-10" }),
+      empresa({ status: "Perdido", status_atualizado_em: "2026-03-05" }),
+    ]);
+    expect(r.frases.join(" ")).toContain("amostra pequena demais");
+  });
+
+  it("com amostra e queda, a frase diz CAI e o movimento é negativo", () => {
+    const r = resumoDe([
+      empresa({ status: "Fechado", status_atualizado_em: "2026-01-10" }),
+      empresa({ status: "Fechado", status_atualizado_em: "2026-01-11" }),
+      empresa({ status: "Fechado", status_atualizado_em: "2026-01-12" }),
+      empresa({ status: "Perdido", status_atualizado_em: "2026-04-01" }),
+      empresa({ status: "Perdido", status_atualizado_em: "2026-04-02" }),
+      empresa({ status: "Perdido", status_atualizado_em: "2026-04-03" }),
+    ]);
+    expect(r.movimento).toBeLessThan(0);
+    expect(r.frases.join(" ")).toContain("CAI");
+  });
+
+  it("com amostra e alta, a frase diz SOBE", () => {
+    const r = resumoDe([
+      empresa({ status: "Perdido", status_atualizado_em: "2026-01-10" }),
+      empresa({ status: "Perdido", status_atualizado_em: "2026-01-11" }),
+      empresa({ status: "Perdido", status_atualizado_em: "2026-01-12" }),
+      empresa({ status: "Fechado", status_atualizado_em: "2026-04-01" }),
+      empresa({ status: "Fechado", status_atualizado_em: "2026-04-02" }),
+      empresa({ status: "Fechado", status_atualizado_em: "2026-04-03" }),
+    ]);
+    expect(r.movimento).toBeGreaterThan(0);
+    expect(r.frases.join(" ")).toContain("SOBE");
+  });
+
+  it("conta os dias de silêncio no fim e avisa que a taxa está PARADA", () => {
+    // Último desfecho em 10/01; de 11/01 a 15/06 são mais de quatro meses sem
+    // nada decidido. A taxa fica bonita e imóvel, e é isso que a frase quebra.
+    const r = resumoDe([
+      empresa({ status: "Fechado", status_atualizado_em: "2026-01-10" }),
+      empresa({ status: "Perdido", status_atualizado_em: "2026-01-10" }),
+      empresa({ status: "Fechado", status_atualizado_em: "2026-01-09" }),
+      empresa({ status: "Fechado", status_atualizado_em: "2026-01-08" }),
+      empresa({ status: "Perdido", status_atualizado_em: "2026-01-07" }),
+    ]);
+    expect(r.diasParada).toBeGreaterThan(150);
+    expect(r.frases.join(" ")).toContain("PARADA");
+  });
+});
+
+describe("porDiaDaSemana", () => {
+  const j = janelaMeses(6, BASE);
+
+  it("conta quantas VEZES cada dia da semana ocorreu — é o denominador", () => {
+    const linhas = porDiaDaSemana(dados(), j, BASE);
+    const total = linhas.reduce((s, l) => s + l.ocorrencias, 0);
+    // 01/01 a 15/06 de 2026: 31+28+31+30+31+15.
+    expect(total).toBe(166);
+    // Nenhum dia da semana pode ficar sem ocorrência numa janela de 5 meses.
+    expect(linhas.every(l => l.ocorrencias > 0)).toBe(true);
+  });
+
+  it("põe cada registro no dia da semana da sua própria data", () => {
+    // 04/05/2026 é segunda; 06/05/2026 é quarta.
+    const linhas = porDiaDaSemana(dados({
+      empresas: [
+        empresa({ criado_em: "2026-05-04" }),
+        empresa({ status: "Fechado", status_atualizado_em: "2026-05-06" }),
+        empresa({ status: "Perdido", status_atualizado_em: "2026-05-06" }),
+      ],
+    }), j, BASE);
+    expect(linhas[1].leads).toBe(1);          // segunda
+    expect(linhas[3].fechados).toBe(1);       // quarta
+    expect(linhas[3].perdidos).toBe(1);
+    expect(linhas[3].conversao).toBe(50);
+  });
+
+  it("divide pelo número de ocorrências, não pelo total de dias", () => {
+    const linhas = porDiaDaSemana(dados({
+      empresas: [
+        empresa({ status: "Fechado", status_atualizado_em: "2026-05-06" }),
+        empresa({ status: "Fechado", status_atualizado_em: "2026-05-13" }),
+      ],
+    }), j, BASE);
+    const quarta = linhas[3];
+    expect(quarta.fechados).toBe(2);
+    expect(quarta.fechadosPorOcorrencia).toBeCloseTo(2 / quarta.ocorrencias, 6);
+  });
+});
+
+describe("destaquesDaSemana", () => {
+  const j = janelaMeses(6, BASE);
+
+  /** N fechamentos numa quarta e M numa sexta, dentro da janela. */
+  const semana = (quartas: number, sextas: number) => {
+    const es: EmpresaMetrica[] = [];
+    // Quartas de maio: 06, 13, 20, 27. Sextas: 01, 08, 15, 22.
+    const dQuarta = ["06", "13", "20", "27"], dSexta = ["01", "08", "15", "22"];
+    for (let i = 0; i < quartas; i++) {
+      es.push(empresa({ status: "Fechado", status_atualizado_em: `2026-05-${dQuarta[i % 4]}` }));
+    }
+    for (let i = 0; i < sextas; i++) {
+      es.push(empresa({ status: "Fechado", status_atualizado_em: `2026-05-${dSexta[i % 4]}` }));
+    }
+    return destaquesDaSemana(porDiaDaSemana(dados({ empresas: es }), j, BASE));
+  };
+
+  it("com amostra curta, RECUSA eleger melhor e pior dia", () => {
+    const d = semana(4, 2);
+    expect(d.fechamentos).toBe(6);
+    expect(d.confiavel).toBe(false);
+    expect(d.frases.join(" ")).toContain("ainda não há amostra");
+  });
+
+  it("com amostra, elege o dia útil que mais fecha por ocorrência", () => {
+    const d = semana(14, 4);
+    expect(d.confiavel).toBe(true);
+    expect(d.melhor && d.melhor.dia).toBe(3);      // quarta
+    expect(d.frases.join(" ")).toContain("Quarta");
+  });
+
+  it("fim de semana NUNCA vira melhor nem pior — ali se mede expediente", () => {
+    // 20 fechamentos num domingo esmagariam qualquer dia útil na conta bruta.
+    const es: EmpresaMetrica[] = [];
+    for (let i = 0; i < 20; i++) {
+      es.push(empresa({ status: "Fechado", status_atualizado_em: "2026-05-03" }));   // domingo
+    }
+    es.push(empresa({ status: "Fechado", status_atualizado_em: "2026-05-06" }));
+    const d = destaquesDaSemana(porDiaDaSemana(dados({ empresas: es }), j, BASE));
+    expect(d.melhor && d.melhor.dia).not.toBe(0);
+    expect(d.pior && d.pior.dia).not.toBe(0);
+    expect(d.frases.join(" ")).toContain("Sábado e domingo");
+  });
+});
+
+describe("clientesForaDoPadrao", () => {
+  /** Um cliente com N compras de `valor` em cada janela. */
+  const cliente = (nome: string, atras: { q: number; v: number }, agora: { q: number; v: number }) => {
+    const e = empresa({ nome, ultima_interacao: "2026-06-01" });
+    const orcs: OrcamentoMetrica[] = [];
+    for (let i = 0; i < atras.q; i++) {
+      orcs.push(orcamento({ empresa_id: e.empresa_id, status: "aprovado",
+                            total: atras.v, data_decisao: "2025-10-10" }));
+    }
+    for (let i = 0; i < agora.q; i++) {
+      orcs.push(orcamento({ empresa_id: e.empresa_id, status: "aprovado",
+                            total: agora.v, data_decisao: "2026-03-10" }));
+    }
+    return { e, orcs };
+  };
+
+  it("a decomposição SEMPRE fecha: quantidade + ticket = diferença", () => {
+    // É a garantia que sustenta a coluna "Por quê". Se as parcelas não somarem
+    // a diferença, a tela está explicando uma queda com números que não são
+    // dela — e o erro é invisível, porque cada parcela isolada parece razoável.
+    const a = cliente("Menos vezes", { q: 2, v: 10_000 }, { q: 1, v: 10_000 });
+    const b = cliente("Mais barato", { q: 2, v: 10_000 }, { q: 2, v: 5_000 });
+    const c = cliente("Cresceu", { q: 1, v: 10_000 }, { q: 3, v: 12_000 });
+    const d = clientesForaDoPadrao(dados({
+      empresas: [a.e, b.e, c.e],
+      orcamentos: a.orcs.concat(b.orcs, c.orcs),
+    }), 6, BASE);
+    expect(d.length).toBe(3);
+    d.forEach(x => expect(x.porQuantidade + x.porTicket).toBeCloseTo(x.delta, 6));
+  });
+
+  it("separa 'comprou menos vezes' de 'comprou mais barato'", () => {
+    const a = cliente("Menos vezes", { q: 2, v: 10_000 }, { q: 1, v: 10_000 });
+    const b = cliente("Mais barato", { q: 2, v: 10_000 }, { q: 2, v: 5_000 });
+    const d = clientesForaDoPadrao(dados({
+      empresas: [a.e, b.e], orcamentos: a.orcs.concat(b.orcs),
+    }), 6, BASE);
+    const porNome = (n: string) => d.filter(x => x.nome === n)[0];
+    expect(porNome("Menos vezes").causa).toBe("quantidade");
+    expect(porNome("Menos vezes").porTicket).toBeCloseTo(0, 6);
+    expect(porNome("Mais barato").causa).toBe("ticket");
+    expect(porNome("Mais barato").porQuantidade).toBeCloseTo(0, 6);
+  });
+
+  it("cliente NOVO fica de fora: não há padrão anterior para desviar", () => {
+    const novo = cliente("Novo", { q: 0, v: 0 }, { q: 2, v: 50_000 });
+    const d = clientesForaDoPadrao(dados({
+      empresas: [novo.e], orcamentos: novo.orcs,
+    }), 6, BASE);
+    expect(d).toHaveLength(0);
+  });
+
+  it("quem comprava e zerou aparece, com a queda inteira", () => {
+    const sumiu = cliente("Sumiu", { q: 2, v: 8_000 }, { q: 0, v: 0 });
+    const d = clientesForaDoPadrao(dados({
+      empresas: [sumiu.e], orcamentos: sumiu.orcs,
+    }), 6, BASE);
+    expect(d).toHaveLength(1);
+    expect(d[0].atual).toBe(0);
+    expect(d[0].delta).toBe(-16_000);
+    expect(d[0].porQuantidade + d[0].porTicket).toBeCloseTo(-16_000, 6);
+  });
+
+  it("variação pequena não vira notícia", () => {
+    const quase = cliente("Quase igual", { q: 2, v: 10_000 }, { q: 2, v: 10_500 });
+    expect(clientesForaDoPadrao(dados({
+      empresas: [quase.e], orcamentos: quase.orcs,
+    }), 6, BASE)).toHaveLength(0);
+  });
+
+  it("ordena pelo desvio em DINHEIRO, não em porcentagem", () => {
+    // O pequeno cai 90%, o grande cai 40%. Por porcentagem o pequeno lideraria
+    // a tela, e não é ele que explica o mês.
+    const pequeno = cliente("Pequeno", { q: 1, v: 1_000 }, { q: 1, v: 100 });
+    const grande = cliente("Grande", { q: 1, v: 100_000 }, { q: 1, v: 60_000 });
+    const d = clientesForaDoPadrao(dados({
+      empresas: [pequeno.e, grande.e], orcamentos: pequeno.orcs.concat(grande.orcs),
+    }), 6, BASE);
+    expect(d[0].nome).toBe("Grande");
+    expect(Math.abs(d[0].deltaPct)).toBeLessThan(Math.abs(d[1].deltaPct));
+  });
+
+  it("junta a evidência do período: recusa com motivo e proposta em aberto", () => {
+    const c = cliente("Com evidência", { q: 2, v: 10_000 }, { q: 1, v: 10_000 });
+    const orcs = c.orcs.concat([
+      orcamento({ empresa_id: c.e.empresa_id, status: "recusado", total: 4_000,
+                  motivo_recusa: "Prazo", data_decisao: "2026-02-01" }),
+      orcamento({ empresa_id: c.e.empresa_id, status: "recusado", total: 9_000,
+                  motivo_recusa: "Preço", data_decisao: "2026-02-20" }),
+      orcamento({ empresa_id: c.e.empresa_id, status: "enviado", total: 7_000,
+                  data_envio: "2026-05-02" }),
+    ]);
+    const d = clientesForaDoPadrao(dados({ empresas: [c.e], orcamentos: orcs }), 6, BASE);
+    expect(d[0].recusado).toBe(13_000);
+    // Fica o motivo da recusa MAIS CARA, não o da mais recente: é a que explica
+    // o buraco no valor, que é o que a linha mede.
+    expect(d[0].motivoRecusa).toBe("Preço");
+    expect(d[0].aberto).toBe(7_000);
+  });
+});
+
+describe("porEquipeDetalhado", () => {
+  const supA = usuario({ role: "supervisor", nome: "Ana" });
+  const v1 = usuario({ nome: "V1", supervisor_nome: "Ana" });
+  const v2 = usuario({ nome: "V2", supervisor_nome: "Ana" });
+  const v3 = usuario({ nome: "V3", supervisor_nome: "Beto" });
+
+  const e1 = empresa({ vendedor_id: v1.usuario_id, status: "Fechado",
+                       status_atualizado_em: "2026-03-01" });
+  const e2 = empresa({ vendedor_id: v2.usuario_id, status: "Perdido",
+                       status_atualizado_em: "2026-03-01" });
+  const e3 = empresa({ vendedor_id: v3.usuario_id, status: "Fechado",
+                       status_atualizado_em: "2026-03-01" });
+
+  const d = dados({
+    empresas: [e1, e2, e3],
+    orcamentos: [
+      orcamento({ empresa_id: e1.empresa_id, status: "aprovado", total: 90_000,
+                  data_decisao: "2026-03-02" }),
+      orcamento({ empresa_id: e2.empresa_id, status: "aprovado", total: 10_000,
+                  data_decisao: "2026-03-02" }),
+      orcamento({ empresa_id: e3.empresa_id, status: "aprovado", total: 40_000,
+                  data_decisao: "2026-03-02" }),
+    ],
+  });
+  const linhas = porVendedor(d, [supA, v1, v2, v3], 6, BASE);
+  const equipes = porEquipeDetalhado(linhas);
+  const ana = equipes.filter(x => x.equipe === "Ana")[0];
+
+  it("a conversão da equipe sai dos NÚMEROS somados, não da média das taxas", () => {
+    // Ana tem um vendedor com 100% e outro com 0%. A média das taxas daria 50%;
+    // o certo é 1 fechado sobre 2 decididos — que aqui coincide, e é por isso
+    // que o caso seguinte existe.
+    expect(ana.fechados).toBe(1);
+    expect(ana.perdidos).toBe(1);
+    expect(ana.conversao).toBe(50);
+  });
+
+  it("concentração denuncia a equipe que depende de uma pessoa só", () => {
+    // 90k de 100k na Ana: 90% do resultado da equipe vem de um vendedor.
+    expect(ana.concentracao).toBeCloseTo(90, 6);
+    expect(ana.destaque && ana.destaque.nome).toBe("V1");
+  });
+
+  it("participação é a fatia do total do escopo, e as fatias somam 100", () => {
+    const soma = equipes.reduce((s, x) => s + x.participacao, 0);
+    expect(soma).toBeCloseTo(100, 6);
+    expect(ana.participacao).toBeCloseTo((100_000 / 140_000) * 100, 6);
+  });
+
+  it("aprovado por vendedor corrige o tamanho do time", () => {
+    const beto = equipes.filter(x => x.equipe === "Beto")[0];
+    expect(ana.aprovado).toBeGreaterThan(beto.aprovado);
+    // Ana produz mais no total e MENOS por cabeça — a comparação só existe
+    // porque a coluna existe.
+    expect(ana.aprovadoPorVendedor).toBe(50_000);
+    expect(beto.aprovadoPorVendedor).toBe(40_000);
+  });
+
+  it("Δ da equipe é null quando nenhum vendedor tinha base anterior", () => {
+    // Somar `null` como zero diria "não mudou" onde o certo é "não dá para saber".
+    expect(ana.deltaAprovado).toBeNull();
+  });
+});
+
+describe("serieEquipeMensal", () => {
+  const v1 = usuario({ nome: "V1", supervisor_nome: "Ana" });
+  const v2 = usuario({ nome: "V2" });   // sem supervisor
+  const e1 = empresa({ vendedor_id: v1.usuario_id });
+  const e2 = empresa({ vendedor_id: v2.usuario_id });
+
+  const d = dados({
+    empresas: [e1, e2],
+    orcamentos: [
+      orcamento({ empresa_id: e1.empresa_id, status: "aprovado", total: 5_000,
+                  data_decisao: "2026-05-10" }),
+      orcamento({ empresa_id: e2.empresa_id, status: "aprovado", total: 3_000,
+                  data_decisao: "2026-06-10" }),
+      // Recusado não entra: a série é de valor APROVADO.
+      orcamento({ empresa_id: e1.empresa_id, status: "recusado", total: 99_000,
+                  data_decisao: "2026-05-11" }),
+    ],
+  });
+
+  it("agrupa pelo supervisor do dono da empresa, e o órfão vira 'Sem supervisor'", () => {
+    const s = serieEquipeMensal(d, [v1, v2], 6, BASE);
+    expect(s.map(x => x.equipe).sort()).toEqual(["Ana", "Sem supervisor"]);
+    expect(s.filter(x => x.equipe === "Ana")[0].total).toBe(5_000);
+    expect(s.filter(x => x.equipe === "Sem supervisor")[0].total).toBe(3_000);
+  });
+
+  it("põe o valor no mês da DECISÃO, e a série tem um ponto por mês da janela", () => {
+    const s = serieEquipeMensal(d, [v1, v2], 6, BASE);
+    const ana = s.filter(x => x.equipe === "Ana")[0];
+    expect(ana.valores).toHaveLength(6);
+    expect(ana.valores[4]).toBe(5_000);   // maio é o 5º dos 6 meses
+    expect(ana.valores[5]).toBe(0);
   });
 });

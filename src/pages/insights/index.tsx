@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  BarChart3, Boxes, Building2, Calendar, ClipboardList, Compass, LayoutDashboard,
-  Menu, RefreshCw, Search, TrendingUp, Users, Users2, UserRoundCog,
+  Activity, BarChart3, Boxes, Building2, Calendar, ClipboardList, Compass,
+  LayoutDashboard, Menu, RefreshCw, Search, TrendingUp, Users, Users2, UserRoundCog,
 } from "lucide-react";
 
 import CardUsuario, { podeVerInsights, useUsuarioLogado } from "../../components/CardUsuario";
@@ -19,6 +19,7 @@ import type {
 } from "../../utils/metricas";
 import AbaCatalogo from "./AbaCatalogo";
 import AbaFunil from "./AbaFunil";
+import AbaRitmo from "./AbaRitmo";
 import AbaTime from "./AbaTime";
 import AbaVisaoGeral from "./AbaVisaoGeral";
 import FiltroGlobal, { intervaloEmPalavras } from "./FiltroGlobal";
@@ -100,11 +101,16 @@ const navItems = [
   { icon: Calendar,        label: "Calendário",         path: "/calendario" },
 ];
 
-type ChaveAba = "geral" | "funil" | "time" | "catalogo";
+type ChaveAba = "geral" | "funil" | "ritmo" | "time" | "catalogo";
 
+// A ordem é a da pergunta que cada aba responde: quanto (geral) → onde trava
+// (funil) → quando e por quê (ritmo) → quem (time) → o quê (catálogo). "Ritmo"
+// vem depois de "Funil" porque só faz sentido depois de saber que a taxa
+// existe: ela é a mesma conversão, aberta dia a dia.
 const ABAS: { chave: ChaveAba; rotulo: string; curto: string; icone: any }[] = [
   { chave: "geral",    rotulo: "Visão geral",       curto: "Geral",    icone: BarChart3 },
   { chave: "funil",    rotulo: "Funil e conversão", curto: "Funil",    icone: Compass },
+  { chave: "ritmo",    rotulo: "Ritmo e padrões",   curto: "Ritmo",    icone: Activity },
   { chave: "time",     rotulo: "Time",              curto: "Time",     icone: Users2 },
   { chave: "catalogo", rotulo: "Catálogo e base",   curto: "Catálogo", icone: Boxes },
 ];
@@ -382,6 +388,7 @@ export default function Insights() {
                   aoEscolher={setKpiEscolhido} />
               )}
               {aba === "funil" && <AbaFunil {...props} />}
+              {aba === "ritmo" && <AbaRitmo {...props} />}
               {aba === "time" && <AbaTime {...props} usuarios={usuarios} />}
               {aba === "catalogo" && <AbaCatalogo {...props} />}
             </div>

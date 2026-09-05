@@ -16,13 +16,14 @@
  */
 
 import { useState } from "react";
+import type { ReactNode } from "react";
 
 import useIsMobile from "../../hooks/useIsMobile";
 import { brl } from "../../utils/moeda";
 import type { Balde, Serie } from "../../utils/metricas";
 import {
-  caminhoComBuracos, marcasEixo, mesMaisProximo, posicaoNoViewBox, rotuloEixo,
-  Tabela, Num, VerNumeros, useVerNumeros,
+  caminhoComBuracos, caminhoDasPontes, marcasEixo, mesMaisProximo, posicaoNoViewBox,
+  rotuloEixo, Tabela, Num, VerNumeros, useVerNumeros,
 } from "./pecas";
 
 const CINZA_ANTERIOR = "#7E9DBB";
@@ -35,6 +36,26 @@ interface Props {
   rotuloAnterior?: string;
   mostrarAnterior?: boolean;
   vazio: string;
+  /**
+   * Liga a PONTE tracejada por cima dos buracos da série.
+   *
+   * Serve para série esparsa — a taxa de conversão, cujo mês sem negócio
+   * decidido não tem valor nenhum. Sem ela o gráfico vira bolinhas soltas e a
+   * forma da curva, que é o que se lê num gráfico de linha, some.
+   *
+   * Quem liga assume a obrigação de explicar na tela que o tracejado não passa
+   * por dado medido. O componente já faz a parte dele: a ponte entra na legenda
+   * com nome próprio e o balão avisa quando o mês lido não tem valor.
+   */
+  ponte?: boolean;
+  /**
+   * Conteúdo extra dentro do balão, por mês.
+   *
+   * É o gancho do "ritmo dentro do mês": só o gráfico que precisa dele o passa,
+   * e os outros continuam com o balão enxuto. Um balão com o dobro de linhas em
+   * todo gráfico da tela cobriria a própria curva que se está lendo.
+   */
+  detalheDoMes?: (indice: number) => ReactNode;
 }
 
 /** `null` = mês sem amostra. Ver `Serie.valores` em utils/metricas.ts. */
@@ -63,6 +84,7 @@ function afastar(ys: number[], minimo: number): number[] {
 
 export default function GraficoLinhas({
   series, baldes, moeda = false, rotuloAnterior, mostrarAnterior = false, vazio,
+  ponte = false, detalheDoMes,
 }: Props) {
   const isMobile = useIsMobile();
   const [ativo, setAtivo] = useState<number | null>(null);
@@ -116,6 +138,10 @@ export default function GraficoLinhas({
   const faixa = pw / Math.max(n - 1, 1);
 
   const caminho = (vals: (number | null)[]) => caminhoComBuracos(vals, x, y);
+  const pontes = (vals: (number | null)[]) => caminhoDasPontes(vals, x, y);
+  /** Há vão para atravessar? Decide se a ponte ganha linha na legenda. */
+  const temBuraco = series.some(s =>
+    s.valores.some(v => v === null) && s.valores.filter(v => v !== null).length >= 2);
 
   /**
    * Converte a posição do ponteiro para o viewBox e acha o mês mais próximo.
@@ -181,6 +207,16 @@ export default function GraficoLinhas({
               <span style={{ width: 9, height: 0, flexShrink: 0,
                              borderTop: `2px dashed ${CINZA_ANTERIOR}` }} />
               {rotuloAnterior || "período anterior"}
+            </span>
+          )}
+          {/* A ponte só entra na legenda quando existe vão para atravessar, e
+              com nome que diz o que ela é. Tracejado sem legenda seria lido como
+              uma medição de outro tipo — que é justamente o que ela não é. */}
+          {ponte && temBuraco && (
+            <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "#8AA9C6" }}>
+              <span style={{ width: 9, height: 0, flexShrink: 0,
+                             borderTop: "2px dotted #8AA9C6" }} />
+              trecho sem medição
             </span>
           )}
         </div>
@@ -250,6 +286,16 @@ export default function GraficoLinhas({
               <path fill={`url(#ar-${series[0].chave})`}
                     d={`${caminho(series[0].valores)} L${x(n - 1)},${T + ph} L${x(0)},${T + ph} Z`} />
             )}
+
+            {/* A ponte vai ANTES e mais fina: a linha cheia passa por cima dela,
+                então o que foi medido continua sendo o traço dominante. Pontilhado
+                (e não tracejado) para não ser confundido com o período anterior,
+                que já usa tracejado neste mesmo desenho. */}
+            {ponte && series.map(s => (
+              <path key={`p-${s.chave}`} d={pontes(s.valores)} fill="none" stroke={s.cor}
+                    strokeWidth="1.6" strokeDasharray="1.5 4" strokeOpacity="0.55"
+                    strokeLinecap="round" />
+            ))}
 
             {series.map(s => (
               <path key={s.chave} d={caminho(s.valores)} fill="none" stroke={s.cor}
@@ -374,8 +420,14 @@ export default function GraficoLinhas({
               {/* Diz de onde vem o número: o balão anda com o cursor, mas o
                   valor é sempre de um mês medido. Sem isto, parar entre dois
                   meses parece dar um valor daquele ponto do meio. */}
+              {/* Conteúdo específico do gráfico — hoje, o ritmo dentro do mês.
+                  Vem depois dos valores e antes do rodapé, que continua sendo a
+                  última linha lida. */}
+              {detalheDoMes && detalheDoMes(ativo)}
               <div style={{ color: "#7E9DBB", fontSize: 10, marginTop: 6 }}>
-                {ativo > 0 ? "▲▼ é a variação contra o mês anterior" : "primeiro mês do período"}
+                {ponte && series.some(s => (s.valores[ativo] ?? null) === null)
+                  ? "sem valor neste mês — o pontilhado só liga os dois lados do vão"
+                  : ativo > 0 ? "▲▼ é a variação contra o mês anterior" : "primeiro mês do período"}
               </div>
             </div>
           )}

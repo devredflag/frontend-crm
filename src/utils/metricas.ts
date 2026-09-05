@@ -1193,3 +1193,834 @@ export function taxaAceiteConvite(d: Dados, j: Janela): Medida {
   return razao(aceitos, comConvite.length,
     comConvite.length ? `${aceitos} de ${comConvite.length} convites` : "nenhum convite enviado");
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Grade DIÁRIA — o ritmo dentro do mês
+//
+// Tudo acima desta linha é mensal, e por um bom motivo: o mês é a unidade em
+// que se crava meta. Mas o mês também esconde a única coisa que diz se o time
+// está reagindo AGORA — a inclinação dentro dele. Um mês que fechou igual ao
+// anterior pode ter começado devagar e acelerado, ou o contrário, e as duas
+// leituras pedem decisões opostas.
+//
+// ⚠️ O dia NÃO vira ponto de gráfico grande em lugar nenhum: contagem diária de
+// um CRM pequeno é quase toda zero, e uma linha diária desenharia serrilha onde
+// não há sinal. O diário entra como AGREGADO (média por dia, metade contra
+// metade, dia da semana) e como ACUMULADO — nunca como série crua.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface BaldeDia {
+  /** Dia do mês, 1–31. */
+  dia: number;
+  /** 0 = domingo. */
+  diaSemana: number;
+  /** "12/03" */
+  rotulo: string;
+  inicio: Date;
+  fim: Date;
+}
+
+const DIAS_SEMANA = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+const DIAS_SEMANA_CURTO = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+const doisDigitos = (n: number) => String(n).padStart(2, "0");
+
+/**
+ * Um balde por dia entre `inicio` e `fim`, sem passar de hoje.
+ *
+ * O corte em hoje é o que impede o mês corrente de parecer uma queda: sem ele,
+ * os dias que ainda não aconteceram entram como zero e afundam qualquer média
+ * ou inclinação calculada sobre eles. Quem consome sabe que a última janela é
+ * parcial porque `parcial` diz isso — não porque adivinhou pelo desenho.
+ */
+export function baldesDiarios(inicio: Date, fim: Date, hoje: Date = new Date()): BaldeDia[] {
+  const out: BaldeDia[] = [];
+  const ultimo = fim < hoje ? fim : hoje;
+  const cursor = inicioDoDia(inicio);
+  const parada = inicioDoDia(ultimo);
+  // Teto de segurança: pouco mais de dois anos de dias. Janela absurda vinda de
+  // um filtro errado não pode virar laço infinito na thread da interface.
+  for (let guarda = 0; cursor <= parada && guarda < 800; guarda++) {
+    const d = new Date(cursor);
+    out.push({
+      dia: d.getDate(),
+      diaSemana: d.getDay(),
+      rotulo: `${doisDigitos(d.getDate())}/${doisDigitos(d.getMonth() + 1)}`,
+      inicio: new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0),
+      fim: new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999),
+    });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return out;
+}
+
+export type Direcao = "acelerando" | "desacelerando" | "estável";
+
+export interface RitmoMes {
+  chave: string;
+  /** Um valor por dia JÁ DECORRIDO do mês. */
+  porDia: number[];
+  dias: number;
+  total: number;
+  /** Total ÷ dias decorridos. */
+  media: number;
+  primeiraMetade: number;
+  segundaMetade: number;
+  /** (segunda − primeira) ÷ primeira. `null` quando a primeira metade é zero. */
+  variacao: number | null;
+  /**
+   * `null` = amostra pequena demais para afirmar direção.
+   *
+   * Sem esse null, um mês com dois leads viraria "acelerando 100%" porque os
+   * dois caíram na segunda quinzena — e é exatamente esse tipo de frase que
+   * faz um painel perder a confiança de quem o lê.
+   */
+  direcao: Direcao | null;
+  /** O mês ainda não terminou: os dias contados não são o mês inteiro. */
+  parcial: boolean;
+  /** Dia do mês com o maior valor, e o valor. `null` quando não houve nada. */
+  diaPico: number | null;
+  picoValor: number;
+  diasComAlgo: number;
+}
+
+/** Piso para afirmar direção: abaixo disso, metade contra metade é ruído. */
+const MINIMO_PARA_DIRECAO = 4;
+/** Quanto a segunda metade precisa se afastar da primeira para não ser "estável". */
+const MARGEM_DIRECAO = 0.2;
+
+/**
+ * Como uma das contagens do funil se distribuiu DENTRO de um mês.
+ *
+ * É o que o balão do gráfico de ritmo passa a dizer: o mês fechou em 12 leads,
+ * mas 9 deles entraram na segunda quinzena — o time está reagindo, e o número
+ * mensal sozinho não contava isso.
+ *
+ * A direção sai de METADE CONTRA METADE, e não de uma regressão. Com trinta
+ * pontos quase todos zerados, a inclinação de mínimos quadrados é dominada
+ * pelos poucos dias com valor e troca de sinal com um único negócio mudando de
+ * dia. Somar as metades é grosseiro de propósito: é a leitura que sobrevive à
+ * amostra que este CRM tem.
+ */
+export function ritmoDoMes(
+  chave: string, d: Dados, b: Balde, hoje: Date = new Date(),
+): RitmoMes {
+  const conta = CONTAS[chave];
+  const dias = baldesDiarios(b.inicio, b.fim, hoje);
+  const porDia = conta ? dias.map(dia => conta(d, { inicio: dia.inicio, fim: dia.fim })) : [];
+  const total = porDia.reduce((s, v) => s + v, 0);
+  const meio = Math.floor(porDia.length / 2);
+  const primeiraMetade = porDia.slice(0, meio).reduce((s, v) => s + v, 0);
+  // Em contagem ímpar de dias, o do meio fica com a SEGUNDA metade: numa
+  // leitura de "está acelerando?", o presente pesa mais que o passado.
+  const segundaMetade = porDia.slice(meio).reduce((s, v) => s + v, 0);
+
+  let diaPico: number | null = null;
+  let picoValor = 0;
+  porDia.forEach((v, i) => { if (v > picoValor) { picoValor = v; diaPico = dias[i].dia; } });
+
+  const variacao = primeiraMetade > 0 ? (segundaMetade - primeiraMetade) / primeiraMetade : null;
+  let direcao: Direcao | null = null;
+  if (total >= MINIMO_PARA_DIRECAO && porDia.length >= 6) {
+    if (variacao === null) direcao = segundaMetade > 0 ? "acelerando" : "estável";
+    else if (variacao >= MARGEM_DIRECAO) direcao = "acelerando";
+    else if (variacao <= -MARGEM_DIRECAO) direcao = "desacelerando";
+    else direcao = "estável";
+  }
+
+  const inicioHoje = inicioDoDia(hoje);
+  return {
+    chave,
+    porDia,
+    dias: porDia.length,
+    total,
+    media: porDia.length ? total / porDia.length : 0,
+    primeiraMetade,
+    segundaMetade,
+    variacao,
+    direcao,
+    parcial: inicioHoje >= inicioDoDia(b.inicio) && inicioHoje <= inicioDoDia(b.fim),
+    diaPico,
+    picoValor,
+    diasComAlgo: porDia.filter(v => v > 0).length,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// A conversão dia a dia
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface PontoConversaoDia {
+  rotulo: string;
+  data: Date;
+  fechadosDia: number;
+  perdidosDia: number;
+  fechadosAcum: number;
+  perdidosAcum: number;
+  decididosAcum: number;
+  /** Taxa ACUMULADA até o dia. `null` enquanto nada foi decidido no período. */
+  taxaAcum: number | null;
+}
+
+/** Chave de dia local, para agrupar sem comparar Date a Date num laço. */
+const chaveDia = (d: Date) =>
+  `${d.getFullYear()}-${doisDigitos(d.getMonth() + 1)}-${doisDigitos(d.getDate())}`;
+
+/**
+ * A curva acumulada da taxa de conversão, dia a dia dentro da janela.
+ *
+ * ACUMULADA, e não diária: a taxa de um dia isolado é 0% ou 100% na quase
+ * totalidade dos dias deste CRM — um desenho de serrilha que não informa nada.
+ * A acumulada mostra o que a pergunta pede ("como ela foi crescendo com os dias
+ * passando"): cada ponto é a conversão do período ATÉ ali, então a curva é a
+ * própria história da taxa se formando, e o último ponto é exatamente o número
+ * grande do card.
+ *
+ * Antes da primeira decisão a taxa é `null`, não zero — a mesma regra do resto
+ * do arquivo. Zero ali afirmaria "converteu nada" onde o certo é "nada foi
+ * decidido ainda".
+ */
+export function conversaoDiaria(d: Dados, j: Janela, hoje: Date = new Date()): PontoConversaoDia[] {
+  const fechadosPorDia: Record<string, number> = {};
+  const perdidosPorDia: Record<string, number> = {};
+  d.empresas.forEach(e => {
+    if (e.status !== "Fechado" && e.status !== "Perdido") return;
+    const dt = dataLocal(e.status_atualizado_em);
+    if (!dt || !dentro(dt, j)) return;
+    const k = chaveDia(dt);
+    const alvo = e.status === "Fechado" ? fechadosPorDia : perdidosPorDia;
+    alvo[k] = (alvo[k] || 0) + 1;
+  });
+
+  let fechadosAcum = 0, perdidosAcum = 0;
+  return baldesDiarios(j.inicio, j.fim, hoje).map(dia => {
+    const k = chaveDia(dia.inicio);
+    const fechadosDia = fechadosPorDia[k] || 0;
+    const perdidosDia = perdidosPorDia[k] || 0;
+    fechadosAcum += fechadosDia;
+    perdidosAcum += perdidosDia;
+    const decididosAcum = fechadosAcum + perdidosAcum;
+    return {
+      rotulo: dia.rotulo,
+      data: dia.inicio,
+      fechadosDia,
+      perdidosDia,
+      fechadosAcum,
+      perdidosAcum,
+      decididosAcum,
+      taxaAcum: decididosAcum > 0 ? (fechadosAcum / decididosAcum) * 100 : null,
+    };
+  });
+}
+
+export interface MarcoConversao {
+  rotulo: string;
+  data: Date;
+  taxa: number;
+  decididos: number;
+  /** Pontos percentuais que a taxa acumulada moveu NAQUELE dia. */
+  variacao: number;
+  fechadosDia: number;
+  perdidosDia: number;
+}
+
+/**
+ * Os dias em que a taxa acumulada REALMENTE mexeu.
+ *
+ * Não são "os dias com mais fechamentos": num acumulado, o mesmo negócio move
+ * muito no começo (quando o denominador é pequeno) e quase nada no fim. O que
+ * interessa contar é o movimento da TAXA, porque é ele que aparece na curva e é
+ * dele que vem a pergunta "o que aconteceu aqui?".
+ *
+ * O primeiro dia com decisão entra sempre: é o ponto em que a taxa nasce, e sem
+ * ele a lista começaria no meio de uma história.
+ */
+export function marcosConversao(pontos: PontoConversaoDia[], limite = 5): MarcoConversao[] {
+  const comMovimento: MarcoConversao[] = [];
+  let anterior: number | null = null;
+  pontos.forEach(p => {
+    if (p.taxaAcum === null) return;
+    const nasceu = anterior === null;
+    const variacao = nasceu ? 0 : p.taxaAcum - (anterior as number);
+    if (nasceu || Math.abs(variacao) > 1e-9) {
+      comMovimento.push({
+        rotulo: p.rotulo, data: p.data, taxa: p.taxaAcum,
+        decididos: p.decididosAcum, variacao,
+        fechadosDia: p.fechadosDia, perdidosDia: p.perdidosDia,
+      });
+    }
+    anterior = p.taxaAcum;
+  });
+  if (comMovimento.length === 0) return [];
+
+  const nascimento = comMovimento[0];
+  const resto = comMovimento.slice(1)
+    .sort((a, b) => Math.abs(b.variacao) - Math.abs(a.variacao))
+    .slice(0, Math.max(limite - 1, 0));
+  return [nascimento].concat(resto).sort((a, b) => a.data.getTime() - b.data.getTime());
+}
+
+export interface ResumoConversao {
+  /** Frases prontas, na ordem de leitura. Vazio quando não houve decisão. */
+  frases: string[];
+  primeira: PontoConversaoDia | null;
+  ultima: PontoConversaoDia | null;
+  /** Maior e menor valor que a curva acumulada alcançou. */
+  maximo: PontoConversaoDia | null;
+  minimo: PontoConversaoDia | null;
+  /** Diferença em PONTOS entre o primeiro dia com taxa e o último. */
+  movimento: number | null;
+  /** Dias corridos sem nenhuma decisão, no fim da janela. */
+  diasParada: number;
+}
+
+const umaCasa = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
+
+/**
+ * A leitura da curva em português.
+ *
+ * Mora aqui, e não no componente, pela mesma razão que o resto do arquivo: a
+ * frase é uma CONCLUSÃO sobre o dado ("a taxa subiu 12 pontos com os dias
+ * passando"), e conclusão escrita na marcação é conclusão que ninguém consegue
+ * conferir. Saindo de função pura, o teste trava o texto contra a série.
+ *
+ * ⚠️ Toda frase daqui carrega o tamanho da amostra junto. "62% de conversão"
+ * sobre 3 negócios e sobre 300 são a mesma frase e informações opostas, e a
+ * primeira coisa que um painel perde ao esquecer isso é a confiança de quem lê.
+ */
+export function resumoConversao(pontos: PontoConversaoDia[]): ResumoConversao {
+  const comTaxa = pontos.filter(p => p.taxaAcum !== null);
+  if (comTaxa.length === 0) {
+    return { frases: [], primeira: null, ultima: null, maximo: null, minimo: null,
+             movimento: null, diasParada: pontos.length };
+  }
+
+  const primeira = comTaxa[0];
+  const ultima = comTaxa[comTaxa.length - 1];
+  let maximo = primeira, minimo = primeira;
+  comTaxa.forEach(p => {
+    if ((p.taxaAcum as number) > (maximo.taxaAcum as number)) maximo = p;
+    if ((p.taxaAcum as number) < (minimo.taxaAcum as number)) minimo = p;
+  });
+
+  // Dias no FIM da janela sem nenhuma decisão nova: é o sinal de funil parado
+  // que a taxa sozinha não dá — ela fica bonita e imóvel.
+  let diasParada = 0;
+  for (let i = pontos.length - 1; i >= 0; i--) {
+    if (pontos[i].fechadosDia + pontos[i].perdidosDia > 0) break;
+    diasParada++;
+  }
+
+  const movimento = (ultima.taxaAcum as number) - (primeira.taxaAcum as number);
+  const frases: string[] = [];
+
+  frases.push(
+    `A taxa nasce em ${primeira.rotulo}, no primeiro desfecho do período: ` +
+    `${umaCasa(primeira.taxaAcum as number)}% sobre ${primeira.decididosAcum} ` +
+    `${primeira.decididosAcum === 1 ? "negócio decidido" : "negócios decididos"}.`
+  );
+
+  if (ultima.decididosAcum < 5) {
+    frases.push(
+      `Ela termina em ${umaCasa(ultima.taxaAcum as number)}%, mas sobre ` +
+      `${ultima.decididosAcum} ${ultima.decididosAcum === 1 ? "negócio" : "negócios"} — ` +
+      `amostra pequena demais para virar meta: um único desfecho a mais move a curva inteira.`
+    );
+  } else if (Math.abs(movimento) < 2) {
+    frases.push(
+      `De ${primeira.rotulo} a ${ultima.rotulo} ela praticamente não se moveu — fecha em ` +
+      `${umaCasa(ultima.taxaAcum as number)}% sobre ${ultima.decididosAcum} decididos. ` +
+      `Acumulada plana é time constante, não time parado: quem diz se produziu é o volume, ao lado.`
+    );
+  } else if (movimento > 0) {
+    frases.push(
+      `Com os dias passando ela SOBE ${umaCasa(movimento)} pontos — de ` +
+      `${umaCasa(primeira.taxaAcum as number)}% para ${umaCasa(ultima.taxaAcum as number)}% ` +
+      `em ${ultima.decididosAcum} negócios decididos. Cada desfecho novo entrou melhor que a média ` +
+      `do que já estava na conta.`
+    );
+  } else {
+    frases.push(
+      `Com os dias passando ela CAI ${umaCasa(Math.abs(movimento))} pontos — de ` +
+      `${umaCasa(primeira.taxaAcum as number)}% para ${umaCasa(ultima.taxaAcum as number)}% ` +
+      `em ${ultima.decididosAcum} negócios decididos. Os desfechos recentes estão piores que os antigos.`
+    );
+  }
+
+  if (maximo.rotulo !== ultima.rotulo && (maximo.taxaAcum as number) - (ultima.taxaAcum as number) >= 2) {
+    frases.push(
+      `O topo foi em ${maximo.rotulo}, com ${umaCasa(maximo.taxaAcum as number)}%. De lá para cá a ` +
+      `curva cedeu ${umaCasa((maximo.taxaAcum as number) - (ultima.taxaAcum as number))} pontos.`
+    );
+  }
+
+  if (diasParada >= 14) {
+    frases.push(
+      `Nenhum negócio foi decidido nos últimos ${diasParada} dias. A taxa está PARADA, não estável: ` +
+      `o número acima é história, e o funil deixou de produzir desfecho.`
+    );
+  }
+
+  return { frases, primeira, ultima, maximo, minimo, movimento, diasParada };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Padrão por dia da semana
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface LinhaDiaSemana {
+  /** 0 = domingo. */
+  dia: number;
+  rotulo: string;
+  curto: string;
+  /**
+   * Quantas vezes este dia da semana OCORREU na janela.
+   *
+   * É o denominador que faz a comparação valer. Uma janela de 6 meses costuma
+   * ter 27 segundas e 26 terças; comparar os totais crus premiaria a segunda
+   * por existir uma vez a mais, e o "melhor dia da semana" viraria um artefato
+   * do calendário em vez de um fato sobre o time.
+   */
+  ocorrencias: number;
+  leads: number;
+  propostas: number;
+  fechados: number;
+  perdidos: number;
+  atividades: number;
+  aprovado: number;
+  /** Fechados ÷ decididos NESTE dia da semana. `null` sem desfecho. */
+  conversao: number | null;
+  fechadosPorOcorrencia: number;
+  leadsPorOcorrencia: number;
+  aprovadoPorOcorrencia: number;
+}
+
+/**
+ * O que acontece em cada dia da semana, dentro da janela.
+ *
+ * A pergunta que responde é "quando vendemos mais e quando vendemos menos, de
+ * forma RECORRENTE" — recorrente é a palavra que obriga o denominador: o número
+ * comparável entre linhas é sempre por ocorrência do dia, nunca o total.
+ *
+ * ⚠️ Fim de semana quase sempre aparece como o pior dia, e isso não é achado: é
+ * o expediente. Por isso `destaquesDaSemana` só procura melhor e pior ENTRE OS
+ * DIAS ÚTEIS, e o sábado/domingo continua na tabela apenas porque volume alto
+ * ali é notícia por si só.
+ */
+export function porDiaDaSemana(d: Dados, j: Janela, hoje: Date = new Date()): LinhaDiaSemana[] {
+  const linhas: LinhaDiaSemana[] = [];
+  for (let i = 0; i < 7; i++) {
+    linhas.push({
+      dia: i, rotulo: DIAS_SEMANA[i], curto: DIAS_SEMANA_CURTO[i], ocorrencias: 0,
+      leads: 0, propostas: 0, fechados: 0, perdidos: 0, atividades: 0, aprovado: 0,
+      conversao: null, fechadosPorOcorrencia: 0, leadsPorOcorrencia: 0, aprovadoPorOcorrencia: 0,
+    });
+  }
+
+  baldesDiarios(j.inicio, j.fim, hoje).forEach(dia => { linhas[dia.diaSemana].ocorrencias += 1; });
+
+  const noDia = (valor: string | null | undefined): LinhaDiaSemana | null => {
+    const dt = dataLocal(valor ?? null);
+    if (!dt || !dentro(dt, j)) return null;
+    return linhas[dt.getDay()];
+  };
+
+  d.empresas.forEach(e => {
+    if (!ehReal(e)) return;
+    const entrada = noDia(e.criado_em);
+    if (entrada) entrada.leads += 1;
+    if (e.status === "Fechado" || e.status === "Perdido") {
+      const desfecho = noDia(e.status_atualizado_em);
+      if (desfecho) {
+        if (e.status === "Fechado") desfecho.fechados += 1;
+        else desfecho.perdidos += 1;
+      }
+    }
+  });
+
+  d.orcamentos.forEach(o => {
+    const envio = noDia(o.data_envio);
+    if (envio) envio.propostas += 1;
+    if (o.status === "aprovado") {
+      const decisao = noDia(o.data_decisao);
+      if (decisao) decisao.aprovado += num(o.total);
+    }
+  });
+
+  d.eventos.forEach(ev => {
+    const quando = noDia(ev.data);
+    if (quando) quando.atividades += 1;
+  });
+
+  linhas.forEach(l => {
+    const decididos = l.fechados + l.perdidos;
+    l.conversao = decididos > 0 ? (l.fechados / decididos) * 100 : null;
+    l.fechadosPorOcorrencia = l.ocorrencias ? l.fechados / l.ocorrencias : 0;
+    l.leadsPorOcorrencia = l.ocorrencias ? l.leads / l.ocorrencias : 0;
+    l.aprovadoPorOcorrencia = l.ocorrencias ? l.aprovado / l.ocorrencias : 0;
+  });
+  return linhas;
+}
+
+export interface DestaquesSemana {
+  /** Melhor e pior dia ÚTIL, por fechamentos por ocorrência. */
+  melhor: LinhaDiaSemana | null;
+  pior: LinhaDiaSemana | null;
+  /** O dia útil com mais dinheiro aprovado por ocorrência. */
+  melhorEmValor: LinhaDiaSemana | null;
+  /** Dia útil em que mais se PROSPECTA (leads e compromissos) por ocorrência. */
+  maisEsforco: LinhaDiaSemana | null;
+  /** Fechamentos na janela — o tamanho da amostra por trás de tudo. */
+  fechamentos: number;
+  /**
+   * Falso quando a amostra não sustenta a leitura. A tela mostra a tabela assim
+   * mesmo, mas SEM chamar nada de "melhor dia": dez fechamentos espalhados em
+   * cinco dias úteis dão duas por dia, e o campeão é sorteio.
+   */
+  confiavel: boolean;
+  /** Frases prontas sobre o padrão, na ordem de leitura. */
+  frases: string[];
+}
+
+/** Abaixo disso o "melhor dia" é sorteio, não padrão. */
+const MINIMO_FECHAMENTOS_SEMANA = 15;
+
+export function destaquesDaSemana(linhas: LinhaDiaSemana[]): DestaquesSemana {
+  const uteis = linhas.filter(l => l.dia >= 1 && l.dia <= 5 && l.ocorrencias > 0);
+  const fechamentos = linhas.reduce((s, l) => s + l.fechados, 0);
+  const confiavel = fechamentos >= MINIMO_FECHAMENTOS_SEMANA && uteis.length >= 4;
+
+  const maiorPor = (f: (l: LinhaDiaSemana) => number) =>
+    uteis.length ? uteis.slice().sort((a, b) => f(b) - f(a) || a.dia - b.dia)[0] : null;
+  const menorPor = (f: (l: LinhaDiaSemana) => number) =>
+    uteis.length ? uteis.slice().sort((a, b) => f(a) - f(b) || a.dia - b.dia)[0] : null;
+
+  const melhor = maiorPor(l => l.fechadosPorOcorrencia);
+  const pior = menorPor(l => l.fechadosPorOcorrencia);
+  const melhorEmValor = maiorPor(l => l.aprovadoPorOcorrencia);
+  const maisEsforco = maiorPor(l => l.leadsPorOcorrencia + l.atividades / Math.max(l.ocorrencias, 1));
+
+  const frases: string[] = [];
+  if (!confiavel) {
+    frases.push(
+      `São ${fechamentos} ${fechamentos === 1 ? "fechamento" : "fechamentos"} no período, espalhados por ` +
+      `cinco dias úteis. A tabela abaixo está certa, mas ainda não há amostra para chamar nenhum dia de ` +
+      `melhor ou pior: com esse volume, o campeão muda de nome com um negócio trocando de dia.`
+    );
+  } else if (melhor && pior && melhor.dia !== pior.dia) {
+    const razao = pior.fechadosPorOcorrencia > 0
+      ? melhor.fechadosPorOcorrencia / pior.fechadosPorOcorrencia : null;
+    frases.push(
+      `${melhor.rotulo} é o dia que mais fecha: ${umaCasa(melhor.fechadosPorOcorrencia)} negócios por ` +
+      `${melhor.rotulo.toLowerCase()}, contra ${umaCasa(pior.fechadosPorOcorrencia)} em ` +
+      `${pior.rotulo.toLowerCase()}` + (razao && razao >= 1.5 ? ` — ${umaCasa(razao)}× mais.` : ".")
+    );
+    if (melhorEmValor && melhorEmValor.dia !== melhor.dia) {
+      frases.push(
+        `O dinheiro, porém, entra em ${melhorEmValor.rotulo.toLowerCase()}: é o dia com maior valor ` +
+        `aprovado por ocorrência. Fechar mais e faturar mais não caem no mesmo dia, e é o segundo que ` +
+        `decide a agenda de quem negocia grande.`
+      );
+    }
+    if (maisEsforco && maisEsforco.dia !== melhor.dia) {
+      frases.push(
+        `O esforço se concentra em ${maisEsforco.rotulo.toLowerCase()} — é onde entram mais leads e mais ` +
+        `compromissos —, mas o retorno aparece em ${melhor.rotulo.toLowerCase()}. Esforço e resultado em ` +
+        `dias diferentes é normal; o que não é normal é ninguém ter medido a distância entre os dois.`
+      );
+    }
+  }
+  frases.push(
+    "Sábado e domingo ficam fora da escolha de melhor e pior: ali o que se mede é o expediente, não o " +
+    "desempenho. Continuam na tabela porque volume alto no fim de semana é achado por si só."
+  );
+
+  return { melhor, pior, melhorEmValor, maisEsforco, fechamentos, confiavel, frases };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Clientes fora do próprio padrão
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface DesvioCliente {
+  empresa_id: string;
+  nome: string;
+  segmento: string | null;
+  /** Valor aprovado deste cliente na janela atual. */
+  atual: number;
+  /** O mesmo, na janela anterior de igual tamanho — o "normalmente ele compra". */
+  referencia: number;
+  delta: number;
+  /** Δ relativo à referência, em porcentagem. */
+  deltaPct: number;
+  propostasAtual: number;
+  propostasRef: number;
+  ticketAtual: number | null;
+  ticketRef: number | null;
+  /**
+   * A diferença aberta nas suas duas causas possíveis. Somadas dão `delta`
+   * exatamente — ver o comentário da função.
+   */
+  porQuantidade: number;
+  porTicket: number;
+  /** A causa dominante, em uma palavra. */
+  causa: "quantidade" | "ticket" | "ambas";
+  /** Valor recusado por este cliente na janela, e o motivo da recusa mais cara. */
+  recusado: number;
+  motivoRecusa: string | null;
+  /** Propostas dele em aberto agora — o que ainda pode virar. */
+  aberto: number;
+  diasSemContato: number;
+  direcao: "caiu" | "cresceu";
+}
+
+/**
+ * Quem comprou fora do próprio padrão — e a decomposição do porquê.
+ *
+ * A pergunta era "por que vendemos X para um cliente que normalmente compra Y a
+ * mais". A resposta honesta que o dado sustenta não é uma causa de negócio ("o
+ * concorrente baixou o preço"), que ninguém registrou em lugar nenhum — é a
+ * DECOMPOSIÇÃO ARITMÉTICA da diferença, que tem exatamente duas parcelas:
+ *
+ *     atual − referência  =  (qa − qr)·tr  +  (ta − tr)·qa
+ *                            └ quantidade ┘   └── ticket ──┘
+ *
+ * com q = orçamentos aprovados e t = ticket médio deles. A identidade é exata
+ * (expandindo, sobra qa·ta − qr·tr), então as duas parcelas SEMPRE somam a
+ * diferença; não é uma aproximação que fecha por sorte.
+ *
+ * A leitura muda a ação, e é por isso que separá-las importa: caiu por
+ * QUANTIDADE é o cliente comprando menos vezes — sumiu contato, sumiu proposta,
+ * e o remédio é follow-up. Caiu por TICKET é o mesmo cliente comprando mais
+ * barato — desconto, mix ou preço de concorrente, e o remédio é conversa
+ * comercial. Um "caiu 40%" sozinho apaga essa diferença e manda cobrar a pessoa
+ * errada.
+ *
+ * O que a função acrescenta por cima da aritmética é evidência DATADA: o que
+ * ele recusou no período e por qual motivo, o que dele ainda está em aberto, e
+ * há quantos dias ninguém o procura. Isso é registro, não interpretação.
+ *
+ * ⚠️ Só entra quem comprou nas DUAS janelas. Quem não comprava antes e comprou
+ * agora é cliente novo, não crescimento — e dividir por zero viraria "+∞%".
+ * Quem comprava e zerou aparece, sim: é o caso mais grave da lista.
+ */
+export function clientesForaDoPadrao(
+  d: Dados, meses: number, base: Date = new Date(), minimo = 0.15,
+): DesvioCliente[] {
+  const j = janelaMeses(meses, base);
+  const ant = janelaAnterior(meses, base);
+  const porEmpresa: Record<string, EmpresaMetrica> = {};
+  d.empresas.forEach(e => { porEmpresa[e.empresa_id] = e; });
+
+  const agregado: Record<string, {
+    atual: number; referencia: number; qa: number; qr: number;
+    recusado: number; motivo: { texto: string; valor: number } | null; aberto: number;
+  }> = {};
+  const pegar = (id: string) => agregado[id] || (agregado[id] = {
+    atual: 0, referencia: 0, qa: 0, qr: 0, recusado: 0, motivo: null, aberto: 0,
+  });
+
+  d.orcamentos.forEach(o => {
+    if (!porEmpresa[o.empresa_id]) return;
+    const g = pegar(o.empresa_id);
+    const valor = num(o.total);
+    if (o.status === "aprovado") {
+      if (em(o.data_decisao, j)) { g.atual += valor; g.qa += 1; }
+      else if (em(o.data_decisao, ant)) { g.referencia += valor; g.qr += 1; }
+    } else if (o.status === "recusado" && em(o.data_decisao, j)) {
+      g.recusado += valor;
+      // Fica o motivo da recusa MAIS CARA, não o da mais recente: é a que
+      // explica o buraco no valor, que é o que a linha está medindo.
+      const texto = (o.motivo_recusa || "").trim();
+      if (texto && (!g.motivo || valor > g.motivo.valor)) g.motivo = { texto, valor };
+    } else if (ORCAMENTO_ABERTO.indexOf(o.status) !== -1) {
+      g.aberto += valor;
+    }
+  });
+
+  const saida: DesvioCliente[] = [];
+  Object.keys(agregado).forEach(id => {
+    const g = agregado[id];
+    const e = porEmpresa[id];
+    if (!e || !ehReal(e)) return;
+    if (g.referencia <= 0) return;                        // sem padrão anterior, não há desvio
+    const delta = g.atual - g.referencia;
+    if (Math.abs(delta) < g.referencia * minimo) return;  // variação pequena é ruído, não notícia
+
+    const ticketRef = g.qr > 0 ? g.referencia / g.qr : null;
+    const ticketAtual = g.qa > 0 ? g.atual / g.qa : null;
+    // A identidade fecha mesmo com qa = 0: (0 − qr)·tr + (0 − tr)·0 = −referência.
+    const porQuantidade = (g.qa - g.qr) * (ticketRef ?? 0);
+    const porTicket = ((ticketAtual ?? 0) - (ticketRef ?? 0)) * g.qa;
+    const dominante: "quantidade" | "ticket" =
+      Math.abs(porQuantidade) >= Math.abs(porTicket) ? "quantidade" : "ticket";
+    const equilibrado = Math.abs(Math.abs(porQuantidade) - Math.abs(porTicket))
+      < Math.max(Math.abs(delta), 1) * 0.2;
+
+    saida.push({
+      empresa_id: id,
+      nome: e.nome,
+      segmento: e.segmento,
+      atual: g.atual,
+      referencia: g.referencia,
+      delta,
+      deltaPct: (delta / g.referencia) * 100,
+      propostasAtual: g.qa,
+      propostasRef: g.qr,
+      ticketAtual,
+      ticketRef,
+      porQuantidade,
+      porTicket,
+      causa: equilibrado ? "ambas" : dominante,
+      recusado: g.recusado,
+      motivoRecusa: g.motivo ? g.motivo.texto : null,
+      aberto: g.aberto,
+      diasSemContato: diasDesde(e.ultima_interacao),
+      direcao: delta < 0 ? "caiu" : "cresceu",
+    });
+  });
+
+  // Pelo tamanho do desvio em DINHEIRO, não em porcentagem: uma queda de 90% num
+  // cliente de R$ 800 não é a notícia do mês, e ordenar por porcentagem
+  // colocaria justamente esse no topo da tela.
+  return saida.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Equipe: comparação detalhada entre supervisores
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface LinhaEquipeDetalhe extends LinhaEquipe {
+  perdidos: number;
+  propostas: number;
+  atividades: number;
+  aberto: number;
+  ticket: number | null;
+  deltaAprovado: number | null;
+  /** Fatia do valor aprovado total do escopo, em %. */
+  participacao: number;
+  /** Valor aprovado ÷ vendedores — o que cada cabeça produziu. */
+  aprovadoPorVendedor: number;
+  /** Atividades ÷ fechamentos. `null` sem fechamento no período. */
+  esforco: number | null;
+  /** Quem puxa o resultado da equipe, e quanto dele. */
+  destaque: { nome: string; aprovado: number; fatia: number } | null;
+  /**
+   * Fatia do maior vendedor no total da equipe.
+   *
+   * É o número que separa "equipe boa" de "equipe com um bom vendedor". Cinco
+   * pessoas em que uma faz 85% não é um time — é um risco de saída, e nenhuma
+   * das outras colunas mostra isso.
+   */
+  concentracao: number | null;
+}
+
+/**
+ * `porEquipe`, com tudo que uma comparação entre supervisores precisa.
+ *
+ * Mantém a regra que já valia e que é a mais fácil de perder de vista: toda
+ * taxa da equipe sai dos NÚMEROS SOMADOS, nunca da média das taxas dos
+ * vendedores — média de porcentagem dá o mesmo peso a quem decidiu dois
+ * negócios e a quem decidiu sessenta.
+ */
+export function porEquipeDetalhado(linhas: LinhaVendedor[]): LinhaEquipeDetalhe[] {
+  const grupos: Record<string, LinhaVendedor[]> = {};
+  linhas.forEach(l => {
+    const nome = l.equipe || "Sem supervisor";
+    (grupos[nome] || (grupos[nome] = [])).push(l);
+  });
+  const totalGeral = linhas.reduce((s, l) => s + l.aprovado, 0);
+  const soma = (v: LinhaVendedor[], f: (l: LinhaVendedor) => number) =>
+    v.reduce((s, l) => s + f(l), 0);
+
+  return Object.keys(grupos).map(nome => {
+    const v = grupos[nome];
+    const fechados = soma(v, l => l.fechados);
+    const perdidos = soma(v, l => l.perdidos);
+    const aprovado = soma(v, l => l.aprovado);
+    const atividades = soma(v, l => l.atividades);
+    const decididos = fechados + perdidos;
+    // O Δ da equipe só existe quando ALGUM vendedor dela tinha base anterior.
+    // Somar `null` como zero diria "não mudou" onde o certo é "não dá para saber".
+    const comDelta = v.filter(l => l.deltaAprovado !== null);
+    const melhor = v.slice().sort((a, b) => b.aprovado - a.aprovado)[0];
+    // Reconstrói a contagem de orçamentos aprovados a partir de valor ÷ ticket:
+    // é a mesma divisão que os produziu, então volta exata a menos de
+    // arredondamento — e o ticket da equipe precisa desse denominador somado,
+    // não da média dos tickets individuais.
+    const propostasAprovadas = v.reduce(
+      (s, l) => s + (l.ticket !== null && l.ticket > 0 ? Math.round(l.aprovado / l.ticket) : 0), 0);
+
+    return {
+      equipe: nome,
+      vendedores: v.length,
+      carteira: soma(v, l => l.carteira),
+      fechados,
+      perdidos,
+      conversao: decididos > 0 ? (fechados / decididos) * 100 : null,
+      aprovado,
+      paradas: soma(v, l => l.paradas),
+      propostas: soma(v, l => l.propostas),
+      atividades,
+      aberto: soma(v, l => l.aberto),
+      ticket: propostasAprovadas > 0 ? aprovado / propostasAprovadas : null,
+      deltaAprovado: comDelta.length
+        ? comDelta.reduce((s, l) => s + (l.deltaAprovado as number), 0) : null,
+      participacao: totalGeral > 0 ? (aprovado / totalGeral) * 100 : 0,
+      aprovadoPorVendedor: v.length ? aprovado / v.length : 0,
+      esforco: fechados > 0 ? atividades / fechados : null,
+      destaque: melhor && aprovado > 0
+        ? { nome: melhor.nome, aprovado: melhor.aprovado, fatia: (melhor.aprovado / aprovado) * 100 }
+        : null,
+      concentracao: melhor && aprovado > 0 ? (melhor.aprovado / aprovado) * 100 : null,
+    };
+  }).sort((a, b) => b.aprovado - a.aprovado || b.carteira - a.carteira
+    || a.equipe.localeCompare(b.equipe, "pt-BR"));
+}
+
+/**
+ * Valor aprovado mês a mês, uma série por equipe.
+ *
+ * Devolve séries SEPARADAS de propósito, para a tela desenhá-las como small
+ * multiples e não como N linhas num eixo só. Com quatro ou cinco equipes não há
+ * paleta segura para linhas irmãs nesta base de cores: o azul `#56A4F5` e o
+ * roxo `#A78BFA` do CRM ficam a ΔE 0,7 sob deuteranopia — a MESMA cor para
+ * parte dos usuários. Separadas, cada gráfico tem série única e a cor não
+ * precisa distinguir nada.
+ */
+export function serieEquipeMensal(
+  d: Dados, usuarios: UsuarioMetrica[], meses: number, base: Date = new Date(),
+): { equipe: string; valores: number[]; total: number }[] {
+  const baldes = baldesMensais(meses, base);
+  const equipeDoVendedor: Record<string, string> = {};
+  usuarios.forEach(u => {
+    if (u.role === "vendedor" || u.role === "supervisor") {
+      equipeDoVendedor[u.usuario_id] = u.supervisor_nome || "Sem supervisor";
+    }
+  });
+
+  // O orçamento segue a EMPRESA, não o `vendedor_id` do próprio orçamento — a
+  // mesma regra de `aplicarFiltro` e de `porVendedor`. Uma empresa que trocou de
+  // mão depois da proposta pertence a quem detém a carteira hoje, senão o total
+  // por equipe deixa de bater com o total por vendedor.
+  const equipeDaEmpresa: Record<string, string> = {};
+  d.empresas.forEach(e => {
+    const eq = e.vendedor_id ? equipeDoVendedor[e.vendedor_id] : undefined;
+    if (eq) equipeDaEmpresa[e.empresa_id] = eq;
+  });
+
+  const porEquipe: Record<string, number[]> = {};
+  d.orcamentos.forEach(o => {
+    if (o.status !== "aprovado") return;
+    const equipe = equipeDaEmpresa[o.empresa_id];
+    if (!equipe) return;
+    const serie = porEquipe[equipe] || (porEquipe[equipe] = baldes.map(() => 0));
+    baldes.forEach((b, i) => { if (em(o.data_decisao, b)) serie[i] += num(o.total); });
+  });
+
+  return Object.keys(porEquipe).map(equipe => ({
+    equipe,
+    valores: porEquipe[equipe],
+    total: porEquipe[equipe].reduce((s, v) => s + v, 0),
+  })).sort((a, b) => b.total - a.total || a.equipe.localeCompare(b.equipe, "pt-BR"));
+}

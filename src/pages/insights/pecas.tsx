@@ -95,9 +95,20 @@ function Sparkline({ valores, cor }: { valores: (number | null)[]; cor: string }
         <line x1="0" y1={H / 2} x2={W} y2={H / 2} stroke={cor} strokeWidth="1.6"
               strokeOpacity="0.35" vectorEffect="non-scaling-stroke" />
       ) : (
-        <path d={caminhoComBuracos(valores, x, y)} fill="none" stroke={cor} strokeWidth="1.6"
-              strokeOpacity="0.9" strokeLinecap="round" strokeLinejoin="round"
-              vectorEffect="non-scaling-stroke" />
+        <>
+          {/* A ponte importa MAIS aqui do que no gráfico grande: com 26 pixels
+              de altura, uma taxa medida em dois meses de seis vira dois pontos
+              soltos, e o card perde justamente a forma que a sparkline existe
+              para dar. Pontilhada e por baixo, ela devolve a leitura sem
+              afirmar medição — quem explica o vão é o balão do gráfico grande,
+              logo abaixo, e a própria linha "sem base" deste card. */}
+          <path d={caminhoDasPontes(valores, x, y)} fill="none" stroke={cor} strokeWidth="1.4"
+                strokeOpacity="0.45" strokeDasharray="1 3" strokeLinecap="round"
+                vectorEffect="non-scaling-stroke" />
+          <path d={caminhoComBuracos(valores, x, y)} fill="none" stroke={cor} strokeWidth="1.6"
+                strokeOpacity="0.9" strokeLinecap="round" strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke" />
+        </>
       )}
       {!chato && ultimo >= 0 && (
         <circle cx={x(ultimo)} cy={y(valores[ultimo] as number)} r="2.2" fill={cor} />
@@ -131,6 +142,41 @@ export function caminhoComBuracos(
       const sozinho = (valores[i - 1] ?? null) === null && (valores[i + 1] ?? null) === null;
       if (sozinho) partes.push(`L${x(i)},${y(v)}`);
     }
+  });
+  return partes.join(" ");
+}
+
+/**
+ * Só os trechos que ATRAVESSAM um buraco, para desenhar por cima em tracejado.
+ *
+ * Existe por causa de um caso real que a interrupção pura resolve mal: numa
+ * série esparsa — a taxa de conversão de um CRM em que nem todo mês tem negócio
+ * decidido — quase todo ponto fica isolado, e o gráfico vira um punhado de
+ * bolinhas soltas. A forma da curva, que é a única coisa que se lê num gráfico
+ * de linha, desaparece.
+ *
+ * A ponte devolve a forma sem devolver a mentira: ela liga os dois lados do vão
+ * em TRACEJADO e mais apagada, enquanto a linha cheia continua marcando só o
+ * que foi medido. As duas juntas dizem exatamente o que aconteceu — "de março a
+ * junho a taxa subiu, e em abril e maio não houve nada para medir".
+ *
+ * ⚠️ Isto é desenho, não dado: o traço da ponte não passa por nenhum valor.
+ * Quem a usa TEM de dizer isso na tela; sem essa frase, a ponte é indistinguível
+ * de uma medição. É o motivo de ela ser opcional e não o comportamento padrão.
+ */
+export function caminhoDasPontes(
+  valores: (number | null)[], x: (i: number) => number, y: (v: number) => number,
+): string {
+  const partes: string[] = [];
+  let ultimo = -1;
+  valores.forEach((v, i) => {
+    if (v === null) return;
+    // Só há ponte quando existe pelo menos um buraco no meio; vizinhos imediatos
+    // já estão ligados pela linha cheia e não podem ganhar traço duplo.
+    if (ultimo >= 0 && i - ultimo > 1) {
+      partes.push(`M${x(ultimo)},${y(valores[ultimo] as number)} L${x(i)},${y(v)}`);
+    }
+    ultimo = i;
   });
   return partes.join(" ");
 }

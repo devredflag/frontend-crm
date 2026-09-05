@@ -10,7 +10,9 @@
  * saber que o vão está lá é conferir a string.
  */
 
-import { caminhoComBuracos, mesMaisProximo, mesSobCursor, posicaoNoViewBox } from "./pecas";
+import {
+  caminhoComBuracos, caminhoDasPontes, mesMaisProximo, mesSobCursor, posicaoNoViewBox,
+} from "./pecas";
 
 // Escalas de identidade: o `d` fica legível e o teste fala de estrutura, não
 // de aritmética de coordenadas — que é o que importa aqui.
@@ -144,5 +146,40 @@ describe("mesSobCursor (coluna)", () => {
   it("sem colunas ou sem passo não quebra", () => {
     expect(mesSobCursor(300, L, passo, 0)).toBe(0);
     expect(mesSobCursor(300, L, 0, 6)).toBe(0);
+  });
+});
+
+describe("caminhoDasPontes", () => {
+  it("liga os dois lados de um vão, e só isso", () => {
+    // A ponte existe para série esparsa: sem ela, a taxa de conversão de um mês
+    // isolado vira uma bolinha solta e a forma da curva some.
+    expect(caminhoDasPontes([1, 2, null, 4, 5], x, y)).toBe("M1,2 L3,4");
+  });
+
+  it("vizinhos SEM buraco não ganham ponte — a linha cheia já os liga", () => {
+    // Traço duplo sobre trecho medido faria o pontilhado parecer significar
+    // outra coisa, e é justamente o significado dele que precisa ficar de pé.
+    expect(caminhoDasPontes([1, 2, 3], x, y)).toBe("");
+  });
+
+  it("atravessa buracos seguidos numa ponte só", () => {
+    expect(caminhoDasPontes([1, null, null, 4], x, y)).toBe("M0,1 L3,4");
+  });
+
+  it("uma ponte por vão, quando há mais de um", () => {
+    const d = caminhoDasPontes([1, null, 3, null, 5], x, y);
+    expect(d).toBe("M0,1 L2,3 M2,3 L4,5");
+  });
+
+  it("ponto sozinho não gera ponte nenhuma", () => {
+    expect(caminhoDasPontes([null, 7, null], x, y)).toBe("");
+  });
+
+  it("série inteiramente vazia não desenha nada", () => {
+    expect(caminhoDasPontes([null, null], x, y)).toBe("");
+  });
+
+  it("buraco nas PONTAS não vira ponte para fora do gráfico", () => {
+    expect(caminhoDasPontes([null, 2, 3, null], x, y)).toBe("");
   });
 });
