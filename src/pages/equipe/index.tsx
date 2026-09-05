@@ -6,7 +6,9 @@ import {
   LayoutDashboard, Search, Building2, Users, ClipboardList,
   Calendar, BarChart3, Plus, RefreshCw, Menu, Shield, UserPlus,
   Mail, X, Crown, CheckCircle2, Ban, TrendingUp, UserRoundCog, Network,
+  Clock, Percent, SearchX,
 } from "lucide-react";
+import { diasDesde } from "../../utils/data";
 import useIsMobile from "../../hooks/useIsMobile";
 import Dropdown from "../../components/Dropdown";
 import CardUsuario, { useUsuarioLogado, podeVerInsights } from "../../components/CardUsuario";
@@ -44,7 +46,44 @@ const FUNCOES = [
 ] as const;
 
 // Colunas da lista de usuários (cabeçalho e linhas usam a mesma definição).
-const GRID_USUARIOS = "2fr 110px 150px 90px 90px 140px";
+const GRID_USUARIOS = "1.8fr 108px 148px 78px 186px 128px 132px";
+
+/** Sem movimento na carteira há tanto tempo que vale perguntar o que houve. */
+const DIAS_SEM_MOVIMENTO = 21;
+
+const umaCasa = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
+
+/**
+ * Os três estados de um usuário, e não os dois que a tela mostrava.
+ *
+ * `ativo: false` cobria duas situações opostas — quem nunca abriu o convite e
+ * quem o gerente desativou de propósito. Fundidas num rótulo só, o gerente via
+ * "Inativo" e não sabia se faltava cobrar o email ou se ele mesmo havia tirado
+ * o acesso; e o botão "Reenviar" aparecia nos dois casos.
+ */
+function estadoDe(u: UsuarioRow): { rotulo: string; cor: string; fundo: string; icone: any } {
+  if (u.ativo) {
+    return { rotulo: "Ativo", cor: "#83DDA8", fundo: "rgba(39,174,96,0.12)", icone: CheckCircle2 };
+  }
+  if (convitePendente(u)) {
+    return { rotulo: "Convite pendente", cor: "#F2C879", fundo: "rgba(217,119,6,0.12)", icone: Mail };
+  }
+  return { rotulo: "Desativado", cor: "#F7B8B1", fundo: "rgba(220,38,38,0.10)", icone: Ban };
+}
+
+/**
+ * Inativo por nunca ter criado a senha.
+ *
+ * ⚠️ O campo AUSENTE cai no comportamento antigo (todo inativo é convite
+ * pendente), e não em "desativado". O front vai para a Vercel e o back para o
+ * Railway em deploys independentes: entre um e outro, a tela recebe a resposta
+ * velha, sem o campo. Tratar ausência como `false` esconderia o botão de
+ * reenviar de todo mundo justamente na janela em que ninguém entende por quê —
+ * e o backend continua sendo quem recusa o reenvio indevido de fato.
+ */
+function convitePendente(u: UsuarioRow): boolean {
+  return u.convite_pendente === undefined ? true : u.convite_pendente;
+}
 
 function rotuloFuncao(role?: string) {
   return FUNCOES.find(f => f.valor === role)?.rotulo || "Vendedor";
@@ -64,6 +103,14 @@ interface UsuarioRow {
   total_empresas: number;
   supervisor_id: string | null;
   supervisor_nome: string | null;
+  /**
+   * Nunca criou a senha — o convite ainda está no ar.
+   *
+   * Separa dois estados que `ativo: false` juntava: convite pendente e usuário
+   * desativado pelo gerente. A ação certa para cada um é OPOSTA (reenviar
+   * convite × reativar), e a tela mostrava a mesma linha para os dois.
+   */
+  convite_pendente?: boolean;
 }
 
 // Organograma devolvido por GET /equipe/estrutura
@@ -88,6 +135,8 @@ interface VendedorMetrica {
   nome: string;
   email: string;
   ativo: boolean;
+  /** Vem de `/gerencia/dashboard` e é o que permite somar a equipe do supervisor. */
+  supervisor_id: string | null;
   total_empresas: number;
   ganhos: number;
   perdidos: number;
@@ -129,6 +178,13 @@ export default function Equipe() {
   const [loading, setLoading] = useState(true);
   const [negado, setNegado] = useState(false);
   const [aviso, setAviso] = useState("");
+
+  // Filtros da lista. Moram na tela e não na URL de propósito: a lista é curta
+  // o bastante para não valer um estado compartilhável, e um parâmetro de busca
+  // na URL de uma tela de gestão acaba colado num chat.
+  const [busca, setBusca] = useState("");
+  const [filtroFuncao, setFiltroFuncao] = useState("todas");
+  const [filtroStatus, setFiltroStatus] = useState("todos");
 
   // modal de convite
   const [showInvite, setShowInvite] = useState(false);
@@ -325,15 +381,63 @@ export default function Equipe() {
   const ehGerente = !!me?.is_gerente;
   const supervisores = usuarios.filter(u => u.role === "supervisor");
   const semSupervisor = usuarios.filter(u => u.role === "vendedor" && !u.supervisor_id).length;
+  const pendentes = usuarios.filter(u => !u.ativo && convitePendente(u)).length;
+
+  // Conversão da conta: ganhos ÷ decididos. Empresa ainda no funil não decidiu
+  // nada e fica fora do denominador — é a mesma regra da tela de Insights, e as
+  // duas precisam devolver o mesmo número para a conta não ter duas verdades.
+  const decididos = dash ? dash.conta.ganhos + dash.conta.perdidos : 0;
+  const conversao = decididos > 0 && dash ? (dash.conta.ganhos / decididos) * 100 : null;
 
   const cards = dash ? [
-    { label: "Vendedores", value: dash.conta.total_vendedores, color:"#9FD3EA", icon: Users },
-    { label: "Empresas", value: dash.conta.total_empresas, color:"#9FD3EA", icon: Building2 },
-    { label: "Ganhos", value: dash.conta.ganhos, color:"#83DDA8", icon: TrendingUp },
+    { label: "Vendedores", value: String(dash.conta.total_vendedores), color:"#9FD3EA", icon: Users,
+      sub: pendentes ? `${pendentes} convite(s) sem resposta` : "todos com acesso criado" },
+    { label: "Empresas", value: String(dash.conta.total_empresas), color:"#9FD3EA", icon: Building2,
+      sub: `${dash.conta.rascunhos} em rascunho` },
+    { label: "Ganhos", value: String(dash.conta.ganhos), color:"#83DDA8", icon: TrendingUp,
+      sub: `${dash.conta.perdidos} perdidos` },
+    // O denominador fica visível junto do número: "60% de conversão" sobre
+    // cinco negócios e sobre quinhentos são a mesma frase e informações opostas.
+    { label: "Conversão", value: conversao === null ? "—" : `${umaCasa(conversao)}%`,
+      color:"#83DDA8", icon: Percent,
+      sub: decididos ? `${dash.conta.ganhos} de ${decididos} decididos` : "nada decidido ainda" },
     // Mesmo vocabulario do funil: e a soma dos orcamentos enviados e em
     // negociacao, nao mais o ticket estimado que ninguem preenchia.
-    { label: "Em negociação", value: money(dash.conta.ticket_total), color:"#F2C879", icon: BarChart3 },
+    { label: "Em negociação", value: money(dash.conta.ticket_total), color:"#F2C879", icon: BarChart3,
+      sub: "propostas sem decisão" },
   ] : [];
+
+  // A lista filtrada. A busca cobre nome, email e nome do supervisor — procurar
+  // "Ana" e receber a equipe inteira dela é o uso mais comum numa tela cuja
+  // função é justamente arrumar quem responde a quem.
+  const termo = busca.trim().toLowerCase();
+  const visiveis = usuarios.filter(u => {
+    if (filtroFuncao !== "todas" && u.role !== filtroFuncao) return false;
+    if (filtroStatus === "ativos" && !u.ativo) return false;
+    if (filtroStatus === "pendentes" && !(!u.ativo && convitePendente(u))) return false;
+    if (filtroStatus === "desativados" && !(!u.ativo && !convitePendente(u))) return false;
+    if (!termo) return true;
+    return [u.nome, u.email, u.supervisor_nome || ""]
+      .some(t => t.toLowerCase().indexOf(termo) !== -1);
+  });
+  const filtrando = !!termo || filtroFuncao !== "todas" || filtroStatus !== "todos";
+
+  /** O resultado da equipe de um supervisor, somado dos vendedores dele. */
+  const resumoEquipe = (supervisorId: string) => {
+    const vs = (dash?.vendedores || []).filter(v => v.supervisor_id === supervisorId);
+    const ganhos = vs.reduce((t, v) => t + (v.ganhos || 0), 0);
+    const perdidos = vs.reduce((t, v) => t + (v.perdidos || 0), 0);
+    return {
+      carteira: vs.reduce((t, v) => t + (v.total_empresas || 0), 0),
+      ganhos,
+      perdidos,
+      emNegociacao: vs.reduce((t, v) => t + Number(v.ticket_total || 0), 0),
+      // Somada dos números, nunca a média das taxas dos vendedores: média de
+      // porcentagem daria o mesmo peso a quem decidiu dois negócios e a quem
+      // decidiu sessenta.
+      conversao: ganhos + perdidos > 0 ? (ganhos / (ganhos + perdidos)) * 100 : null,
+    };
+  };
 
   return (
     <div style={{ display: "flex", height: "100vh", overflow: "hidden", position: "relative" }}>
@@ -405,16 +509,19 @@ export default function Equipe() {
 
         <div style={{ padding: isMobile ? "16px" : "24px 30px" }}>
           {/* Métricas */}
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 14, marginBottom: 22 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(5,minmax(0,1fr))", gap: 14, marginBottom: 22 }}>
             {cards.map(c => (
-              <div key={c.label} className="card" style={{ padding: "16px 18px" }}>
+              <div key={c.label} className="card" style={{ padding: "16px 18px", minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 9, background:`${c.color}18`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 9, background:`${c.color}18`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <c.icon style={{ width: 16, height: 16, color:c.color }} />
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 700, color:"#9FD3EA", textTransform: "uppercase", letterSpacing: "0.05em" }}>{c.label}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color:"#9FD3EA", textTransform: "uppercase", letterSpacing: "0.05em", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.label}</span>
                 </div>
-                <div style={{ fontSize: 24, fontWeight: 900, color:c.color }}>{c.value}</div>
+                <div style={{ fontSize: 24, fontWeight: 900, color:c.color, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.value}</div>
+                {/* O denominador vive colado no número. Sem ele, "100% de
+                    conversão" sobre dois negócios vira meta da conta. */}
+                <div style={{ fontSize: 10.5, color:"#9FD3EA", marginTop: 3, opacity: 0.8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.sub}</div>
               </div>
             ))}
           </div>
@@ -489,6 +596,24 @@ export default function Equipe() {
                         {sup.vendedores.length}
                       </span>
                     </div>
+
+                    {/* O card mostrava só quantas cabeças o supervisor tem.
+                        Quantas cabeças não é um resultado — e como o número da
+                        equipe já vinha no /gerencia/dashboard, o organograma
+                        estava escondendo dado que a tela já havia carregado. */}
+                    {sup.vendedores.length > 0 && (() => {
+                      const r = resumoEquipe(sup.usuario_id);
+                      return (
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 8, padding: "10px 0 2px", borderBottom:"1px solid rgba(142,68,173,0.12)" }}>
+                          <MiniNumero rotulo="Carteira" valor={String(r.carteira)} cor="#9FD3EA" />
+                          <MiniNumero rotulo="Ganhos" valor={String(r.ganhos)} cor="#83DDA8"
+                            dica={r.conversao === null ? "Nada decidido nesta equipe ainda" : `${r.ganhos} de ${r.ganhos + r.perdidos} decididos`}
+                            detalhe={r.conversao === null ? "sem decisão" : `${umaCasa(r.conversao)}% conv.`} />
+                          <MiniNumero rotulo="Negociando" valor={money(r.emNegociacao)} cor="#F2C879" />
+                        </div>
+                      );
+                    })()}
+
                     {sup.vendedores.length === 0 ? (
                       <p style={{ fontSize: 11.5, color:"#9FD3EA", fontWeight: 600, padding: "12px 2px 2px" }}>
                         Nenhum vendedor atribuído a este supervisor.
@@ -505,6 +630,12 @@ export default function Equipe() {
                             </span>
                             <span style={{ fontSize: 11, fontWeight: 700, color:"#9FD3EA", flexShrink: 0 }}>
                               {v.total_empresas} emp.
+                              {(() => {
+                                const m = metricaDe(v.usuario_id);
+                                return m && m.ganhos > 0
+                                  ? <span style={{ color:"#83DDA8" }}> · {m.ganhos}✓</span>
+                                  : null;
+                              })()}
                             </span>
                           </div>
                         ))}
@@ -545,11 +676,59 @@ export default function Equipe() {
 
           {/* Lista de usuários */}
           <div className="card" style={{ padding: isMobile ? "14px" : "20px 22px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
               <Users style={{ width: 18, height: 18, color:"#9FD3EA" }} />
               <h2 style={{ fontSize: 16, fontWeight: 800, color:"#EAF6FB" }}>{ehGerente ? "Usuários da conta" : "Meus vendedores"}</h2>
-              <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 800, color:"#9FD3EA", background:"rgba(46,111,149,0.1)", padding: "2px 9px", borderRadius: 8 }}>{usuarios.length}</span>
+              {/* A contagem diz sempre quantos de quantos: filtrar e ver "3" sem
+                  saber que a conta tem 40 faz o gerente achar que perdeu gente. */}
+              <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 800, color:"#9FD3EA", background:"rgba(46,111,149,0.1)", padding: "2px 9px", borderRadius: 8 }}>
+                {filtrando ? `${visiveis.length} de ${usuarios.length}` : usuarios.length}
+              </span>
+              {pendentes > 0 && filtroStatus !== "pendentes" && (
+                <button type="button" onClick={() => setFiltroStatus("pendentes")}
+                  style={{ marginLeft: "auto", border:"1px solid rgba(217,119,6,0.35)", background:"rgba(217,119,6,0.10)", color:"#F2C879", fontSize: 11, fontWeight: 800, padding: "4px 10px", borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+                  <Mail style={{ width: 12, height: 12 }} />
+                  {pendentes} {pendentes === 1 ? "convite pendente" : "convites pendentes"}
+                </button>
+              )}
             </div>
+
+            {/* Filtro da lista. Só aparece quando há gente o bastante para
+                procurar — em conta com cinco usuários ele ocuparia mais espaço
+                do que a própria lista e não resolveria nada. */}
+            {usuarios.length > 6 && (
+              <div style={{ display: "grid", gap: 10, marginBottom: 14,
+                            gridTemplateColumns: isMobile ? "1fr" : "minmax(0,2fr) 150px 170px" }}>
+                <div style={{ position: "relative" }}>
+                  <Search style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", width: 15, height: 15, color:"#9FD3EA", pointerEvents: "none" }} />
+                  <input className="ipt" style={{ paddingLeft: 36, paddingRight: busca ? 34 : 14 }}
+                    value={busca} onChange={e => setBusca(e.target.value)}
+                    aria-label="Buscar por nome, email ou supervisor"
+                    placeholder="Buscar por nome, email ou supervisor" />
+                  {busca && (
+                    <button type="button" onClick={() => setBusca("")} aria-label="Limpar busca"
+                      style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border:"none", background:"none", cursor: "pointer", color:"#9FD3EA", display: "flex" }}>
+                      <X style={{ width: 14, height: 14 }} />
+                    </button>
+                  )}
+                </div>
+                <Dropdown valor={filtroFuncao} onChange={setFiltroFuncao}
+                  ariaLabel="Filtrar por função" altura={42} corAtiva="#9FD3EA"
+                  opcoes={[{ valor: "todas", rotulo: "Todas as funções" }].concat(
+                    FUNCOES.map(f => ({ valor: f.valor, rotulo: f.rotulo })) as any)} />
+                <Dropdown valor={filtroStatus} onChange={setFiltroStatus}
+                  ariaLabel="Filtrar por status" altura={42}
+                  corAtiva={filtroStatus === "pendentes" ? "#F2C879" : "#9FD3EA"}
+                  opcoes={[
+                    { valor: "todos", rotulo: "Todos os status" },
+                    { valor: "ativos", rotulo: "Ativos", cor: "#83DDA8" },
+                    { valor: "pendentes", rotulo: "Convite pendente", cor: "#F2C879",
+                      detalhe: "nunca criaram a senha" },
+                    { valor: "desativados", rotulo: "Desativados", cor: "#F7B8B1",
+                      detalhe: "tiveram o acesso retirado" },
+                  ]} />
+              </div>
+            )}
 
             {loading ? (
               <div style={{ padding: 40, textAlign: "center", color:"#9FD3EA", fontSize: 13 }}>Carregando...</div>
@@ -558,13 +737,28 @@ export default function Equipe() {
                 <Users style={{ width: 34, height: 34, margin: "0 auto 10px", opacity: 0.3 }} />
                 <p style={{ fontSize: 13, fontWeight: 600 }}>Nenhum usuário ainda. Adicione o primeiro vendedor.</p>
               </div>
+            ) : visiveis.length === 0 ? (
+              /* Lista vazia POR FILTRO é outra coisa de "conta sem usuário", e
+                 confundir as duas faz o gerente achar que perdeu a equipe. */
+              <div style={{ padding: 40, textAlign: "center", color:"#9FD3EA" }}>
+                <SearchX style={{ width: 34, height: 34, margin: "0 auto 10px", opacity: 0.3 }} />
+                <p style={{ fontSize: 13, fontWeight: 700 }}>Nenhum usuário com esses filtros.</p>
+                <p style={{ fontSize: 12, marginTop: 4 }}>Os {usuarios.length} usuários continuam lá.</p>
+                <button type="button"
+                  onClick={() => { setBusca(""); setFiltroFuncao("todas"); setFiltroStatus("todos"); }}
+                  style={{ marginTop: 14, padding: "8px 16px", borderRadius: 9, border:"1px solid rgba(159,211,234,0.30)", background:"rgba(46,111,149,0.08)", color:"#9FD3EA", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                  Limpar filtros
+                </button>
+              </div>
             ) : (
               <div style={{ overflowX: "auto" }}>
-                <div style={{ minWidth: isMobile ? 720 : undefined }}>
+                <div style={{ minWidth: 1000 }}>
                   <div style={{ display: "grid", gridTemplateColumns: GRID_USUARIOS, gap: 12, padding: "6px 12px", fontSize: 10, fontWeight: 700, color:"#9FD3EA", letterSpacing: "0.06em", textTransform: "uppercase" }}>
-                    <span>Usuário</span><span>Função</span><span>Supervisor</span><span>Carteira</span><span>Status</span><span>Ações</span>
+                    <span>Usuário</span><span>Função</span><span>Supervisor</span><span>Carteira</span>
+                    <span title="Ganhos, perdidos e conversão da carteira dele">Desempenho</span>
+                    <span>Status</span><span>Ações</span>
                   </div>
-                  {usuarios.map((u, idx) => {
+                  {visiveis.map((u, idx) => {
                     const m = metricaDe(u.usuario_id);
                     const cor = corFuncao(u.role);
                     return (
@@ -627,13 +821,54 @@ export default function Equipe() {
                         </div>
                         <div style={{ fontSize: 13, fontWeight: 700, color:"#EAF6FB" }}>
                           {u.total_empresas}
-                          {m && m.ganhos > 0 && <span style={{ fontSize: 10, color:"#83DDA8", marginLeft: 4 }}>· {m.ganhos}✓</span>}
                         </div>
+
+                        {/* Desempenho: o /gerencia/dashboard já devolvia ganhos,
+                            perdidos e a data do último movimento, e a tela
+                            mostrava só um "✓" colado na carteira. Sem esta
+                            coluna, a única leitura possível era "quem tem mais
+                            empresas" — que é distribuição, não resultado. */}
+                        <div style={{ minWidth: 0 }}>
+                          {!m ? (
+                            <span style={{ fontSize: 11, color:"#9FD3EA" }} title={u.role === "vendedor" ? "Sem dados no período" : "O painel mede a carteira dos vendedores"}>—</span>
+                          ) : (
+                            <>
+                              <div style={{ fontSize: 12, fontWeight: 700, color:"#EAF6FB", whiteSpace: "nowrap" }}
+                                   title={m.ganhos + m.perdidos > 0 ? `${m.ganhos} de ${m.ganhos + m.perdidos} decididos` : "Nada decidido ainda"}>
+                                <span style={{ color:"#83DDA8" }}>{m.ganhos}✓</span>
+                                <span style={{ color:"#9FD3EA", margin: "0 4px" }}>·</span>
+                                <span style={{ color: m.perdidos ? "#F7B8B1" : "#9FD3EA" }}>{m.perdidos}✕</span>
+                                {m.ganhos + m.perdidos > 0 && (
+                                  <span style={{ color:"#9FD3EA", fontWeight: 600, marginLeft: 6 }}>
+                                    {umaCasa((m.ganhos / (m.ganhos + m.perdidos)) * 100)}%
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ fontSize: 10, marginTop: 2, display: "flex", alignItems: "center", gap: 3, whiteSpace: "nowrap",
+                                            color: diasDesde(m.ultima_atividade) >= DIAS_SEM_MOVIMENTO ? "#F2C879" : "#9FD3EA" }}>
+                                <Clock style={{ width: 10, height: 10, flexShrink: 0 }} />
+                                {m.ultima_atividade === null || diasDesde(m.ultima_atividade) === Infinity
+                                  ? "sem movimento registrado"
+                                  : diasDesde(m.ultima_atividade) === 0 ? "movimento hoje"
+                                  : `há ${diasDesde(m.ultima_atividade)} d`}
+                              </div>
+                            </>
+                          )}
+                        </div>
+
                         <div>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 7, background:u.ativo ? "rgba(39,174,96,0.12)" : "rgba(220,38,38,0.1)", color: u.ativo ? "#83DDA8" : "#F7B8B1" }}>
-                            {u.ativo ? <CheckCircle2 style={{ width: 11, height: 11 }} /> : <Ban style={{ width: 11, height: 11 }} />}
-                            {u.ativo ? "Ativo" : "Inativo"}
-                          </span>
+                          {(() => {
+                            const est = estadoDe(u);
+                            return (
+                              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 7, background: est.fundo, color: est.cor, whiteSpace: "nowrap" }}
+                                    title={u.ativo ? "Já criou a senha e tem acesso"
+                                           : convitePendente(u) ? "O convite foi enviado, mas a senha nunca foi criada"
+                                           : "Criou a senha, e o acesso foi retirado pelo gerente"}>
+                                <est.icone style={{ width: 11, height: 11, flexShrink: 0 }} />
+                                {est.rotulo}
+                              </span>
+                            );
+                          })()}
                         </div>
                         <div>
                           {u.email === me?.email ? (
@@ -646,8 +881,14 @@ export default function Equipe() {
                                 style={{ padding: "6px 12px", borderRadius: 8, border:"1px solid rgba(159,211,234,0.18)", background: u.ativo ? "rgba(220,38,38,0.06)" : "rgba(39,174,96,0.08)", color: u.ativo ? "#F7B8B1" : "#83DDA8", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
                                 {u.ativo ? "Desativar" : "Reativar"}
                               </button>
-                              {/* Quem nunca ativou pode nao ter recebido o email */}
-                              {!u.ativo && (
+                              {/* Reenviar SÓ para quem nunca criou a senha. Para
+                                  quem foi desativado, o convite geraria token
+                                  novo e a ativação devolveria o acesso com senha
+                                  escolhida por quem recebesse o link — desfazendo
+                                  a desativação por um caminho que ninguém vê. O
+                                  backend também recusa; o botão escondido é
+                                  conveniência, não a trava. */}
+                              {!u.ativo && convitePendente(u) && (
                                 <button onClick={() => reenviarConvite(u)} disabled={reenviandoId === u.usuario_id}
                                   title="Gerar um convite novo e reenviar por email"
                                   style={{ padding: "6px 10px", borderRadius: 8, border:"1px solid rgba(159,211,234,0.30)", background:"rgba(46,111,149,0.08)", color:"#9FD3EA", fontSize: 11, fontWeight: 700, cursor: reenviandoId === u.usuario_id ? "wait" : "pointer", display: "flex", alignItems: "center", gap: 4 }}>
@@ -821,6 +1062,35 @@ function LinkAtivacao({
       {motivo && (
         <div style={{ fontSize: 11, color:"#EAF6FB", marginTop: 8, lineHeight: 1.5 }}>
           <strong>Por que o email não saiu:</strong> {motivo}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+/**
+ * Um número pequeno com rótulo, para o resumo dentro do card do supervisor.
+ *
+ * `detalhe` carrega o denominador da taxa (“12 de 20 decididos” vira “60%
+ * conv.” com o `title` completo): a conversão de uma equipe pequena sobe e
+ * desce com um negócio, e o número sozinho convida a comparar equipes que não
+ * são comparáveis.
+ */
+function MiniNumero({ rotulo, valor, cor, detalhe, dica }: {
+  rotulo: string; valor: string; cor: string; detalhe?: string; dica?: string;
+}) {
+  return (
+    <div style={{ minWidth: 0 }} title={dica}>
+      <div style={{ fontSize: 9.5, fontWeight: 700, color:"#9FD3EA", textTransform: "uppercase", letterSpacing: "0.06em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {rotulo}
+      </div>
+      <div style={{ fontSize: 14, fontWeight: 800, color: cor, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {valor}
+      </div>
+      {detalhe && (
+        <div style={{ fontSize: 9.5, color:"#9FD3EA", opacity: 0.85, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {detalhe}
         </div>
       )}
     </div>
